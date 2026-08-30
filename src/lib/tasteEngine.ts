@@ -42,15 +42,26 @@ export type Candidate = {
   popularity?: number;
   /** Opcional: requiere llamada a GET /artists/{id}, puede no venir */
   genre?: string;
+  /**
+   * Opcional: vibra canónica de la canción (voto mayoritario de la comunidad,
+   * ver track_canonical_vibe en supabase/schema.sql). Ausente hasta que la
+   * canción acumule >= 3 votos -- mismo patrón que genre, la dimensión
+   * simplemente se salta si no viene.
+   */
+  vibe?: string;
 };
 
 export type DimensionWeight = { key: string; weight: number };
 
+// Pesos reajustados 2026-08-29 al agregar vibra como quinta dimensión
+// (antes: artist 0.5 / decade 0.2 / popularity 0.15 / genre 0.15). Punto de
+// partida, no medido con datos reales todavía -- ajustable.
 const DEFAULT_WEIGHTS = {
-  artist: 0.5,
-  decade: 0.2,
-  popularity: 0.15,
+  artist: 0.45,
+  decade: 0.15,
+  popularity: 0.1,
   genre: 0.15,
+  vibe: 0.15,
 };
 
 /**
@@ -225,6 +236,9 @@ export function dimensionKeys(track: Candidate): DimensionWeight[] {
   if (track.genre) {
     dims.push({ key: `genero:${track.genre}`, weight: DEFAULT_WEIGHTS.genre });
   }
+  if (track.vibe) {
+    dims.push({ key: `vibra:${track.vibe}`, weight: DEFAULT_WEIGHTS.vibe });
+  }
   return dims;
 }
 
@@ -343,7 +357,14 @@ export function rankCandidatesWithExploration(
     .sort((a, b) => b.score - a.score)
     .map((entry) => entry.track);
 
-  const sampleSize = Math.round(exploreRatio * candidates.length);
+  // Bug real encontrado 2026-08-29: cuando `hot` está vacío (arranque en frío
+  // -- sin historial local ni consenso global/vecino, el estado exacto de
+  // Showmi hoy: 0 swipes en la tabla), TODO candidato es "frío", y recortar
+  // a `sampleSize` tiraba la mayoría del pool sin necesidad (con 3
+  // candidatos: sampleSize=1, el deck se reducía de 3 a 1). El recorte solo
+  // tiene sentido como cuota de exploración cuando SÍ hay un pool caliente
+  // de reserva -- sin uno, no hay nada mejor que mostrar en su lugar.
+  const sampleSize = hot.length > 0 ? Math.round(exploreRatio * candidates.length) : cold.length;
   const coldSample = shuffle(cold).slice(0, sampleSize);
 
   return interleave(hotSorted, coldSample);

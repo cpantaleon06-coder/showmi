@@ -1,15 +1,19 @@
 {
   "expo": {
-    "name": "showmi",
+    "name": "Showmi",
     "slug": "showmi",
     "version": "1.0.0",
+    "scheme": "showmi",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.showmi.app"
     },
     "android": {
+      "package": "com.showmi.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -18,8 +22,21 @@
       },
       "predictiveBackGestureEnabled": false
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    }
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-image",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "940a8a55-7818-4b8d-b03b-39dc3c52f85d"
+      }
+    },
+    "owner": "showmi"
   }
 }

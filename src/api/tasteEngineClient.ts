@@ -66,3 +66,50 @@ export async function fetchArtistNeighborsBatch(artistIds: string[]): Promise<Co
   }
   return co;
 }
+
+/**
+ * Trae la vibra canónica (voto mayoritario, >= 3 votos) para un batch de tracks. Un track
+ * ausente del resultado simplemente no tiene vibra todavía -- dimensionKeys() ya sabe
+ * saltarse la dimensión cuando Candidate.vibe es undefined.
+ */
+export async function fetchTrackVibes(trackIds: string[]): Promise<Record<string, string>> {
+  if (trackIds.length === 0) return {};
+  const { data, error } = await supabase.rpc('get_track_vibes', { p_track_ids: trackIds });
+  if (error) {
+    console.warn('[tasteEngineClient] fetchTrackVibes falló:', error.message);
+    return {};
+  }
+  const vibes: Record<string, string> = {};
+  for (const row of data ?? []) {
+    vibes[row.track_id] = row.vibe;
+  }
+  return vibes;
+}
+
+/**
+ * Registra (o actualiza) el voto de vibra del usuario para un track. Mismo patrón que
+ * registerSwipeRemote: no bloquea la UI, se traga sus propios errores.
+ */
+export async function registerVibeVoteRemote(trackId: string, vibe: string): Promise<void> {
+  const { error } = await supabase.rpc('register_vibe_vote', { p_track_id: trackId, p_vibe: vibe });
+  if (error) {
+    console.warn('[tasteEngineClient] registerVibeVoteRemote falló (no bloqueante):', error.message);
+  }
+}
+
+/** Conjunto explícito {artist_id -> conteo de likes} o {genre -> conteo}, para chips de Perfil. */
+export async function fetchTopSets(prefix: 'artista' | 'genero' | 'vibra', limit = 5): Promise<{ dimKey: string; likedCount: number }[]> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase.rpc('get_top_sets', { p_user_id: user.id, p_prefix: prefix, p_limit: limit });
+  if (error) {
+    console.warn('[tasteEngineClient] fetchTopSets falló:', error.message);
+    return [];
+  }
+  return (data ?? []).map((row: { dim_key: string; liked_count: number }) => ({
+    dimKey: row.dim_key,
+    likedCount: row.liked_count,
+  }));
+}

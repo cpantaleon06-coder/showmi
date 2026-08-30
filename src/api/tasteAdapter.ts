@@ -12,12 +12,18 @@ import { Track } from './types';
  *    normalizeForMatch (la misma utilidad que ya usa el matching iTunes<->Last.fm) para que
  *    variaciones de capitalización/acentos no generen claves de dimensión distintas para el
  *    mismo artista real.
+ *
+ * `vibe` no viene del Track en sí (a diferencia de genre) -- es la vibra canónica votada por
+ * la comunidad para ESTE track, resuelta aparte vía fetchTrackVibes y pasada explícitamente
+ * por quien llama (ver useDeck.ts). Se mantiene como parámetro separado en vez de meterla en
+ * Track porque no es un dato de la canción, es un agregado calculado sobre votos.
  */
-export function trackToCandidate(track: Track): Candidate {
+export function trackToCandidate(track: Track, vibe?: string): Candidate {
   return {
     trackId: track.id,
     artistIds: [normalizeForMatch(track.artist)],
     releaseDate: track.releaseDate ?? '',
     genre: track.genre ?? undefined,
+    vibe,
   };
 }
