@@ -11,15 +11,20 @@
  * 2026-08-31: ampliada de 8 a 22, luego de 22 a 30, y luego de 30 a 37
  * géneros en una tercera pasada el mismo día -- la segunda pasada seguía
  * pesando mucho hacia Latino/en español (el propio feedback del usuario);
- * esta ronda suma mercados/idiomas que no tenían NINGÚN representante
- * todavía (Bollywood, pop árabe, pop turco, bossa nova/MPB brasileño en
- * portugués, soca/calypso caribeño, mandopop/cantopop, pop nórdico).
- * `rock_metal` se separó en `rock`/`metal` (audiencias reales distintas).
- * Cada lista de sinónimos es DISJUNTA de las demás a propósito --
- * `resolveCanonicalGenre` hace match exacto por elemento de array (no
- * substring), así que dos géneros nunca deberían compartir el mismo string
- * de tag, o el orden del array (arbitrario) decidiría cuál gana. Verificado
- * a mano al armar esta lista, las tres veces.
+ * esa ronda sumó mercados/idiomas que no tenían NINGÚN representante todavía
+ * (Bollywood, pop árabe, pop turco, bossa nova/MPB brasileño en portugués,
+ * soca/calypso caribeño, mandopop/cantopop, pop nórdico).
+ *
+ * 2026-09-01: ampliada de 37 a 53 -- `electronica` (solo 2 en su categoría)
+ * se desglosó en house/techno/trance/dubstep-bass/drum&bass (audiencias
+ * reales distintas, igual razón que rock_metal); se sumaron emo/shoegaze
+ * (rock), drill (urbano), tejano/boleros (Latino), ópera/flamenco/bluegrass
+ * y highlife/celtic/fado (raíces y del mundo, huecos reales que quedaban).
+ * `rock_metal` se separó en `rock`/`metal` en la primera pasada. Cada lista
+ * de sinónimos es DISJUNTA de las demás a propósito -- `resolveCanonicalGenre`
+ * hace match exacto por elemento de array (no substring), así que dos
+ * géneros nunca deberían compartir el mismo string de tag, o el orden del
+ * array (arbitrario) decidiría cuál gana. Verificado a mano, las cuatro veces.
  */
 export type CanonicalGenre =
   | 'corridos_tumbados_regional'
@@ -32,14 +37,24 @@ export type CanonicalGenre =
   | 'vallenato'
   | 'merengue'
   | 'ranchera_mariachi'
+  | 'tejano'
+  | 'boleros'
   | 'pop_latino'
   | 'rock'
   | 'metal'
   | 'indie_lofi'
+  | 'emo'
+  | 'shoegaze_dreampop'
   | 'pop'
   | 'hip_hop_rap'
+  | 'drill'
   | 'rnb_soul'
   | 'electronica'
+  | 'house'
+  | 'techno'
+  | 'trance'
+  | 'dubstep_bass'
+  | 'drum_and_bass'
   | 'jazz'
   | 'blues'
   | 'k_pop'
@@ -53,10 +68,16 @@ export type CanonicalGenre =
   | 'nordic_pop'
   | 'country_folk'
   | 'classical'
+  | 'opera'
+  | 'flamenco'
+  | 'bluegrass'
   | 'ambient_new_age'
   | 'funk_disco'
   | 'reggae'
   | 'afrobeats'
+  | 'highlife'
+  | 'celtic_irish'
+  | 'fado'
   | 'gospel_cristiana'
   | 'punk';
 
@@ -163,6 +184,20 @@ export const CANONICAL_GENRES: GenreDef[] = [
     lastfmTagSynonyms: ['ranchera', 'rancheras', 'mariachi'],
   },
   {
+    key: 'tejano',
+    category: 'Latino',
+    label: 'Tejano',
+    emoji: '🐎',
+    lastfmTagSynonyms: ['tejano', 'tex-mex'],
+  },
+  {
+    key: 'boleros',
+    category: 'Latino',
+    label: 'Boleros',
+    emoji: '💐',
+    lastfmTagSynonyms: ['bolero', 'boleros'],
+  },
+  {
     key: 'pop_latino',
     category: 'Latino',
     label: 'Pop Latino',
@@ -191,6 +226,20 @@ export const CANONICAL_GENRES: GenreDef[] = [
     lastfmTagSynonyms: ['indie', 'indie pop', 'indie rock', 'lo-fi', 'lofi', 'bedroom pop'],
   },
   {
+    key: 'emo',
+    category: 'Rock/Alternativo',
+    label: 'Emo',
+    emoji: '🖤',
+    lastfmTagSynonyms: ['emo', 'emo pop', 'screamo'],
+  },
+  {
+    key: 'shoegaze_dreampop',
+    category: 'Rock/Alternativo',
+    label: 'Shoegaze/Dream Pop',
+    emoji: '💭',
+    lastfmTagSynonyms: ['shoegaze', 'dream pop', 'dreampop'],
+  },
+  {
     key: 'pop',
     category: 'Pop/Urbano',
     label: 'Pop',
@@ -205,6 +254,13 @@ export const CANONICAL_GENRES: GenreDef[] = [
     lastfmTagSynonyms: ['hip hop', 'hip-hop', 'rap', 'trap'],
   },
   {
+    key: 'drill',
+    category: 'Pop/Urbano',
+    label: 'Drill',
+    emoji: '🧊',
+    lastfmTagSynonyms: ['drill', 'uk drill', 'brooklyn drill'],
+  },
+  {
     key: 'rnb_soul',
     category: 'Pop/Urbano',
     label: 'R&B/Soul',
@@ -212,11 +268,49 @@ export const CANONICAL_GENRES: GenreDef[] = [
     lastfmTagSynonyms: ['r&b', 'rnb', 'soul', 'neo soul'],
   },
   {
+    // 2026-09-01: 'house'/'techno' se movieron a sus propios géneros abajo
+    // (ver comentario de cabecera) -- esta entrada queda como el catch-all
+    // genérico de electrónica, no como el bucket de todo el EDM.
     key: 'electronica',
     category: 'Electrónica/Chill',
     label: 'Electrónica',
     emoji: '🎛️',
-    lastfmTagSynonyms: ['electronic', 'electronica', 'edm', 'house', 'techno', 'synthwave'],
+    lastfmTagSynonyms: ['electronic', 'electronica', 'edm', 'synthwave'],
+  },
+  {
+    key: 'house',
+    category: 'Electrónica/Chill',
+    label: 'House',
+    emoji: '🏠',
+    lastfmTagSynonyms: ['house', 'deep house', 'tech house'],
+  },
+  {
+    key: 'techno',
+    category: 'Electrónica/Chill',
+    label: 'Techno',
+    emoji: '⚙️',
+    lastfmTagSynonyms: ['techno', 'minimal techno', 'acid techno'],
+  },
+  {
+    key: 'trance',
+    category: 'Electrónica/Chill',
+    label: 'Trance',
+    emoji: '🌀',
+    lastfmTagSynonyms: ['trance', 'progressive trance', 'psytrance'],
+  },
+  {
+    key: 'dubstep_bass',
+    category: 'Electrónica/Chill',
+    label: 'Dubstep/Bass',
+    emoji: '💥',
+    lastfmTagSynonyms: ['dubstep', 'bass music', 'drumstep'],
+  },
+  {
+    key: 'drum_and_bass',
+    category: 'Electrónica/Chill',
+    label: 'Drum & Bass',
+    emoji: '🔊',
+    lastfmTagSynonyms: ['drum and bass', 'dnb', 'jungle'],
   },
   {
     key: 'jazz',
@@ -310,6 +404,27 @@ export const CANONICAL_GENRES: GenreDef[] = [
     lastfmTagSynonyms: ['classical', 'orchestral', 'soundtrack'],
   },
   {
+    key: 'opera',
+    category: 'Raíces',
+    label: 'Ópera',
+    emoji: '🎭',
+    lastfmTagSynonyms: ['opera', 'aria'],
+  },
+  {
+    key: 'flamenco',
+    category: 'Raíces',
+    label: 'Flamenco',
+    emoji: '🩰',
+    lastfmTagSynonyms: ['flamenco', 'flamenco pop'],
+  },
+  {
+    key: 'bluegrass',
+    category: 'Raíces',
+    label: 'Bluegrass',
+    emoji: '🌾',
+    lastfmTagSynonyms: ['bluegrass', 'old-time'],
+  },
+  {
     key: 'ambient_new_age',
     category: 'Electrónica/Chill',
     label: 'Ambient/New Age',
@@ -336,6 +451,27 @@ export const CANONICAL_GENRES: GenreDef[] = [
     label: 'Afrobeats',
     emoji: '🌍',
     lastfmTagSynonyms: ['afrobeats', 'afropop', 'amapiano'],
+  },
+  {
+    key: 'highlife',
+    category: 'Del Mundo',
+    label: 'Highlife',
+    emoji: '🔔',
+    lastfmTagSynonyms: ['highlife', 'west african highlife'],
+  },
+  {
+    key: 'celtic_irish',
+    category: 'Del Mundo',
+    label: 'Celta/Irlandesa',
+    emoji: '☘️',
+    lastfmTagSynonyms: ['celtic', 'irish folk', 'irish traditional'],
+  },
+  {
+    key: 'fado',
+    category: 'Del Mundo',
+    label: 'Fado',
+    emoji: '🎼',
+    lastfmTagSynonyms: ['fado', 'fado portugues'],
   },
   {
     key: 'gospel_cristiana',

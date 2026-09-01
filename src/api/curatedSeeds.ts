@@ -25,10 +25,15 @@ import { DeckAnchor, SimilarTrackSeed } from './types';
  * 2026-08-31: ampliado de 8 a 22, luego de 22 a 30, y luego de 30 a 37 en una
  * tercera pasada el mismo día, junto con lib/genres.ts -- la segunda pasada
  * seguía pesando mucho hacia Latino/en español (feedback directo del
- * usuario); esta ronda suma mercados/idiomas sin representante todavía:
+ * usuario); esa ronda sumó mercados/idiomas sin representante todavía:
  * mandopop/cantopop, Bollywood, pop árabe, pop turco, bossa nova/MPB
- * (portugués, no español), soca/calypso y pop nórdico -- cada uno con su
- * propio anchor + 3 similares, mismo criterio editorial que el resto.
+ * (portugués, no español), soca/calypso y pop nórdico.
+ *
+ * 2026-09-01: ampliado de 37 a 53 -- electrónica se desglosó en
+ * house/techno/trance/dubstep-bass/drum&bass, más emo/shoegaze, drill,
+ * tejano/boleros, ópera/flamenco/bluegrass y highlife/celtic/fado -- cada
+ * uno con su propio anchor + 3 similares, mismo criterio editorial que el
+ * resto.
  */
 export const curatedSimilarSeeds: Record<string, SimilarTrackSeed[]> = {
   // corridos_tumbados_regional
@@ -91,6 +96,18 @@ export const curatedSimilarSeeds: Record<string, SimilarTrackSeed[]> = {
     { artist: 'Pedro Infante', title: 'Amorcito Corazón', matchScore: 0.79 },
     { artist: 'Ana Gabriel', title: 'Ay Amor', matchScore: 0.75 },
   ],
+  // tejano
+  'selena::como la flor': [
+    { artist: 'Emilio Navaira', title: 'Como Le Hago', matchScore: 0.8 },
+    { artist: 'La Mafia', title: 'Un Millón de Rosas', matchScore: 0.76 },
+    { artist: 'Intocable', title: 'Fuerte No Soy', matchScore: 0.73 },
+  ],
+  // boleros
+  'luis miguel::la barca': [
+    { artist: 'Los Panchos', title: 'Bésame Mucho', matchScore: 0.85 },
+    { artist: 'Javier Solís', title: 'Payaso', matchScore: 0.79 },
+    { artist: 'Armando Manzanero', title: 'Somos Novios', matchScore: 0.77 },
+  ],
   // pop_latino
   'karol g::provenza': [
     { artist: 'Shakira', title: 'Te Felicito', matchScore: 0.85 },
@@ -115,6 +132,18 @@ export const curatedSimilarSeeds: Record<string, SimilarTrackSeed[]> = {
     { artist: 'Men I Trust', title: 'Show Me How', matchScore: 0.83 },
     { artist: 'Cuco', title: 'Lo Que Siento', matchScore: 0.78 },
   ],
+  // emo
+  'my chemical romance::welcome to the black parade': [
+    { artist: 'Paramore', title: 'Misery Business', matchScore: 0.85 },
+    { artist: 'Dashboard Confessional', title: 'Vindicated', matchScore: 0.78 },
+    { artist: 'Taking Back Sunday', title: 'MakeDamnSure', matchScore: 0.76 },
+  ],
+  // shoegaze_dreampop
+  'beach house::space song': [
+    { artist: 'My Bloody Valentine', title: 'Only Shallow', matchScore: 0.83 },
+    { artist: 'Slowdive', title: 'Alison', matchScore: 0.8 },
+    { artist: 'Cocteau Twins', title: 'Cherry-coloured Funk', matchScore: 0.76 },
+  ],
   // pop
   'dua lipa::levitating': [
     { artist: 'The Weeknd', title: 'Blinding Lights', matchScore: 0.85 },
@@ -127,6 +156,12 @@ export const curatedSimilarSeeds: Record<string, SimilarTrackSeed[]> = {
     { artist: 'Travis Scott', title: 'SICKO MODE', matchScore: 0.82 },
     { artist: 'Drake', title: "God's Plan", matchScore: 0.79 },
   ],
+  // drill
+  'central cee::doja': [
+    { artist: 'Pop Smoke', title: 'Dior', matchScore: 0.85 },
+    { artist: 'Fivio Foreign', title: 'Big Drip', matchScore: 0.78 },
+    { artist: 'Headie One', title: 'Both', matchScore: 0.75 },
+  ],
   // rnb_soul
   'sza::kill bill': [
     { artist: 'Frank Ocean', title: 'Pink + White', matchScore: 0.83 },
@@ -138,6 +173,36 @@ export const curatedSimilarSeeds: Record<string, SimilarTrackSeed[]> = {
     { artist: 'Tycho', title: 'Awake', matchScore: 0.85 },
     { artist: 'Rüfüs Du Sol', title: 'Innerbloom', matchScore: 0.81 },
     { artist: 'ODESZA', title: 'Say My Name', matchScore: 0.77 },
+  ],
+  // house
+  'disclosure::latch': [
+    { artist: 'Duke Dumont', title: 'Ocean Drive', matchScore: 0.83 },
+    { artist: 'Route 94', title: 'My Love', matchScore: 0.78 },
+    { artist: 'Gorgon City', title: 'Ready For Your Love', matchScore: 0.76 },
+  ],
+  // techno
+  'charlotte de witte::doppler': [
+    { artist: 'Amelie Lens', title: 'In My Mind', matchScore: 0.82 },
+    { artist: 'Adam Beyer', title: 'Your Mind', matchScore: 0.77 },
+    { artist: 'Carl Cox', title: 'I Want You (Forever)', matchScore: 0.75 },
+  ],
+  // trance
+  'armin van buuren::this is what it feels like': [
+    { artist: 'Above & Beyond', title: 'Sun & Moon', matchScore: 0.84 },
+    { artist: 'Tiësto', title: 'Adagio for Strings', matchScore: 0.81 },
+    { artist: 'Paul van Dyk', title: 'For An Angel', matchScore: 0.76 },
+  ],
+  // dubstep_bass
+  'skrillex::bangarang': [
+    { artist: 'Excision', title: 'X Rated', matchScore: 0.82 },
+    { artist: 'Zeds Dead', title: 'Adrenaline', matchScore: 0.77 },
+    { artist: 'Flux Pavilion', title: "I Can't Stop", matchScore: 0.79 },
+  ],
+  // drum_and_bass
+  'netsky::never stop chasing': [
+    { artist: 'Sub Focus', title: 'Rock It', matchScore: 0.81 },
+    { artist: 'Andy C', title: 'Rollercoaster', matchScore: 0.77 },
+    { artist: 'Wilkinson', title: 'Afterglow', matchScore: 0.78 },
   ],
   // jazz
   'kamasi washington::truth': [
@@ -217,6 +282,24 @@ export const curatedSimilarSeeds: Record<string, SimilarTrackSeed[]> = {
     { artist: 'Yiruma', title: 'River Flows in You', matchScore: 0.8 },
     { artist: 'Ólafur Arnalds', title: 'Near Light', matchScore: 0.78 },
   ],
+  // opera
+  'andrea bocelli::con te partirò': [
+    { artist: 'Luciano Pavarotti', title: 'Nessun Dorma', matchScore: 0.87 },
+    { artist: 'Maria Callas', title: 'Casta Diva', matchScore: 0.81 },
+    { artist: 'Plácido Domingo', title: 'Granada', matchScore: 0.78 },
+  ],
+  // flamenco
+  'paco de lucía::entre dos aguas': [
+    { artist: 'Camarón de la Isla', title: 'Como el Agua', matchScore: 0.84 },
+    { artist: 'Vicente Amigo', title: 'Tres Notas Para Decir Te Quiero', matchScore: 0.79 },
+    { artist: 'Estrella Morente', title: 'Niña de Fuego', matchScore: 0.76 },
+  ],
+  // bluegrass
+  'alison krauss::man of constant sorrow': [
+    { artist: 'Bill Monroe', title: 'Blue Moon of Kentucky', matchScore: 0.83 },
+    { artist: 'Earl Scruggs', title: 'Foggy Mountain Breakdown', matchScore: 0.79 },
+    { artist: 'Billy Strings', title: 'Dust in a Baggie', matchScore: 0.77 },
+  ],
   // ambient_new_age
   'brian eno::an ending (ascent)': [
     { artist: 'Stars of the Lid', title: 'Requiem for Dying Mothers', matchScore: 0.82 },
@@ -240,6 +323,24 @@ export const curatedSimilarSeeds: Record<string, SimilarTrackSeed[]> = {
     { artist: 'Wizkid', title: 'Essence', matchScore: 0.86 },
     { artist: 'Davido', title: 'Fall', matchScore: 0.81 },
     { artist: 'Rema', title: 'Calm Down', matchScore: 0.8 },
+  ],
+  // highlife
+  'osibisa::sunshine day': [
+    { artist: 'E.T. Mensah', title: 'All For You', matchScore: 0.78 },
+    { artist: 'Amakye Dede', title: 'Iron Boy', matchScore: 0.74 },
+    { artist: 'Daddy Lumba', title: 'Aben Wo Ha', matchScore: 0.73 },
+  ],
+  // celtic_irish
+  "the chieftains::the foggy dew": [
+    { artist: 'Clannad', title: "Theme from Harry's Game", matchScore: 0.81 },
+    { artist: 'The Dubliners', title: 'Whiskey in the Jar', matchScore: 0.8 },
+    { artist: 'Altan', title: 'Green Grow the Rushes', matchScore: 0.74 },
+  ],
+  // fado
+  'amália rodrigues::uma casa portuguesa': [
+    { artist: 'Mariza', title: 'Barco Negro', matchScore: 0.85 },
+    { artist: 'Carminho', title: 'Fado Sem Sorte', matchScore: 0.79 },
+    { artist: 'Dulce Pontes', title: 'Canção do Mar', matchScore: 0.77 },
   ],
   // gospel_cristiana
   'kirk franklin::melodies from heaven': [
@@ -272,14 +373,24 @@ export const curatedAnchorsByGenre: Record<CanonicalGenre, DeckAnchor> = {
   vallenato: { artist: 'Carlos Vives', title: 'La Gota Fría' },
   merengue: { artist: 'Juan Luis Guerra', title: 'La Bilirrubina' },
   ranchera_mariachi: { artist: 'Vicente Fernández', title: 'Volver Volver' },
+  tejano: { artist: 'Selena', title: 'Como La Flor' },
+  boleros: { artist: 'Luis Miguel', title: 'La Barca' },
   pop_latino: { artist: 'Karol G', title: 'Provenza' },
   rock: { artist: 'Queens of the Stone Age', title: 'No One Knows' },
   metal: { artist: 'Metallica', title: 'Enter Sandman' },
   indie_lofi: { artist: 'Mac DeMarco', title: 'Chamber of Reflection' },
+  emo: { artist: 'My Chemical Romance', title: 'Welcome to the Black Parade' },
+  shoegaze_dreampop: { artist: 'Beach House', title: 'Space Song' },
   pop: { artist: 'Dua Lipa', title: 'Levitating' },
   hip_hop_rap: { artist: 'Kendrick Lamar', title: 'HUMBLE.' },
+  drill: { artist: 'Central Cee', title: 'Doja' },
   rnb_soul: { artist: 'SZA', title: 'Kill Bill' },
   electronica: { artist: 'Bonobo', title: 'Kerala' },
+  house: { artist: 'Disclosure', title: 'Latch' },
+  techno: { artist: 'Charlotte de Witte', title: 'Doppler' },
+  trance: { artist: 'Armin van Buuren', title: 'This Is What It Feels Like' },
+  dubstep_bass: { artist: 'Skrillex', title: 'Bangarang' },
+  drum_and_bass: { artist: 'Netsky', title: 'Never Stop Chasing' },
   jazz: { artist: 'Kamasi Washington', title: 'Truth' },
   blues: { artist: 'B.B. King', title: 'The Thrill Is Gone' },
   k_pop: { artist: 'BTS', title: 'Dynamite' },
@@ -293,10 +404,16 @@ export const curatedAnchorsByGenre: Record<CanonicalGenre, DeckAnchor> = {
   nordic_pop: { artist: 'Tove Lo', title: 'Habits (Stay High)' },
   country_folk: { artist: 'Chris Stapleton', title: 'Tennessee Whiskey' },
   classical: { artist: 'Ludovico Einaudi', title: 'Nuvole Bianche' },
+  opera: { artist: 'Andrea Bocelli', title: 'Con Te Partirò' },
+  flamenco: { artist: 'Paco de Lucía', title: 'Entre Dos Aguas' },
+  bluegrass: { artist: 'Alison Krauss', title: 'Man of Constant Sorrow' },
   ambient_new_age: { artist: 'Brian Eno', title: 'An Ending (Ascent)' },
   funk_disco: { artist: 'Chic', title: 'Le Freak' },
   reggae: { artist: 'Bob Marley & The Wailers', title: 'Three Little Birds' },
   afrobeats: { artist: 'Burna Boy', title: 'Last Last' },
+  highlife: { artist: 'Osibisa', title: 'Sunshine Day' },
+  celtic_irish: { artist: 'The Chieftains', title: 'The Foggy Dew' },
+  fado: { artist: 'Amália Rodrigues', title: 'Uma Casa Portuguesa' },
   gospel_cristiana: { artist: 'Kirk Franklin', title: 'Melodies From Heaven' },
   punk: { artist: 'The Interrupters', title: "She's Kerosene" },
 };
