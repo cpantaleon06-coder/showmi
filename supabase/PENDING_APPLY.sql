@@ -1,11 +1,10 @@
--- Todo lo pendiente de aplicar contra el proyecto real de Supabase, en un solo bloque.
--- Verificado por curl contra cada función (2026-09-01): NINGUNA de estas existe todavía
--- en el proyecto real, así que se puede correr de arriba a abajo sin preocuparse por
--- 'ya existe' -- el comentario cerca del final que dice lo contrario (track_vibe_votes
--- 'ya existe') está desactualizado/era incorrecto, ver verificación empírica.
+-- YA APLICADO contra el proyecto real (2026-09-01, vía Management API con un access
+-- token temporal) -- este archivo queda como registro histórico de lo que se corrió,
+-- no hace falta volver a pegarlo en el SQL Editor. Si en el futuro se agrega una
+-- sección nueva a schema.sql, arma un bundle nuevo en vez de reusar este.
 --
--- Cómo correrlo: Supabase Dashboard -> tu proyecto -> SQL Editor -> New query ->
--- pega TODO este archivo -> Run.
+-- (Contexto original, ya no aplica: se armó juntando todo lo que un curl empírico
+-- contra cada función confirmó que faltaba en el proyecto real a esa fecha.)
 
 -- ---------------------------------------------------------------------------
 -- Conjuntos explícitos de Artista_a / Género_g (2026-08-29)
