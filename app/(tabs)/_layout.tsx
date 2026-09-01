@@ -3,7 +3,6 @@ import type { ColorValue } from 'react-native';
 import { CardsIcon, DiscIcon, RssSimpleIcon } from 'phosphor-react-native';
 
 import { useThemeStore } from '../../src/theme/useThemeStore';
-import { fonts } from '../../src/theme/typography';
 
 // Naranja del wordmark (letra "O"), elegido por ser el que menos se confunde
 // con el verde/coral del swipe y el ámbar de marca -- exclusivo del ícono de
@@ -19,14 +18,20 @@ const ACTIVE_TAB_COLOR = '#F97316';
 // recargados a 24px junto al resto del sistema visual ya simplificado a
 // bloques planos; Disc y RssSimple leen igual de claro con mucho menos
 // detalle. Cards ya era simple, se mantiene.
+//
+// 2026-09-01: weight "fill" -> "regular" (solo línea, sin relleno) y se
+// quitó la etiqueta de texto bajo cada ícono -- referencia mandada por el
+// usuario (barra tipo Reels: 3-5 íconos de línea simple, sin texto). Tamaño
+// subido de 24 a 26 para compensar que ya no hay texto debajo sosteniendo
+// el peso visual de la barra.
 function LibraryTabIcon({ color }: { color: ColorValue }) {
-  return <DiscIcon weight="fill" size={24} color={color as string} />;
+  return <DiscIcon weight="regular" size={26} color={color as string} />;
 }
 function SwipeTabIcon({ color }: { color: ColorValue }) {
-  return <CardsIcon weight="fill" size={24} color={color as string} />;
+  return <CardsIcon weight="regular" size={26} color={color as string} />;
 }
 function FeedTabIcon({ color }: { color: ColorValue }) {
-  return <RssSimpleIcon weight="fill" size={24} color={color as string} />;
+  return <RssSimpleIcon weight="regular" size={26} color={color as string} />;
 }
 
 export default function TabsLayout() {
@@ -36,13 +41,13 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: false,
         tabBarActiveTintColor: ACTIVE_TAB_COLOR,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
         },
-        tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.bodySemiBold },
       }}
     >
       <Tabs.Screen name="library" options={{ title: 'Biblioteca', tabBarIcon: LibraryTabIcon }} />
