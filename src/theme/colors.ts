@@ -44,9 +44,18 @@ export interface ThemeColors {
    * theme-derived) -- verified visually against both page backgrounds.
    */
   nagaiGradient: [string, string, string];
+  /**
+   * Dorado reservado para la insignia/CTA de "Showmi Premium" (paywall, badge en Feed/Perfil)
+   * -- mismo espíritu de "acento reservado" que nagaiGradient (documentado ahí arriba): un
+   * solo uso consistente en toda la app, nunca decorativo en otro lado, para que de verdad
+   * lea como estatus y no se diluya. Igual en ambos modos a propósito (es la identidad de la
+   * insignia, no debe cambiar con el tema).
+   */
+  premiumAccent: string;
 }
 
 const NAGAI_GRADIENT: [string, string, string] = ['#FF8C5A', '#D9718C', '#0F6E7D'];
+const PREMIUM_ACCENT = '#C9A227';
 
 /** Rojo de cartel constructivista -- reemplaza el azul como color interactivo primario. */
 export const darkColors: ThemeColors = {
@@ -59,6 +68,7 @@ export const darkColors: ThemeColors = {
   pass: '#F87171',
   border: '#F2ECE4',
   nagaiGradient: NAGAI_GRADIENT,
+  premiumAccent: PREMIUM_ACCENT,
 };
 
 export const lightColors: ThemeColors = {
@@ -71,6 +81,7 @@ export const lightColors: ThemeColors = {
   pass: '#EF4444',
   border: '#141414',
   nagaiGradient: NAGAI_GRADIENT,
+  premiumAccent: PREMIUM_ACCENT,
 };
 
 export function colorsForMode(mode: ThemeMode): ThemeColors {

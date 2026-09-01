@@ -9,6 +9,7 @@ export interface RemotePost {
   genreTag: string | null;
   createdAt: string;
   isOfficial: boolean;
+  isPremium: boolean;
 }
 
 /**
@@ -36,6 +37,7 @@ export async function fetchFeedPosts(genreTags: string[] | null, limit = 30): Pr
       genre_tag: string | null;
       created_at: string;
       is_official: boolean;
+      is_premium: boolean;
     }) => ({
       postId: row.post_id,
       userId: row.user_id,
@@ -45,6 +47,7 @@ export async function fetchFeedPosts(genreTags: string[] | null, limit = 30): Pr
       genreTag: row.genre_tag,
       createdAt: row.created_at,
       isOfficial: row.is_official,
+      isPremium: row.is_premium,
     })
   );
 }

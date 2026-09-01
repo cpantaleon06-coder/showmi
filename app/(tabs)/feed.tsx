@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StarIcon, TrophyIcon } from 'phosphor-react-native';
+import { CrownIcon, StarIcon, TrophyIcon } from 'phosphor-react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useThemeStore } from '../../src/theme/useThemeStore';
@@ -83,6 +83,11 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
         {post.isOfficial && (
           <View style={[styles.officialBadge, { backgroundColor: colors.brand }]}>
             <Text style={styles.officialBadgeText}>SHOWMI OFICIAL</Text>
+          </View>
+        )}
+        {post.isPremium && !post.isOfficial && (
+          <View style={[styles.premiumBadge, { borderColor: colors.premiumAccent }]}>
+            <CrownIcon weight="fill" size={12} color={colors.premiumAccent} />
           </View>
         )}
       </View>
@@ -322,6 +327,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     fontFamily: fonts.bodyExtraBold,
     color: '#FFFFFF',
+  },
+  premiumBadge: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    padding: 5,
   },
   stars: {
     flexDirection: 'row',

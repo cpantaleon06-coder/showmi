@@ -684,3 +684,38 @@ select cron.schedule('classify-tracks-daily', '0 4 * * *', -- 4am, antes de seed
   );
   $$
 );
+
+-- ---------------------------------------------------------------------------
+-- Showmi Premium: RevenueCat + insignia visible (2026-09-01)
+-- ---------------------------------------------------------------------------
+-- `es_premium` es la copia server-side del entitlement de RevenueCat (fuente real de verdad:
+-- el SDK del cliente, ver src/lib/revenuecat.ts) -- existe SOLO para que el Feed pueda mostrar
+-- la insignia de otros usuarios (get_feed_posts no puede ver el CustomerInfo de nadie más).
+-- El cliente la escribe él mismo (set_premium_status) cada vez que cambia su CustomerInfo, ver
+-- useRevenueCatSync.ts -- no es un webhook de RevenueCat, ver nota de robustez consciente en
+-- src/api/subscriptionClient.ts (suficiente para el v1 del Shipaton, endurecerlo es trabajo
+-- futuro).
+alter table users add column es_premium boolean not null default false;
+
+create or replace function set_premium_status(p_is_premium boolean)
+returns void language sql security definer set search_path = public as $$
+  update users set es_premium = p_is_premium where id = auth.uid();
+$$;
+
+-- get_feed_posts cambia de columnas de salida -- Postgres no permite CREATE OR REPLACE
+-- cuando cambia el shape de retorno de una función que regresa tabla, hay que dropearla.
+drop function if exists get_feed_posts(text[], int);
+
+create or replace function get_feed_posts(p_genre_tags text[] default null, p_limit int default 30)
+returns table(
+  post_id uuid, user_id uuid, track_id text, post_text text, rating int,
+  genre_tag text, created_at timestamptz, is_official boolean, is_premium boolean
+)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.user_id, p.track_id, p.text, p.rating, p.genre_tag, p.created_at, u.es_cuenta_oficial, u.es_premium
+  from posts p
+  join users u on u.id = p.user_id
+  where p_genre_tags is null or p.genre_tag = any(p_genre_tags)
+  order by p.created_at desc
+  limit p_limit;
+$$;

@@ -2,12 +2,13 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { PencilSimpleIcon, SignOutIcon, TShirtIcon, UserPlusIcon } from 'phosphor-react-native';
+import { CrownIcon, PencilSimpleIcon, SignOutIcon, TShirtIcon, UserPlusIcon } from 'phosphor-react-native';
 import { useQuery } from '@tanstack/react-query';
 
 import { useThemeStore } from '../src/theme/useThemeStore';
 import { fonts } from '../src/theme/typography';
 import { useAuthStore } from '../src/state/authStore';
+import { useSubscriptionStore } from '../src/state/subscriptionStore';
 import { signOut } from '../src/api/authClient';
 import { fetchTopSets } from '../src/api/tasteEngineClient';
 import { VIBES } from '../src/lib/vibes';
@@ -46,6 +47,7 @@ export default function ProfileScreen() {
   const userId = useAuthStore((s) => s.session?.user.id);
   const isAnonymous = useAuthStore((s) => s.session?.user.is_anonymous ?? true);
   const email = useAuthStore((s) => s.session?.user.email);
+  const isPremium = useSubscriptionStore((s) => s.isPremium);
   const router = useRouter();
 
   const genresQuery = useQuery({
@@ -103,6 +105,13 @@ export default function ProfileScreen() {
             Tus estadísticas aparecen aquí en cuanto empieces a dar like y calificar canciones.
           </Text>
         )}
+
+        <Pressable onPress={() => router.push('/premium')} style={[styles.row, { borderColor: colors.premiumAccent }]} hitSlop={8}>
+          <CrownIcon weight="fill" size={20} color={colors.premiumAccent} />
+          <Text style={[styles.rowText, { color: colors.premiumAccent }]}>
+            {isPremium ? 'Showmi Premium ✓' : 'Hazte Showmi Premium'}
+          </Text>
+        </Pressable>
 
         <Pressable onPress={() => router.push('/closet')} style={[styles.row, { borderColor: colors.border }]} hitSlop={8}>
           <TShirtIcon weight="fill" size={20} color={colors.textPrimary} />

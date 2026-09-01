@@ -12,6 +12,7 @@ import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sa
 import { asyncStoragePersister, queryClient } from '../src/lib/queryClient';
 import { useThemeStore } from '../src/theme/useThemeStore';
 import { useAuthBootstrap } from '../src/hooks/useAuthBootstrap';
+import { useRevenueCatSync } from '../src/hooks/useRevenueCatSync';
 import { useAuthStore } from '../src/state/authStore';
 
 export default function RootLayout() {
@@ -25,6 +26,8 @@ export default function RootLayout() {
   });
   useAuthBootstrap();
   const authReady = useAuthStore((s) => s.isReady);
+  const userId = useAuthStore((s) => s.session?.user.id);
+  useRevenueCatSync(userId);
 
   // Nada de texto visible con la fuente del sistema, ni siquiera un parpadeo
   // inicial -- se espera a que carguen antes de montar cualquier pantalla.

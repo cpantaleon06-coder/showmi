@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { CrownIcon } from 'phosphor-react-native';
 
 import { Track } from '../../api/types';
 import { useThemeStore } from '../../theme/useThemeStore';
@@ -9,6 +11,7 @@ import { useDeck } from '../../hooks/useDeck';
 import { SwipeDirection, useSwipeStore } from '../../state/swipeStore';
 import { useLibraryStore } from '../../state/libraryStore';
 import { StarRating, usePostStore } from '../../state/postStore';
+import { useSubscriptionStore } from '../../state/subscriptionStore';
 import { CanonicalGenre } from '../../lib/genres';
 import { VibeKey } from '../../lib/vibes';
 import { SwipeCard, SwipeCardHandle } from './SwipeCard';
@@ -33,6 +36,9 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
   const resetIndex = useSwipeStore((s) => s.resetIndex);
   const addToCollection = useLibraryStore((s) => s.addToCollection);
   const rateTrack = usePostStore((s) => s.rateTrack);
+  const canSwipe = useSubscriptionStore((s) => s.hasFreeSwipesLeft());
+  const consumeFreeSwipe = useSubscriptionStore((s) => s.consumeFreeSwipe);
+  const router = useRouter();
 
   const { data: deck, isLoading, isError, refetch, resolvedAnchor } = useDeck(anchor, vibe, genre, currentIndex);
   const [pendingRating, setPendingRating] = useState<Track | null>(null);
@@ -56,6 +62,7 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
   const handleSwiped = useCallback(
     (track: Track, direction: SwipeDirection) => {
       advance(track, direction);
+      consumeFreeSwipe();
       // TODO: once Supabase is wired up, persist this swipe to the `swipes`
       // table too (user_id, track_id, isrc, direction, timestamp).
       if (direction === 'right') {
@@ -68,7 +75,7 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
         setPendingRating(track);
       }
     },
-    [advance, addToCollection]
+    [advance, addToCollection, consumeFreeSwipe]
   );
 
   const handleRate = useCallback(
@@ -97,7 +104,23 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
 
   let content: ReactNode;
 
-  if (isLoading) {
+  if (!canSwipe) {
+    // Fricción tipo Tinder Free (ver subscriptionStore.ts) -- se revisa antes que
+    // isLoading/isError a propósito: si ya se agotó el cupo gratis de hoy, no tiene caso
+    // esperar a que useDeck traiga un pool nuevo, la respuesta correcta es siempre esta.
+    content = (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <CrownIcon weight="fill" size={40} color={colors.premiumAccent} />
+        <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>Se acabaron tus swipes de hoy</Text>
+        <Text style={[styles.stateText, { color: colors.textSecondary }]}>
+          Con Showmi Premium tienes swipes ilimitados, todos los días.
+        </Text>
+        <Text style={[styles.retry, { color: colors.premiumAccent }]} onPress={() => router.push('/premium')}>
+          Ver Showmi Premium
+        </Text>
+      </View>
+    );
+  } else if (isLoading) {
     content = (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.brand} size="large" />
