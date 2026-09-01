@@ -37,8 +37,14 @@ export function useAuthBootstrap() {
       }
     });
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
       useAuthStore.getState().setSession(session);
+      // Cerrar sesión (ver authClient.ts signOut) no debe dejar la app sin auth.uid() --
+      // misma filosofía "sin fricción" que el bootstrap inicial: cae de vuelta a modo
+      // invitado con una sesión anónima nueva en vez de quedarse sin sesión.
+      if (event === 'SIGNED_OUT') {
+        supabase.auth.signInAnonymously().catch(() => {});
+      }
     });
 
     return () => {
