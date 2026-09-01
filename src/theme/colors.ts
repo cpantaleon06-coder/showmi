@@ -1,3 +1,17 @@
+/**
+ * 2026-08-31: pivote de identidad visual -- se abandona el azul (`brand`
+ * anterior, #2D5BFF/#1A3FCC) y la paleta Nagai/City Pop como dirección
+ * principal, a favor de constructivismo ruso: rojo de cartel, negro/crema
+ * en vez de grises suaves, bordes marcados en vez de líneas discretas
+ * (ver `border`, ahora casi negro puro en claro / casi blanco puro en
+ * oscuro -- alto contraste tipo linework de afiche, no un borde sutil).
+ * `nagaiGradient` se mantiene por ahora (sigue en uso en Perfil/Camerino y
+ * el estado seleccionado de chips) pero queda pendiente de reemplazo por
+ * el sistema reactivo de color-por-vibra (`vibeColors.ts`, nuevo) una vez
+ * se toquen esos componentes -- ver orden de implementación de la sección
+ * 8 (tokens -> swipe card -> onboarding -> edición -> Feed), esto es solo
+ * el paso 1.
+ */
 export type ThemeMode = 'light' | 'dark';
 
 export interface ThemeColors {
@@ -34,27 +48,28 @@ export interface ThemeColors {
 
 const NAGAI_GRADIENT: [string, string, string] = ['#FF8C5A', '#D9718C', '#0F6E7D'];
 
+/** Rojo de cartel constructivista -- reemplaza el azul como color interactivo primario. */
 export const darkColors: ThemeColors = {
   background: '#121212',
   surface: '#1C1620',
   textPrimary: '#F5F5F5',
   textSecondary: '#A0A0A0',
-  brand: '#2D5BFF',
+  brand: '#E8362A',
   like: '#34D399',
   pass: '#F87171',
-  border: '#2A2430',
+  border: '#F2ECE4',
   nagaiGradient: NAGAI_GRADIENT,
 };
 
 export const lightColors: ThemeColors = {
-  background: '#FAF9FC',
-  surface: '#FFFFFF',
-  textPrimary: '#1A1A1A',
-  textSecondary: '#6B6B6B',
-  brand: '#1A3FCC',
+  background: '#F3ECE0',
+  surface: '#FFFDF8',
+  textPrimary: '#141414',
+  textSecondary: '#5C5449',
+  brand: '#C81E13',
   like: '#22C55E',
   pass: '#EF4444',
-  border: '#E8E4EE',
+  border: '#141414',
   nagaiGradient: NAGAI_GRADIENT,
 };
 

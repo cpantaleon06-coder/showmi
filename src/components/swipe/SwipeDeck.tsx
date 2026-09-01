@@ -1,15 +1,17 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Track } from '../../api/types';
 import { useThemeStore } from '../../theme/useThemeStore';
+import { getVibeColor } from '../../theme/vibeColors';
 import { fonts } from '../../theme/typography';
 import { useDeck } from '../../hooks/useDeck';
 import { SwipeDirection, useSwipeStore } from '../../state/swipeStore';
 import { useLibraryStore } from '../../state/libraryStore';
 import { StarRating, usePostStore } from '../../state/postStore';
+import { CanonicalGenre } from '../../lib/genres';
 import { VibeKey } from '../../lib/vibes';
-import { SwipeCard } from './SwipeCard';
+import { SwipeCard, SwipeCardHandle } from './SwipeCard';
 import { ActionButtons } from './ActionButtons';
 import { StarRatingPicker } from './StarRatingPicker';
 
@@ -18,18 +20,37 @@ const VISIBLE_STACK_SIZE = 3;
 interface SwipeDeckProps {
   /** Vibra elegida en el selector de sesión (o null) -- ver app/(tabs)/index.tsx. */
   vibe?: VibeKey | null;
+  /** Género elegido en el selector de sesión (o null) -- mismo origen que vibe. */
+  genre?: CanonicalGenre | null;
 }
 
-export function SwipeDeck({ vibe }: SwipeDeckProps) {
+export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
   const colors = useThemeStore((s) => s.colors);
   const anchor = useSwipeStore((s) => s.anchor);
   const currentIndex = useSwipeStore((s) => s.currentIndex);
   const advance = useSwipeStore((s) => s.advance);
+  const setResolvedAnchor = useSwipeStore((s) => s.setResolvedAnchor);
   const addToCollection = useLibraryStore((s) => s.addToCollection);
   const rateTrack = usePostStore((s) => s.rateTrack);
 
-  const { data: deck, isLoading, isError, refetch } = useDeck(anchor, vibe);
+  const { data: deck, isLoading, isError, refetch, resolvedAnchor } = useDeck(anchor, vibe, genre);
   const [pendingRating, setPendingRating] = useState<Track | null>(null);
+  const activeCardRef = useRef<SwipeCardHandle>(null);
+
+  // Sistema reactivo de color por vibra (ver theme/vibeColors.ts, paso 1 de la identidad
+  // visual): reacciona a la vibra elegida en el selector de SESIÓN, no a la vibra canónica
+  // por track -- esta última existe (track_canonical_vibe) pero no sobrevive el mapeo
+  // candidate->Track en useDeck.ts, y cambiar de acento carta a carta sería más ruido visual
+  // que señal. Sin vibra de sesión, cae al rojo constructivista de marca.
+  const accentColor = getVibeColor(vibe, colors.brand);
+
+  // Sin género de sesión, `anchor` queda null y useDeck resuelve uno al azar internamente
+  // (resolvedAnchor) -- lo sincronizamos de vuelta acá para que swipeStore.anchor sea siempre
+  // el ancla REAL que se está viendo, no solo la elegida explícitamente (ver setResolvedAnchor
+  // en swipeStore.ts, y buildSessionSelection en sessionTreeStore.ts que depende de esto).
+  useEffect(() => {
+    if (!anchor) setResolvedAnchor(resolvedAnchor);
+  }, [anchor, resolvedAnchor, setResolvedAnchor]);
 
   const handleSwiped = useCallback(
     (track: Track, direction: SwipeDirection) => {
@@ -55,6 +76,22 @@ export function SwipeDeck({ vibe }: SwipeDeckProps) {
       setPendingRating(null);
     },
     [pendingRating, rateTrack]
+  );
+
+  /** Botones de acción: pasan por la MISMA animación de lanzamiento que el gesto de
+   *  arrastre (vía el ref imperativo de la tarjeta activa), en vez de saltarla -- así el
+   *  audio se detiene en el mismo lugar sin importar cuál de los dos caminos se usó (ver
+   *  SwipeCard.throwCard). Fallback directo a handleSwiped si el ref no está listo por
+   *  algún motivo, para que el botón nunca quede sin hacer nada. */
+  const triggerSwipe = useCallback(
+    (track: Track, direction: SwipeDirection) => {
+      if (activeCardRef.current) {
+        activeCardRef.current.throwCard(direction);
+      } else {
+        handleSwiped(track, direction);
+      }
+    },
+    [handleSwiped]
   );
 
   let content: ReactNode;
@@ -115,8 +152,10 @@ export function SwipeDeck({ vibe }: SwipeDeckProps) {
                     ]}
                   >
                     <SwipeCard
+                      ref={isActive ? activeCardRef : undefined}
                       track={track}
                       colors={colors}
+                      accentColor={accentColor}
                       isActive={isActive}
                       onSwiped={(direction) => handleSwiped(track, direction)}
                     />
@@ -127,9 +166,10 @@ export function SwipeDeck({ vibe }: SwipeDeckProps) {
 
           <ActionButtons
             colors={colors}
-            onPass={() => handleSwiped(topTrack, 'left')}
-            onLike={() => handleSwiped(topTrack, 'right')}
-            onHeard={() => handleSwiped(topTrack, 'up')}
+            accentColor={accentColor}
+            onPass={() => triggerSwipe(topTrack, 'left')}
+            onLike={() => triggerSwipe(topTrack, 'right')}
+            onHeard={() => triggerSwipe(topTrack, 'up')}
           />
         </View>
       );

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { TShirtIcon } from 'phosphor-react-native';
+import { PencilSimpleIcon, TShirtIcon } from 'phosphor-react-native';
 import { useQuery } from '@tanstack/react-query';
 
 import { useThemeStore } from '../src/theme/useThemeStore';
@@ -104,6 +104,11 @@ export default function ProfileScreen() {
         <Pressable onPress={() => router.push('/closet')} style={[styles.row, { borderColor: colors.border }]} hitSlop={8}>
           <TShirtIcon weight="fill" size={20} color={colors.textPrimary} />
           <Text style={[styles.rowText, { color: colors.textPrimary }]}>Camerino</Text>
+        </Pressable>
+
+        <Pressable onPress={() => router.push('/edit-onboarding')} style={[styles.row, { borderColor: colors.border }]} hitSlop={8}>
+          <PencilSimpleIcon weight="fill" size={20} color={colors.textPrimary} />
+          <Text style={[styles.rowText, { color: colors.textPrimary }]}>Editar preferencias</Text>
         </Pressable>
 
         <Pressable onPress={toggleMode} style={[styles.toggle, { borderColor: colors.brand }]} hitSlop={8}>

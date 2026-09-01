@@ -6,12 +6,15 @@ import { fonts } from '../../theme/typography';
 
 interface ActionButtonsProps {
   colors: ThemeColors;
+  /** Color reactivo de vibra de sesión (ver SwipeDeck.tsx) -- reemplaza colors.brand en el
+   *  botón central. */
+  accentColor: string;
   onPass: () => void;
   onLike: () => void;
   onHeard: () => void;
 }
 
-export function ActionButtons({ colors, onPass, onLike, onHeard }: ActionButtonsProps) {
+export function ActionButtons({ colors, accentColor, onPass, onLike, onHeard }: ActionButtonsProps) {
   return (
     <View style={styles.row}>
       <Pressable
@@ -24,10 +27,10 @@ export function ActionButtons({ colors, onPass, onLike, onHeard }: ActionButtons
 
       <Pressable
         onPress={onHeard}
-        style={[styles.button, styles.centerButton, { borderColor: colors.brand, backgroundColor: colors.brand }]}
+        style={[styles.button, styles.centerButton, { borderColor: accentColor, backgroundColor: accentColor }]}
         hitSlop={8}
       >
-        <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Ya la escuché</Text>
+        <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>YA LA ESCUCHÉ</Text>
       </Pressable>
 
       <Pressable
@@ -51,8 +54,8 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   button: {
-    borderWidth: 2,
-    borderRadius: 24,
+    borderWidth: 3,
+    borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -64,7 +67,8 @@ const styles = StyleSheet.create({
     flex: 1.3,
   },
   buttonText: {
-    fontSize: 14,
-    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    letterSpacing: 0.4,
+    fontFamily: fonts.bodyExtraBold,
   },
 });

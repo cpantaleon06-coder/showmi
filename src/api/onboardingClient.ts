@@ -10,6 +10,31 @@ export interface OnboardingAnswers {
   anchorTitle: string | null;
 }
 
+/**
+ * Trae las respuestas guardadas de un usuario que YA completó el onboarding -- fuente para
+ * precargar el formulario cuando lo reabre en modo edición (ver EditOnboardingScreen,
+ * app/edit-onboarding.tsx). `null` si no hay fila o si falla la consulta (mismo criterio
+ * conservador que hasCompletedOnboarding: nunca inventa respuestas).
+ */
+export async function fetchOnboardingAnswers(userId: string): Promise<OnboardingAnswers | null> {
+  const { data, error } = await supabase
+    .from('onboarding_quiz')
+    .select('favorite_genres, reference_artists, preferred_mood, anchor_artist, anchor_title')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error || !data) {
+    if (error) console.warn('[onboardingClient] fetchOnboardingAnswers falló:', error.message);
+    return null;
+  }
+  return {
+    favoriteGenres: (data.favorite_genres ?? []) as CanonicalGenre[],
+    referenceArtists: data.reference_artists ?? [],
+    preferredVibe: (data.preferred_mood as VibeKey | null) ?? null,
+    anchorArtist: data.anchor_artist,
+    anchorTitle: data.anchor_title,
+  };
+}
+
 /** true si este usuario ya tiene una fila en onboarding_quiz -- si falla la consulta
  *  (sin red, RLS no aplicado todavía, etc.) asume que falta hacerlo, nunca lo contrario:
  *  es preferible mostrar el quiz de más que dejar a alguien sin sembrar su taste_profile. */

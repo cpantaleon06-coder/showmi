@@ -80,8 +80,8 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
           </Text>
         </View>
         {post.isOfficial && (
-          <View style={[styles.officialBadge, { borderColor: colors.brand }]}>
-            <Text style={[styles.officialBadgeText, { color: colors.brand }]}>Showmi Oficial</Text>
+          <View style={[styles.officialBadge, { backgroundColor: colors.brand }]}>
+            <Text style={styles.officialBadgeText}>SHOWMI OFICIAL</Text>
           </View>
         )}
       </View>
@@ -89,7 +89,7 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
       {post.rating != null ? (
         <View style={styles.stars}>
           {[1, 2, 3, 4, 5].map((n) => (
-            <StarIcon key={n} weight="fill" size={18} color={n <= post.rating! ? colors.brand : colors.border} />
+            <StarIcon key={n} weight="fill" size={18} color={n <= post.rating! ? colors.brand : colors.textSecondary} />
           ))}
         </View>
       ) : (
@@ -269,8 +269,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
   },
   pickCard: {
-    borderWidth: 1.5,
-    borderRadius: 14,
+    borderWidth: 2,
+    borderRadius: 10,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -283,8 +283,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   card: {
-    borderWidth: 1,
-    borderRadius: 16,
+    borderWidth: 2,
+    borderRadius: 10,
     padding: 14,
     gap: 10,
   },
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   artwork: {
     width: 44,
     height: 44,
-    borderRadius: 6,
+    borderRadius: 10,
   },
   headerText: {
     flex: 1,
@@ -311,14 +311,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyRegular,
   },
   officialBadge: {
-    borderWidth: 1.5,
-    borderRadius: 12,
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   officialBadgeText: {
     fontSize: 10,
+    letterSpacing: 0.4,
     fontFamily: fonts.bodyExtraBold,
+    color: '#FFFFFF',
   },
   stars: {
     flexDirection: 'row',
@@ -334,7 +335,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   reviewInput: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: 10,
     padding: 10,
     fontSize: 13,

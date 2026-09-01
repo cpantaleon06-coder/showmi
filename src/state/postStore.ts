@@ -7,6 +7,8 @@ import { registerSwipeRemote } from '../api/tasteEngineClient';
 import { createRemotePost } from '../api/postsClient';
 import { Track } from '../api/types';
 import { dimensionKeys } from '../lib/tasteEngine';
+import { buildSessionSelection, useSessionTreeStore } from './sessionTreeStore';
+import { useSwipeStore } from './swipeStore';
 import { useTasteStateStore } from './tasteStateStore';
 
 export type StarRating = 1 | 2 | 3 | 4 | 5;
@@ -56,6 +58,14 @@ export const usePostStore = create<PostState>()(
         const candidate = trackToCandidate(track);
         const { liked, intensity } = ratingToSignal(rating);
         useTasteStateStore.getState().registerLocalSwipe(candidate, liked, intensity);
+
+        // Mismo patrón que advance() en swipeStore.ts -- un rating también es un swipe para
+        // efectos del árbol de sesión, con el ancla real de esta sesión (ver setResolvedAnchor).
+        const { anchor } = useSwipeStore.getState();
+        if (anchor) {
+          useSessionTreeStore.getState().recordSwipe(buildSessionSelection(anchor), liked, intensity);
+        }
+
         registerSwipeRemote(track.id, liked, intensity, dimensionKeys(candidate)).catch(() => {});
         createRemotePost(track.id, rating, track.genre).catch(() => {});
 

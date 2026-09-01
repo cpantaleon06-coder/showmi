@@ -533,3 +533,60 @@ language sql stable security definer set search_path = public as $$
   order by post_count desc
   limit p_limit;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Árbol de decisiones por sesión: perfil consolidado por nodo (2026-08-31)
+-- ---------------------------------------------------------------------------
+-- Ver taste-engine/src/sessionTree.ts (paquete standalone) para la lógica de
+-- acumulación/consolidación -- este bloque es solo la persistencia server-side
+-- de ese perfil. No aplicado al proyecto real todavía (a diferencia del resto
+-- del archivo, ver comentario del encabezado); pendiente de que el hilo de
+-- trabajo del selector de sesión/UI conecte el flujo completo antes de
+-- correrlo. NO reemplaza ni extiende `taste_profile` (favorite_genres/
+-- recurring_artists son snapshots planos, no un árbol jerárquico de nodos
+-- con peso) -- tabla nueva a propósito, misma relación uno-a-muchos que
+-- swipe_dimensions/dim_key ya usa para el motor principal.
+create table session_tree_weights (
+  user_id uuid not null references users(id) on delete cascade,
+  node_key text not null, -- ej. "idioma:es>epoca:2010s>genero:reggaeton>vibra:fiesta"
+  weight real not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, node_key)
+);
+create index session_tree_weights_user_id_idx on session_tree_weights (user_id);
+
+alter table session_tree_weights enable row level security;
+create policy "propio arbol select" on session_tree_weights for select using (auth.uid() = user_id);
+-- Insert/update pasan por consolidate_session_tree (security definer) para que el
+-- decay-then-add sea atómico -- no hay policy de insert/update directa aquí.
+
+-- p_deltas: [{"node_key": "...", "weight": <peso del acumulador de la sesión>}, ...],
+-- la salida directa de recordSessionSwipe() en sessionTree.ts, serializada por el
+-- cliente al cerrar sesión. Decae CADA nodo existente del usuario por SESSION_DECAY
+-- (0.9, ver justificación en sessionTree.ts -- constante propia, no el DECAY del
+-- motor principal, granularidades distintas: por sesión vs. por swipe individual)
+-- antes de sumar esta sesión encima -- mismo patrón decay-then-add que
+-- consolidateSession() del lado TypeScript, para que ambos lados calculen
+-- exactamente lo mismo.
+create or replace function consolidate_session_tree(p_deltas jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update session_tree_weights
+  set weight = weight * 0.9, updated_at = now()
+  where user_id = auth.uid();
+
+  insert into session_tree_weights (user_id, node_key, weight)
+  select auth.uid(), d->>'node_key', (d->>'weight')::real
+  from jsonb_array_elements(p_deltas) as d
+  on conflict (user_id, node_key) do update
+    set weight = session_tree_weights.weight + excluded.weight, updated_at = now();
+end; $$;
+
+-- Perfil completo del usuario, para el punto de integración (a) de sessionTree.ts
+-- (suggestNextSessionSelection) y (b) (sessionTreeToMultipliers) -- ambas funciones
+-- reciben el `Record<node_key, weight>` que arma esto en el cliente.
+create or replace function get_session_tree_profile()
+returns table(node_key text, weight real)
+language sql stable security definer set search_path = public as $$
+  select node_key, weight from session_tree_weights where user_id = auth.uid();
+$$;

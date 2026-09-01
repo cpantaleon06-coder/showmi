@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { CoOccurrence, DimensionWeight, GlobalStats, Neighbor } from '../lib/tasteEngine';
+import { SessionTreeWeights } from '../lib/sessionTree';
 
 /**
  * Persiste un swipe real en el ledger remoto (`swipes` + `swipe_dimensions` vía el RPC
@@ -95,6 +96,36 @@ export async function registerVibeVoteRemote(trackId: string, vibe: string): Pro
   if (error) {
     console.warn('[tasteEngineClient] registerVibeVoteRemote falló (no bloqueante):', error.message);
   }
+}
+
+/**
+ * Consolida el acumulador de la sesión de Swipe que se acaba de cerrar en el perfil de largo
+ * plazo (`session_tree_weights`, decay=0.9 + suma, ver consolidate_session_tree en
+ * schema.sql). No bloquea la UI -- se dispara al salir de la pestaña Swipe o tras
+ * backgrounding prolongado, nunca debe demorar esa transición. Un acumulador vacío no
+ * llama al RPC (nada que consolidar, evita una escritura sin sentido).
+ */
+export async function consolidateSessionTree(accumulator: SessionTreeWeights): Promise<void> {
+  const deltas = Object.entries(accumulator).map(([node_key, weight]) => ({ node_key, weight }));
+  if (deltas.length === 0) return;
+  const { error } = await supabase.rpc('consolidate_session_tree', { p_deltas: deltas });
+  if (error) {
+    console.warn('[tasteEngineClient] consolidateSessionTree falló (no bloqueante):', error.message);
+  }
+}
+
+/** Perfil consolidado del árbol de decisiones, para suggestNextSessionSelection (sessionTree.ts). */
+export async function fetchSessionTreeProfile(): Promise<SessionTreeWeights> {
+  const { data, error } = await supabase.rpc('get_session_tree_profile');
+  if (error) {
+    console.warn('[tasteEngineClient] fetchSessionTreeProfile falló:', error.message);
+    return {};
+  }
+  const profile: SessionTreeWeights = {};
+  for (const row of (data ?? []) as { node_key: string; weight: number }[]) {
+    profile[row.node_key] = row.weight;
+  }
+  return profile;
 }
 
 /** Conjunto explícito {artist_id -> conteo de likes} o {genre -> conteo}, para chips de Perfil. */

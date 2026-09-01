@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,11 +28,25 @@ const SWIPE_UP_THRESHOLD = 120;
 interface SwipeCardProps {
   track: Track;
   colors: ThemeColors;
+  /** Color reactivo de vibra de sesión (ver SwipeDeck.tsx / theme/vibeColors.ts) -- reemplaza
+   *  colors.brand como acento de esta tarjeta (edgeLight, stamp "YA LA ESCUCHÉ", tag de género). */
+  accentColor: string;
   isActive: boolean;
   onSwiped: (direction: SwipeDirection) => void;
 }
 
-export function SwipeCard({ track, colors, isActive, onSwiped }: SwipeCardProps) {
+/** Expuesto para que ActionButtons (Pasar/Guardar/Ya la escuché) dispare la MISMA animación
+ *  de lanzamiento que el gesto de arrastre, en vez de saltarla -- así el audio se detiene
+ *  en el mismo lugar (el propio `throwCard`, síncrono) sin importar por cuál de los dos
+ *  caminos llegó el swipe. */
+export interface SwipeCardHandle {
+  throwCard: (direction: SwipeDirection) => void;
+}
+
+export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard(
+  { track, colors, accentColor, isActive, onSwiped },
+  ref
+) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const reducedMotion = useReducedMotion();
@@ -69,16 +83,48 @@ export function SwipeCard({ track, colors, isActive, onSwiped }: SwipeCardProps)
     };
   }, [player]);
 
-  const finishSwipe = (direction: SwipeDirection) => {
-    onSwiped(direction);
-  };
-
   const replay = () => {
     if (!track.previewUrl) return;
     setFinished(false);
     player.seekTo(0);
     player.play();
   };
+
+  /** Duración fija del lanzamiento -- NO un spring. Un spring (damping:15/stiffness:180,
+   *  subamortiguado) tarda ~500-700ms en asentarse lo suficiente para que su callback
+   *  de finalización dispare, y ESE era el bug real reportado ("sigue sonando y tarda en
+   *  sonar la otra"): tanto el pause() como el avance del deck (que activa el audio de
+   *  la siguiente tarjeta) esperaban a ese asentamiento. Con duración fija sabemos
+   *  exactamente cuándo termina, sin importar la física del rebote. */
+  const THROW_DURATION_MS = 220;
+
+  /** Animación de lanzamiento compartida por el gesto de arrastre y por ActionButtons
+   *  (vía el ref imperativo). El pausado de audio es SÍNCRONO acá mismo, antes de
+   *  arrancar cualquier animación -- no depende de que termine ninguna, así que no
+   *  puede quedar sonando por más que dure el lanzamiento visual. El avance del deck
+   *  (`onSwiped`, que activa la tarjeta siguiente y con ella SU audio) sigue esperando
+   *  a que la animación termine para que se alcance a ver la tarjeta salir, pero ahora
+   *  con un tope fijo de THROW_DURATION_MS en vez de un asentamiento impredecible. */
+  const throwCard = (direction: SwipeDirection) => {
+    player.pause();
+    const finishSwipe = () => onSwiped(direction);
+
+    if (direction === 'right') {
+      translateX.value = reducedMotion
+        ? withTiming(SCREEN_WIDTH * 1.5, { duration: 1 }, () => runOnJS(finishSwipe)())
+        : withTiming(SCREEN_WIDTH * 1.5, { duration: THROW_DURATION_MS }, () => runOnJS(finishSwipe)());
+    } else if (direction === 'left') {
+      translateX.value = reducedMotion
+        ? withTiming(-SCREEN_WIDTH * 1.5, { duration: 1 }, () => runOnJS(finishSwipe)())
+        : withTiming(-SCREEN_WIDTH * 1.5, { duration: THROW_DURATION_MS }, () => runOnJS(finishSwipe)());
+    } else {
+      translateY.value = reducedMotion
+        ? withTiming(-SCREEN_WIDTH * 1.5, { duration: 1 }, () => runOnJS(finishSwipe)())
+        : withTiming(-SCREEN_WIDTH * 1.5, { duration: THROW_DURATION_MS }, () => runOnJS(finishSwipe)());
+    }
+  };
+
+  useImperativeHandle(ref, () => ({ throwCard }), [reducedMotion]);
 
   const pan = Gesture.Pan()
     .enabled(isActive)
@@ -91,22 +137,15 @@ export function SwipeCard({ track, colors, isActive, onSwiped }: SwipeCardProps)
       const wentLeft = translateX.value < -SWIPE_X_THRESHOLD;
       const wentUp = translateY.value < -SWIPE_UP_THRESHOLD && Math.abs(translateX.value) < SWIPE_X_THRESHOLD;
 
-      const throwSpring = { damping: 15, stiffness: 180 };
       // Movimiento reducido: nada de spring, solo un salto casi instantáneo
       // (duración 1ms, no 0, para que el callback de finalización siempre
       // dispare de forma confiable).
       if (wentRight) {
-        translateX.value = reducedMotion
-          ? withTiming(SCREEN_WIDTH * 1.5, { duration: 1 }, () => runOnJS(finishSwipe)('right'))
-          : withSpring(SCREEN_WIDTH * 1.5, throwSpring, () => runOnJS(finishSwipe)('right'));
+        runOnJS(throwCard)('right');
       } else if (wentLeft) {
-        translateX.value = reducedMotion
-          ? withTiming(-SCREEN_WIDTH * 1.5, { duration: 1 }, () => runOnJS(finishSwipe)('left'))
-          : withSpring(-SCREEN_WIDTH * 1.5, throwSpring, () => runOnJS(finishSwipe)('left'));
+        runOnJS(throwCard)('left');
       } else if (wentUp) {
-        translateY.value = reducedMotion
-          ? withTiming(-SCREEN_WIDTH * 1.5, { duration: 1 }, () => runOnJS(finishSwipe)('up'))
-          : withSpring(-SCREEN_WIDTH * 1.5, throwSpring, () => runOnJS(finishSwipe)('up'));
+        runOnJS(throwCard)('up');
       } else if (reducedMotion) {
         translateX.value = withTiming(0, { duration: 1 });
         translateY.value = withTiming(0, { duration: 1 });
@@ -156,9 +195,11 @@ export function SwipeCard({ track, colors, isActive, onSwiped }: SwipeCardProps)
   }));
 
   const cardContent = (
-    <Animated.View style={[styles.card, { backgroundColor: colors.surface }, isActive && cardStyle]}>
+    <Animated.View
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.textPrimary }, isActive && cardStyle]}
+    >
       <LinearGradient
-        colors={[colors.brand, 'transparent']}
+        colors={[accentColor, 'transparent']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.edgeLight}
@@ -168,13 +209,15 @@ export function SwipeCard({ track, colors, isActive, onSwiped }: SwipeCardProps)
       {isActive && (
         <>
           <Animated.View style={[styles.badge, styles.likeBadge, { borderColor: colors.like }, likeOpacity]}>
-            <HeartIcon weight="fill" size={28} color={colors.like} />
+            <HeartIcon weight="fill" size={26} color={colors.like} />
           </Animated.View>
           <Animated.View style={[styles.badge, styles.passBadge, { borderColor: colors.pass }, passOpacity]}>
-            <XIcon weight="fill" size={28} color={colors.pass} />
+            <XIcon weight="fill" size={26} color={colors.pass} />
           </Animated.View>
-          <Animated.View style={[styles.badge, styles.heardBadge, { borderColor: colors.brand }, heardOpacity]}>
-            <Text style={[styles.badgeText, { color: colors.brand }]}>YA LA ESCUCHÉ</Text>
+          <Animated.View
+            style={[styles.badge, styles.heardBadge, { borderColor: accentColor, backgroundColor: accentColor }, heardOpacity]}
+          >
+            <Text style={[styles.badgeText, { color: '#FFFFFF' }]}>YA LA ESCUCHÉ</Text>
           </Animated.View>
         </>
       )}
@@ -197,7 +240,11 @@ export function SwipeCard({ track, colors, isActive, onSwiped }: SwipeCardProps)
         <Text style={styles.artist} numberOfLines={1}>
           {track.artist}
         </Text>
-        {track.genre && <Text style={[styles.genre, { borderColor: 'rgba(255,255,255,0.4)' }]}>{track.genre}</Text>}
+        {track.genre && (
+          <View style={[styles.genreTag, { backgroundColor: accentColor }]}>
+            <Text style={styles.genreTagText}>{track.genre.toUpperCase()}</Text>
+          </View>
+        )}
       </LinearGradient>
     </Animated.View>
   );
@@ -207,14 +254,15 @@ export function SwipeCard({ track, colors, isActive, onSwiped }: SwipeCardProps)
   }
 
   return <GestureDetector gesture={cardGesture}>{cardContent}</GestureDetector>;
-}
+});
 
 const styles = StyleSheet.create({
   card: {
     position: 'absolute',
     width: SCREEN_WIDTH - 40,
     height: '100%',
-    borderRadius: 18,
+    borderRadius: 10,
+    borderWidth: 3,
     overflow: 'hidden',
   },
   edgeLight: {
@@ -222,7 +270,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 2,
+    height: 5,
     zIndex: 2,
   },
   artwork: {
@@ -268,22 +316,24 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyRegular,
     color: 'rgba(255,255,255,0.85)',
   },
-  genre: {
+  genreTag: {
     marginTop: 10,
     alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderRadius: 4,
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    fontSize: 12,
-    fontFamily: fonts.bodyRegular,
-    color: 'rgba(255,255,255,0.85)',
+  },
+  genreTagText: {
+    fontSize: 11,
+    letterSpacing: 0.6,
+    fontFamily: fonts.bodyExtraBold,
+    color: '#FFFFFF',
   },
   badge: {
     position: 'absolute',
     top: 32,
     borderWidth: 3,
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 10,
     zIndex: 3,
   },

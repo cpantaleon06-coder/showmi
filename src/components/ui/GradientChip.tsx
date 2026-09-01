@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { ThemeColors } from '../../theme/colors';
@@ -12,17 +11,25 @@ interface GradientChipProps {
   label: string;
   selected: boolean;
   onPress: () => void;
+  /** Color sólido del fill cuando `selected` -- default `colors.brand` (género, artista, tabs
+   *  de Biblioteca). Quien llama pasa un color de `theme/vibeColors.ts` para que un chip de
+   *  vibra reaccione con SU propio color en vez del rojo de marca genérico (ver
+   *  SessionFilterSheet.tsx/OnboardingFlow.tsx). */
+  fillColor?: string;
 }
 
 /**
- * The other reserved spot for the Nagai gradient: a chip's *selected* state
- * (active Biblioteca collection today; chosen Camerino genre / vibe chip
- * once those screens exist) gets the gradient fill instead of a flat brand
- * color, with a spring-in transition rather than an instant swap.
+ * 2026-08-31: reemplaza el fill de degradado Nagai por un bloque de color
+ * sólido (ver comentario de pivote en theme/colors.ts) -- coherente con el
+ * resto del sistema maximalista de bloques planos (SwipeCard/ActionButtons),
+ * un degradado de 3 paradas en un chip chico competía visualmente en vez de
+ * leerse como señal clara de selección. Mantiene el spring-in (`progress`)
+ * y bordes angulares (radius 4, no 18) en vez de pill.
  */
-export function GradientChip({ colors, label, selected, onPress }: GradientChipProps) {
+export function GradientChip({ colors, label, selected, onPress, fillColor }: GradientChipProps) {
   const progress = useSharedValue(selected ? 1 : 0);
   const reducedMotion = useReducedMotion();
+  const fill = fillColor ?? colors.brand;
 
   useEffect(() => {
     progress.value = reducedMotion
@@ -37,15 +44,9 @@ export function GradientChip({ colors, label, selected, onPress }: GradientChipP
 
   return (
     <Pressable onPress={onPress} style={styles.wrap}>
-      <View style={[styles.chip, { borderColor: selected ? 'transparent' : colors.border }]}>
-        <Animated.View style={[StyleSheet.absoluteFill, fillStyle]}>
-          <LinearGradient colors={colors.nagaiGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
-          {/* Flat dark scrim, not a shadow: keeps white text readable across
-              every stop of the gradient (amber alone fails contrast with
-              white ~2.3:1) without relying on a single flat brand color. */}
-          <View style={[StyleSheet.absoluteFill, styles.scrim]} />
-        </Animated.View>
-        <Text style={[styles.label, { color: selected ? '#FFFFFF' : colors.textSecondary }]}>{label}</Text>
+      <View style={[styles.chip, { borderColor: selected ? fill : colors.textPrimary }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, fillStyle, { backgroundColor: fill }]} />
+        <Text style={[styles.label, { color: selected ? '#FFFFFF' : colors.textPrimary }]}>{label}</Text>
       </View>
     </Pressable>
   );
@@ -57,16 +58,13 @@ const styles = StyleSheet.create({
   },
   chip: {
     borderWidth: 2,
-    borderRadius: 18,
+    borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
     overflow: 'hidden',
   },
   label: {
     fontSize: 13,
-    fontFamily: fonts.bodySemiBold,
-  },
-  scrim: {
-    backgroundColor: 'rgba(0,0,0,0.32)',
+    fontFamily: fonts.bodyBold,
   },
 });

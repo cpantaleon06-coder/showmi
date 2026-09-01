@@ -30,6 +30,16 @@ export interface OnboardingResult {
 interface OnboardingFlowProps {
   colors: ThemeColors;
   onComplete: (result: OnboardingResult) => void;
+  /** Precarga el formulario con respuestas ya guardadas -- ver EditOnboardingScreen
+   *  (app/edit-onboarding.tsx). Ausente = onboarding normal de primera vez. */
+  initialAnswers?: OnboardingResult;
+  /** true al reabrir desde "Editar preferencias" en Perfil -- decisión confirmada
+   *  2026-08-30 (sección 1): "botón dedicado que reabre las mismas pantallas en modo
+   *  edición". Se salta el paso de swipes semilla (`ONBOARDING_SWIPE_TARGET` es solo
+   *  para el cold-start inicial, no tiene sentido re-sembrar 8 swipes cada vez que
+   *  alguien ajusta un género) -- el flujo termina justo después de "anchor" con
+   *  "Guardar cambios" en vez de saltar a la pila de swipes. */
+  editMode?: boolean;
 }
 
 /**
@@ -37,12 +47,15 @@ interface OnboardingFlowProps {
  * usuario vea el deck normal por primera vez. A diferencia del selector de
  * sesión (efímero), esto siembra taste_profile de forma PERMANENTE -- ver
  * onComplete, que dispara submitOnboarding + seedFromOnboardingAnswers.
+ *
+ * El mismo componente sirve para el modo edición (`editMode`+`initialAnswers`):
+ * son las MISMAS pantallas, no una segunda implementación, tal como se confirmó.
  */
-export function OnboardingFlow({ colors, onComplete }: OnboardingFlowProps) {
+export function OnboardingFlow({ colors, onComplete, initialAnswers, editMode = false }: OnboardingFlowProps) {
   const [step, setStep] = useState<Step>('genres');
-  const [genres, setGenres] = useState<CanonicalGenre[]>([]);
-  const [artists, setArtists] = useState<string[]>([]);
-  const [vibe, setVibe] = useState<VibeKey | null>(null);
+  const [genres, setGenres] = useState<CanonicalGenre[]>(initialAnswers?.favoriteGenres ?? []);
+  const [artists, setArtists] = useState<string[]>(initialAnswers?.referenceArtists ?? []);
+  const [vibe, setVibe] = useState<VibeKey | null>(initialAnswers?.preferredVibe ?? null);
   const [anchorQuery, setAnchorQuery] = useState('');
   const [anchorResults, setAnchorResults] = useState<Track[]>([]);
   const [searching, setSearching] = useState(false);
@@ -77,12 +90,15 @@ export function OnboardingFlow({ colors, onComplete }: OnboardingFlowProps) {
   };
 
   const finish = () => {
+    // Sin ancla nueva elegida: conserva la que ya tenía (edición) en vez de borrarla --
+    // buscar una canción nueva es opcional en los dos modos, no confirmarla no debería
+    // vaciar lo que la persona ya tenía guardado.
     onComplete({
       favoriteGenres: genres,
       referenceArtists: artists,
       preferredVibe: vibe,
-      anchorArtist: anchor?.artist ?? null,
-      anchorTitle: anchor?.title ?? null,
+      anchorArtist: anchor?.artist ?? initialAnswers?.anchorArtist ?? null,
+      anchorTitle: anchor?.title ?? initialAnswers?.anchorTitle ?? null,
     });
   };
 
@@ -168,6 +184,11 @@ export function OnboardingFlow({ colors, onComplete }: OnboardingFlowProps) {
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Opcional -- la usamos para armar tu primer deck ("dame más como esta").
             </Text>
+            {editMode && !anchor && initialAnswers?.anchorArtist && (
+              <Text style={[styles.currentAnchor, { color: colors.textSecondary, borderColor: colors.textPrimary }]}>
+                Ancla actual: {initialAnswers.anchorTitle} — {initialAnswers.anchorArtist}
+              </Text>
+            )}
             <View style={styles.searchRow}>
               <TextInput
                 value={anchorQuery}
@@ -211,7 +232,10 @@ export function OnboardingFlow({ colors, onComplete }: OnboardingFlowProps) {
             if (step === 'genres') setStep('artists');
             else if (step === 'artists') setStep('vibe');
             else if (step === 'vibe') setStep('anchor');
-            else if (step === 'anchor') startSwipes();
+            else if (step === 'anchor') {
+              if (editMode) finish();
+              else startSwipes();
+            }
           }}
           disabled={step === 'genres' && genres.length === 0}
           style={[
@@ -220,7 +244,9 @@ export function OnboardingFlow({ colors, onComplete }: OnboardingFlowProps) {
           ]}
           hitSlop={8}
         >
-          <Text style={styles.primaryButtonText}>{step === 'anchor' ? 'Empezar a swipear' : 'Continuar'}</Text>
+          <Text style={styles.primaryButtonText}>
+            {step === 'anchor' ? (editMode ? 'Guardar cambios' : 'Empezar a swipear') : 'Continuar'}
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -257,7 +283,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   primaryButton: {
-    borderRadius: 24,
+    borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
   },
@@ -266,6 +292,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: fonts.bodyBold,
   },
+  currentAnchor: {
+    fontSize: 13,
+    fontFamily: fonts.bodySemiBold,
+    borderWidth: 2,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
   searchRow: {
     flexDirection: 'row',
     gap: 8,
@@ -273,8 +308,8 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
+    borderWidth: 2,
+    borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
@@ -282,7 +317,7 @@ const styles = StyleSheet.create({
   },
   searchButton: {
     borderWidth: 2,
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 16,
     justifyContent: 'center',
   },
@@ -294,15 +329,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderWidth: 1.5,
-    borderRadius: 12,
+    borderWidth: 2,
+    borderRadius: 10,
     padding: 8,
     marginBottom: 8,
   },
   resultArtwork: {
     width: 40,
     height: 40,
-    borderRadius: 6,
+    borderRadius: 10,
   },
   resultText: {
     flex: 1,

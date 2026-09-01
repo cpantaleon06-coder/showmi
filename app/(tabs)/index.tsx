@@ -16,8 +16,10 @@ import { curatedAnchorsByGenre } from '../../src/api/curatedSeeds';
 import { hasCompletedOnboarding, submitOnboarding } from '../../src/api/onboardingClient';
 import { ProfileButton } from '../../src/components/ui/ProfileButton';
 import { fonts } from '../../src/theme/typography';
+import { useSessionTreeConsolidation } from '../../src/hooks/useSessionTreeConsolidation';
 
 export default function SwipeScreen() {
+  useSessionTreeConsolidation();
   const colors = useThemeStore((s) => s.colors);
   const userId = useAuthStore((s) => s.session?.user.id);
   const resolvedThisSession = useSessionFilterStore((s) => s.resolvedThisSession);
@@ -110,7 +112,7 @@ export default function SwipeScreen() {
         </View>
       )}
 
-      <SwipeDeck vibe={vibe} />
+      <SwipeDeck vibe={vibe} genre={genre} />
       <ProfileButton colors={colors} style={styles.floating} />
     </SafeAreaView>
   );

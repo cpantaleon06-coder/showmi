@@ -23,7 +23,7 @@ const RATINGS: StarRating[] = [1, 2, 3, 4, 5];
 export function StarRatingPicker({ colors, track, onRate, onDismiss }: StarRatingPickerProps) {
   return (
     <View style={styles.backdrop}>
-      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.textPrimary }]}>
         <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
           {track.title}
         </Text>
@@ -60,8 +60,8 @@ const styles = StyleSheet.create({
     pointerEvents: 'box-none',
   },
   card: {
-    borderWidth: 1,
-    borderRadius: 20,
+    borderWidth: 3,
+    borderRadius: 10,
     paddingVertical: 24,
     paddingHorizontal: 28,
     alignItems: 'center',

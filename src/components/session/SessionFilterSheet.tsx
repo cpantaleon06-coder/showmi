@@ -7,6 +7,9 @@ import { fonts } from '../../theme/typography';
 import { CANONICAL_GENRES, CanonicalGenre } from '../../lib/genres';
 import { VIBES, VibeKey } from '../../lib/vibes';
 import { pickSessionGreeting } from '../../lib/greetings';
+import { suggestNextSessionSelection } from '../../lib/sessionTree';
+import { fetchSessionTreeProfile } from '../../api/tasteEngineClient';
+import { VIBE_COLORS, getVibeColor } from '../../theme/vibeColors';
 import { GradientChip } from '../ui/GradientChip';
 
 interface SessionFilterSheetProps {
@@ -30,6 +33,26 @@ export function SessionFilterSheet({ colors, onDone }: SessionFilterSheetProps) 
     pickSessionGreeting().then(setGreeting);
   }, []);
 
+  // Sugerencia basada en el árbol consolidado de sesiones previas -- si el usuario ya
+  // tocó un chip a mano cuando esto resuelve, no lo pisamos (ver guards abajo).
+  useEffect(() => {
+    fetchSessionTreeProfile().then((profile) => {
+      if (Object.keys(profile).length === 0) return;
+      const suggestion = suggestNextSessionSelection(profile);
+      setGenre((current) => {
+        if (current !== null) return current;
+        const suggested = suggestion.genero ? CANONICAL_GENRES.find((g) => g.key === suggestion.genero) : undefined;
+        return suggested ? suggested.key : current;
+      });
+      setVibe((current) => {
+        if (current !== null) return current;
+        const suggestedKey = suggestion.vibras?.[0];
+        const suggested = suggestedKey ? VIBES.find((v) => v.key === suggestedKey) : undefined;
+        return suggested ? suggested.key : current;
+      });
+    });
+  }, []);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
@@ -47,6 +70,7 @@ export function SessionFilterSheet({ colors, onDone }: SessionFilterSheetProps) 
               label={`${v.emoji} ${v.label}`}
               selected={vibe === v.key}
               onPress={() => setVibe(vibe === v.key ? null : v.key)}
+              fillColor={VIBE_COLORS[v.key]}
             />
           ))}
         </ScrollView>
@@ -68,7 +92,7 @@ export function SessionFilterSheet({ colors, onDone }: SessionFilterSheetProps) 
       <View style={styles.footer}>
         <Pressable
           onPress={() => onDone(genre, vibe)}
-          style={[styles.primaryButton, { backgroundColor: colors.brand }]}
+          style={[styles.primaryButton, { backgroundColor: getVibeColor(vibe, colors.brand) }]}
           hitSlop={8}
         >
           <Text style={styles.primaryButtonText}>{genre || vibe ? 'Empezar' : 'Deck mixto de siempre'}</Text>
@@ -119,7 +143,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   primaryButton: {
-    borderRadius: 24,
+    borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
   },

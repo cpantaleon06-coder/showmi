@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
-import { CardsIcon, NewspaperIcon, VinylRecordIcon } from 'phosphor-react-native';
+import { CardsIcon, DiscIcon, RssSimpleIcon } from 'phosphor-react-native';
 
 import { useThemeStore } from '../../src/theme/useThemeStore';
 import { fonts } from '../../src/theme/typography';
@@ -13,14 +13,20 @@ const ACTIVE_TAB_COLOR = '#F97316';
 // react-navigation types tabBarIcon's color as ColorValue (which allows
 // platform OpaqueColorValue), but every color we ever pass here is a plain
 // hex string -- Phosphor's icons only accept string, hence the cast.
+//
+// 2026-08-31: cambiados por versiones más simples (menos trazos internos) --
+// VinylRecord (surcos) y Newspaper (líneas de texto/pliegue) se veían
+// recargados a 24px junto al resto del sistema visual ya simplificado a
+// bloques planos; Disc y RssSimple leen igual de claro con mucho menos
+// detalle. Cards ya era simple, se mantiene.
 function LibraryTabIcon({ color }: { color: ColorValue }) {
-  return <VinylRecordIcon weight="fill" size={24} color={color as string} />;
+  return <DiscIcon weight="fill" size={24} color={color as string} />;
 }
 function SwipeTabIcon({ color }: { color: ColorValue }) {
   return <CardsIcon weight="fill" size={24} color={color as string} />;
 }
 function FeedTabIcon({ color }: { color: ColorValue }) {
-  return <NewspaperIcon weight="fill" size={24} color={color as string} />;
+  return <RssSimpleIcon weight="fill" size={24} color={color as string} />;
 }
 
 export default function TabsLayout() {
