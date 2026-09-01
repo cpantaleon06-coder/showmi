@@ -34,7 +34,7 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
   const addToCollection = useLibraryStore((s) => s.addToCollection);
   const rateTrack = usePostStore((s) => s.rateTrack);
 
-  const { data: deck, isLoading, isError, refetch, resolvedAnchor } = useDeck(anchor, vibe, genre);
+  const { data: deck, isLoading, isError, refetch, resolvedAnchor } = useDeck(anchor, vibe, genre, currentIndex);
   const [pendingRating, setPendingRating] = useState<Track | null>(null);
   const activeCardRef = useRef<SwipeCardHandle>(null);
 

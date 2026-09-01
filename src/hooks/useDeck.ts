@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { findItunesTrack } from '../api/itunes';
 import { getSimilarTracks, getTagTopTracks, getTrackTopTags } from '../api/lastfm';
@@ -180,13 +180,12 @@ async function seedMissingPriors(candidates: Candidate[]): Promise<void> {
  * porque swipeStore.ts/postStore.ts no llaman `recordSwipe`, ver nota en sessionTreeStore.ts)
  * y el boost explícito de la vibra elegida en el selector de sesión, que pisa esa clave si
  * ambas la tocan.
+ *
+ * Separado de `buildDeck`/`buildMoreTracks` para que las dos compartan exactamente el mismo
+ * ranking -- "cargar más" (ver loadMore más abajo) no es un pipeline distinto, es el mismo
+ * pipeline corriendo sobre un pool crudo distinto.
  */
-async function buildDeck(
-  anchor: DeckAnchor,
-  vibe?: VibeKey | null,
-  genre?: CanonicalGenre | null,
-): Promise<Track[]> {
-  const pool = await fetchCandidatePool(anchor, genre);
+async function rankPool(pool: Track[], vibe?: VibeKey | null, genre?: CanonicalGenre | null): Promise<Track[]> {
   if (pool.length === 0) return pool;
 
   // Vibra canónica por track (voto mayoritario, puede no existir todavía para canciones con
@@ -224,17 +223,81 @@ async function buildDeck(
     .filter((track): track is Track => track !== undefined);
 }
 
-export function useDeck(anchor: DeckAnchor | null, vibe?: VibeKey | null, genre?: CanonicalGenre | null) {
+async function buildDeck(anchor: DeckAnchor, vibe?: VibeKey | null, genre?: CanonicalGenre | null): Promise<Track[]> {
+  const pool = await fetchCandidatePool(anchor, genre);
+  return rankPool(pool, vibe, genre);
+}
+
+/**
+ * Trae otro pool crudo (misma fuente que buildDeck -- similitud del ancla + tag.getTopTracks)
+ * y lo rankea igual, pero excluyendo los tracks que el deck actual ya tiene (`excludeTrackIds`)
+ * para no duplicar cartas ya vistas -- ver loadMore en useDeck() más abajo.
+ */
+async function buildMoreTracks(
+  anchor: DeckAnchor,
+  vibe: VibeKey | null | undefined,
+  genre: CanonicalGenre | null | undefined,
+  excludeTrackIds: Set<string>,
+): Promise<Track[]> {
+  const pool = await fetchCandidatePool(anchor, genre);
+  const freshPool = pool.filter((track) => !excludeTrackIds.has(track.id));
+  return rankPool(freshPool, vibe, genre);
+}
+
+/**
+ * Cuántas cartas sin ver deben quedar antes de pedir más en segundo plano -- pedido explícito
+ * del usuario: "después de las sesenta canciones se busquen más". Un pool típico (con las
+ * edge functions desplegadas) ronda 50-85 tracks, así que un colchón de 20 dispara la primera
+ * carga extra justo alrededor de la carta 60, sin ser un índice absoluto (un pool más chico
+ * -- ej. un género nicho que no llegó al mínimo -- también pide más antes de vaciarse del
+ * todo, en vez de esperar a un número fijo que ese pool nunca alcanzaría).
+ */
+const LOAD_MORE_WHEN_REMAINING = 20;
+
+export function useDeck(anchor: DeckAnchor | null, vibe?: VibeKey | null, genre?: CanonicalGenre | null, currentIndex = 0) {
   // Picked once per null-anchor mount so the query key stays stable across
   // re-renders instead of re-rolling (and re-fetching) a new anchor every time.
   const fallbackAnchor = useMemo(() => pickDefaultAnchor(), []);
   const resolvedAnchor = anchor ?? fallbackAnchor;
+  const queryClient = useQueryClient();
+
+  const queryKey = ['deck', resolvedAnchor.artist, resolvedAnchor.title, vibe ?? null, genre ?? null];
 
   const query = useQuery({
-    queryKey: ['deck', resolvedAnchor.artist, resolvedAnchor.title, vibe ?? null, genre ?? null],
+    queryKey,
     queryFn: () => buildDeck(resolvedAnchor, vibe, genre),
     staleTime: 1000 * 60 * 30,
   });
+
+  const loadMoreMutation = useMutation({
+    mutationFn: async () => {
+      const current = queryClient.getQueryData<Track[]>(queryKey) ?? [];
+      const excludeIds = new Set(current.map((track) => track.id));
+      return buildMoreTracks(resolvedAnchor, vibe, genre, excludeIds);
+    },
+    onSuccess: (more) => {
+      if (more.length === 0) return;
+      queryClient.setQueryData<Track[]>(queryKey, (old) => [...(old ?? []), ...more]);
+    },
+  });
+
+  // Dispara loadMore una sola vez por "racha baja" -- sin este ref, el efecto se re-dispararía
+  // en cada swipe mientras currentIndex siga dentro del colchón (incluso ya con una carga en
+  // camino, o ya habiendo pedido todo lo que la fuente tenía), inundando de mutaciones
+  // repetidas. Se resuelve solo apenas vuelve a haber margen (llegó un batch nuevo de verdad).
+  const hasRequestedMoreRef = useRef(false);
+  useEffect(() => {
+    const deck = query.data;
+    if (!deck) return;
+    const remaining = deck.length - currentIndex;
+    if (remaining > LOAD_MORE_WHEN_REMAINING) {
+      hasRequestedMoreRef.current = false;
+      return;
+    }
+    if (hasRequestedMoreRef.current || loadMoreMutation.isPending) return;
+    hasRequestedMoreRef.current = true;
+    loadMoreMutation.mutate();
+  }, [currentIndex, query.data, loadMoreMutation]);
 
   // Expuesto para que quien llama pueda sincronizar el ancla REAL (elegida o resuelta al
   // azar) de vuelta a swipeStore -- sin esto, un swipe en un deck sin género de sesión no
