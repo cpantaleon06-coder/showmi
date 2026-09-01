@@ -2,6 +2,7 @@ import { FilterableCandidate } from '../lib/deckPipeline';
 import { resolveEpoca } from '../lib/epocas';
 import { resolveCanonicalGenre } from '../lib/genres';
 import { resolveIdioma } from '../lib/idiomas';
+import { CatalogEntry } from './tasteEngineClient';
 import { normalizeForMatch } from './normalize';
 import { DeckAnchor, Track } from './types';
 
@@ -44,7 +45,12 @@ import { DeckAnchor, Track } from './types';
  * muchas más veces. `extraTags` es opcional y best-effort (quien llama en useDeck.ts ya lo
  * trae con `.catch(() => [])` resuelto) -- sin él, el comportamiento es idéntico al de antes.
  */
-export function trackToCandidate(track: Track, vibe?: string, extraTags: string[] = []): FilterableCandidate {
+export function trackToCandidate(
+  track: Track,
+  vibe?: string,
+  extraTags: string[] = [],
+  catalogEntry?: CatalogEntry,
+): FilterableCandidate {
   const genreTags = [track.genre, ...extraTags].filter((t): t is string => !!t);
   return {
     trackId: track.id,
@@ -52,10 +58,10 @@ export function trackToCandidate(track: Track, vibe?: string, extraTags: string[
     releaseDate: track.releaseDate ?? '',
     genre: track.genre ?? undefined,
     vibe,
-    genero: genreTags.length > 0 ? (resolveCanonicalGenre(genreTags) ?? undefined) : undefined,
+    genero: catalogEntry?.genero ?? (genreTags.length > 0 ? (resolveCanonicalGenre(genreTags) ?? undefined) : undefined),
     vibras: vibe ? [vibe] : undefined,
-    idioma: resolveIdioma(track.title, track.artist) ?? undefined,
-    epoca: resolveEpoca(track.releaseDate) ?? undefined,
+    idioma: catalogEntry?.idioma ?? resolveIdioma(track.title, track.artist) ?? undefined,
+    epoca: catalogEntry?.epoca ?? resolveEpoca(track.releaseDate) ?? undefined,
   };
 }
 

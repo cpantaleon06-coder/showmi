@@ -6,7 +6,7 @@ import { getSimilarTracks, getTagTopTracks, getTrackTopTags } from '../api/lastf
 import { normalizeForMatch } from '../api/normalize';
 import { curatedAnchorsByGenre, curatedSimilarSeeds } from '../api/curatedSeeds';
 import { trackToCandidate } from '../api/tasteAdapter';
-import { fetchArtistNeighborsBatch, fetchGlobalStats, fetchTrackVibes } from '../api/tasteEngineClient';
+import { fetchArtistNeighborsBatch, fetchGlobalStats, fetchTrackCatalog, fetchTrackVibes } from '../api/tasteEngineClient';
 import { DeckAnchor, SimilarTrackSeed, Track } from '../api/types';
 import { CANONICAL_GENRES, CanonicalGenre } from '../lib/genres';
 import { VibeKey } from '../lib/vibes';
@@ -189,15 +189,22 @@ async function rankPool(pool: Track[], vibe?: VibeKey | null, genre?: CanonicalG
   if (pool.length === 0) return pool;
 
   // Vibra canónica por track (voto mayoritario, puede no existir todavía para canciones con
-  // pocos votos) y tags reales de Last.fm por track (para resolver `genero` con más que el
-  // string único de iTunes, ver trackToCandidate) -- ambos en batch, no uno por track cada uno.
-  const [vibesByTrackId, tagsByTrackId] = await Promise.all([
+  // pocos votos), tags reales de Last.fm por track (para resolver `genero` con más que el
+  // string único de iTunes, ver trackToCandidate) y catálogo idioma/época/género ya resuelto
+  // server-side (ver classify-tracks, corre a diario) -- los tres en batch, no uno por track
+  // cada uno. Un track ausente del catálogo simplemente todavía no pasó por el job; trackToCandidate
+  // cae al heurístico local en ese caso.
+  const [vibesByTrackId, tagsByTrackId, catalogByTrackId] = await Promise.all([
     fetchTrackVibes(pool.map((track) => track.id)),
     fetchTopTagsByTrackId(pool),
+    fetchTrackCatalog(pool.map((track) => track.id)),
   ]);
 
   const candidatesByTrackId = new Map(
-    pool.map((track) => [track.id, trackToCandidate(track, vibesByTrackId[track.id], tagsByTrackId[track.id])]),
+    pool.map((track) => [
+      track.id,
+      trackToCandidate(track, vibesByTrackId[track.id], tagsByTrackId[track.id], catalogByTrackId[track.id]),
+    ]),
   );
   const candidates = [...candidatesByTrackId.values()];
 

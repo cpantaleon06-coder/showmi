@@ -87,6 +87,32 @@ export async function fetchTrackVibes(trackIds: string[]): Promise<Record<string
   return vibes;
 }
 
+export interface CatalogEntry {
+  idioma: string | null;
+  epoca: string | null;
+  genero: string | null;
+}
+
+/**
+ * Idioma/época/género ya clasificados server-side (ver supabase/functions/classify-tracks,
+ * corre a diario vía pg_cron) para un batch de tracks. Un track ausente del resultado
+ * simplemente todavía no pasó por el job -- quien llama (tasteAdapter.ts) cae al
+ * heurístico local en ese caso, nunca bloquea ni trata esto como error.
+ */
+export async function fetchTrackCatalog(trackIds: string[]): Promise<Record<string, CatalogEntry>> {
+  if (trackIds.length === 0) return {};
+  const { data, error } = await supabase.rpc('get_track_catalog', { p_track_ids: trackIds });
+  if (error) {
+    console.warn('[tasteEngineClient] fetchTrackCatalog falló:', error.message);
+    return {};
+  }
+  const catalog: Record<string, CatalogEntry> = {};
+  for (const row of (data ?? []) as { track_id: string; idioma: string | null; epoca: string | null; genero: string | null }[]) {
+    catalog[row.track_id] = { idioma: row.idioma, epoca: row.epoca, genero: row.genero };
+  }
+  return catalog;
+}
+
 /**
  * Registra (o actualiza) el voto de vibra del usuario para un track. Mismo patrón que
  * registerSwipeRemote: no bloquea la UI, se traga sus propios errores.

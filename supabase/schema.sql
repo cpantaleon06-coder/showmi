@@ -611,3 +611,76 @@ alter table track_vibe_votes add constraint track_vibe_votes_vibe_check check (v
   ('fiesta','romantico','nostalgico','hype','chill','heartbreak','introspectivo','desahogo',
    'motivacional','melancolico','enamorado','sensual','empoderamiento','rabia','alegre',
    'relajacion','viaje','enfoque'));
+
+-- ---------------------------------------------------------------------------
+-- Catálogo de clasificación por lote: idioma/época/género (2026-09-01)
+-- ---------------------------------------------------------------------------
+-- "Workflow con Deno" pedido explícitamente -- ver supabase/functions/classify-tracks.
+-- Hasta ahora idioma/época/género se resolvían en el CLIENTE, en cada armado de deck,
+-- para cada candidato (ver src/api/tasteAdapter.ts) -- funciona, pero recalcula lo mismo
+-- una y otra vez para el mismo track_id entre sesiones/usuarios distintos. Esta tabla es
+-- el resultado cacheado de resolverlo UNA vez por track, vía un cron diario que llama la
+-- función de Deno. El cliente (fetchTrackCatalog en tasteEngineClient.ts) prefiere este
+-- valor cuando existe y cae al heurístico local si el track todavía no pasó por acá --
+-- nunca bloquea, es una mejora de PRECISIÓN/EFICIENCIA, no una dependencia dura nueva.
+create table track_catalog (
+  track_id text primary key,
+  title text not null,
+  artist text not null,
+  release_date text,
+  idioma text,
+  epoca text,
+  genero text,
+  classified_at timestamptz not null default now()
+);
+create index track_catalog_genero_idx on track_catalog (genero);
+
+-- Catálogo público de solo lectura (no hay dato de usuario acá) -- insert/update solo vía
+-- el service role que usa la función de Deno, nunca desde el cliente ni con una policy de
+-- insert/update propia.
+alter table track_catalog enable row level security;
+create policy "catalogo publico select" on track_catalog for select using (true);
+
+-- Candidatos a clasificar: cualquier track_id que ya aparece en swipes/votos/posts (o sea,
+-- alguien ya lo vio de verdad) pero todavía no tiene fila en track_catalog. security definer
+-- porque swipes/track_vibe_votes tienen RLS "auth.uid() = user_id" -- sin esto, el join
+-- quedaría filtrado solo a los track_ids de quien llama, no a los de toda la comunidad.
+create or replace function get_unclassified_track_ids(p_limit int default 50)
+returns table(track_id text)
+language sql stable security definer set search_path = public as $$
+  select distinct t.track_id from (
+    select track_id from swipes
+    union
+    select track_id from track_vibe_votes
+    union
+    select track_id from posts where track_id is not null
+  ) t
+  left join track_catalog c on c.track_id = t.track_id
+  where c.track_id is null
+  limit p_limit;
+$$;
+
+-- Lectura en batch para el cliente (mismo patrón que get_track_vibes).
+create or replace function get_track_catalog(p_track_ids text[])
+returns table(track_id text, idioma text, epoca text, genero text)
+language sql stable security definer set search_path = public as $$
+  select track_id, idioma, epoca, genero from track_catalog where track_id = any(p_track_ids);
+$$;
+
+-- Diario (no cada hora -- el heurístico de idioma/género no cambia de un día para otro, y
+-- LASTFM_API_KEY tiene rate limit; cadencia confirmada con el usuario: "batch periódico,
+-- como los otros dos jobs"). El cron llama la función vía pg_net con la anon key (pública
+-- por diseño), la función misma usa su SUPABASE_SERVICE_ROLE_KEY (inyectada automáticamente
+-- por Supabase, no hay que configurarla a mano) para poder escribir en track_catalog.
+select cron.schedule('classify-tracks-daily', '0 4 * * *', -- 4am, antes de seed-official-feed/community-picks del lunes
+  $$
+  select net.http_post(
+    url := 'https://wdgjdgsxmwgsqrrngxyp.supabase.co/functions/v1/classify-tracks',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndkZ2pkZ3N4bXdnc3Fycm5neHlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NTM3ODAsImV4cCI6MjEwMzQyOTc4MH0.813AhFQdd0OncLzz9nEWyO7bdNmeVwbpTmm3d-PaI2k',
+      'Content-Type', 'application/json'
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
