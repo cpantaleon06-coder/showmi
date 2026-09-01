@@ -30,6 +30,7 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
   const currentIndex = useSwipeStore((s) => s.currentIndex);
   const advance = useSwipeStore((s) => s.advance);
   const setResolvedAnchor = useSwipeStore((s) => s.setResolvedAnchor);
+  const resetIndex = useSwipeStore((s) => s.resetIndex);
   const addToCollection = useLibraryStore((s) => s.addToCollection);
   const rateTrack = usePostStore((s) => s.rateTrack);
 
@@ -110,7 +111,13 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
         <Text style={[styles.stateText, { color: colors.textSecondary }]}>
           No pudimos cargar tu deck. Revisa tu conexión e intenta de nuevo.
         </Text>
-        <Text style={[styles.retry, { color: colors.brand }]} onPress={() => refetch()}>
+        <Text
+          style={[styles.retry, { color: colors.brand }]}
+          onPress={() => {
+            resetIndex();
+            refetch();
+          }}
+        >
           Reintentar
         </Text>
       </View>
@@ -125,7 +132,17 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
           <Text style={[styles.stateText, { color: colors.textSecondary }]}>
             Vuelve más tarde o busca "dame más como esta" desde tu Biblioteca.
           </Text>
-          <Text style={[styles.retry, { color: colors.brand }]} onPress={() => refetch()}>
+          <Text
+            style={[styles.retry, { color: colors.brand }]}
+            onPress={() => {
+              // Bug real de debugging: sin esto, refetch() volvía a traer un pool y
+              // `remaining` seguía vacío (currentIndex se quedaba apuntando más allá del
+              // deck agotado) -- "Buscar más" no hacía nada visible. Ver comentario en
+              // swipeStore.ts (resetIndex).
+              resetIndex();
+              refetch();
+            }}
+          >
             Buscar más
           </Text>
         </View>

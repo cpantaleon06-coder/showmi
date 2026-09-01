@@ -33,6 +33,16 @@ interface SwipeState {
    * de un swipe (ver sessionTreeStore.ts).
    */
   setResolvedAnchor: (anchor: DeckAnchor) => void;
+  /**
+   * Bug real encontrado en debugging: "Buscar más"/"Reintentar" (SwipeDeck.tsx) llamaban
+   * refetch() de React Query sin esto -- currentIndex se queda donde estaba (más allá del
+   * deck ya agotado), así que un refetch con el MISMO anchor podía devolver una pila del
+   * mismo tamaño y quedar en "Se acabaron las tarjetas" para siempre, o saltarse las
+   * primeras N canciones de un pool nuevo más grande. No toca `anchor` -- a diferencia de
+   * reanchor/clearAnchor, esto no es "cambiar de ancla", solo "quiero ver este mismo pool
+   * desde el principio otra vez".
+   */
+  resetIndex: () => void;
 }
 
 /**
@@ -83,4 +93,5 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
   reanchor: (anchor) => set({ anchor, currentIndex: 0, history: [] }),
   clearAnchor: () => set({ anchor: null, currentIndex: 0, history: [] }),
   setResolvedAnchor: (anchor) => set({ anchor }),
+  resetIndex: () => set({ currentIndex: 0 }),
 }));
