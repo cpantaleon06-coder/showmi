@@ -13,6 +13,9 @@
  * track_vibe_votes en supabase/schema.sql (pendiente de aplicar, ver
  * comentario ahí) Y actualizar theme/vibeColors.ts con un color por cada
  * vibra nueva -- las tres cosas tienen que moverse juntas.
+ *
+ * 2026-09-01: agregado `category` -- mismo motivo que GenreCategory en
+ * genres.ts (ver CategorizedChipPicker.tsx).
  */
 export type VibeKey =
   | 'fiesta'
@@ -34,29 +37,34 @@ export type VibeKey =
   | 'viaje'
   | 'enfoque';
 
+export type VibeCategory = 'Para Subir el Ánimo' | 'Amor' | 'Para Relajarte' | 'Emociones Intensas';
+
+export const VIBE_CATEGORY_ORDER: VibeCategory[] = ['Para Subir el Ánimo', 'Amor', 'Para Relajarte', 'Emociones Intensas'];
+
 export interface VibeDef {
   key: VibeKey;
+  category: VibeCategory;
   label: string;
   emoji: string;
 }
 
 export const VIBES: VibeDef[] = [
-  { key: 'fiesta', label: 'Fiesta', emoji: '🎉' },
-  { key: 'romantico', label: 'Romántico', emoji: '💕' },
-  { key: 'nostalgico', label: 'Nostálgico', emoji: '🌇' },
-  { key: 'hype', label: 'Hype', emoji: '🔥' },
-  { key: 'chill', label: 'Chill', emoji: '😌' },
-  { key: 'heartbreak', label: 'Heartbreak', emoji: '💔' },
-  { key: 'introspectivo', label: 'Introspectivo', emoji: '🌙' },
-  { key: 'desahogo', label: 'Desahogo', emoji: '😮‍💨' },
-  { key: 'motivacional', label: 'Motivacional', emoji: '💪' },
-  { key: 'melancolico', label: 'Melancólico', emoji: '🥀' },
-  { key: 'enamorado', label: 'Enamorado', emoji: '😍' },
-  { key: 'sensual', label: 'Sensual', emoji: '🌶️' },
-  { key: 'empoderamiento', label: 'Empoderamiento', emoji: '👑' },
-  { key: 'rabia', label: 'Rabia', emoji: '😤' },
-  { key: 'alegre', label: 'Alegre', emoji: '☀️' },
-  { key: 'relajacion', label: 'Relajación', emoji: '🛌' },
-  { key: 'viaje', label: 'De Viaje', emoji: '🚗' },
-  { key: 'enfoque', label: 'Enfoque', emoji: '🎯' },
+  { key: 'fiesta', category: 'Para Subir el Ánimo', label: 'Fiesta', emoji: '🎉' },
+  { key: 'hype', category: 'Para Subir el Ánimo', label: 'Hype', emoji: '🔥' },
+  { key: 'motivacional', category: 'Para Subir el Ánimo', label: 'Motivacional', emoji: '💪' },
+  { key: 'empoderamiento', category: 'Para Subir el Ánimo', label: 'Empoderamiento', emoji: '👑' },
+  { key: 'alegre', category: 'Para Subir el Ánimo', label: 'Alegre', emoji: '☀️' },
+  { key: 'viaje', category: 'Para Subir el Ánimo', label: 'De Viaje', emoji: '🚗' },
+  { key: 'romantico', category: 'Amor', label: 'Romántico', emoji: '💕' },
+  { key: 'enamorado', category: 'Amor', label: 'Enamorado', emoji: '😍' },
+  { key: 'sensual', category: 'Amor', label: 'Sensual', emoji: '🌶️' },
+  { key: 'heartbreak', category: 'Amor', label: 'Heartbreak', emoji: '💔' },
+  { key: 'chill', category: 'Para Relajarte', label: 'Chill', emoji: '😌' },
+  { key: 'relajacion', category: 'Para Relajarte', label: 'Relajación', emoji: '🛌' },
+  { key: 'introspectivo', category: 'Para Relajarte', label: 'Introspectivo', emoji: '🌙' },
+  { key: 'enfoque', category: 'Para Relajarte', label: 'Enfoque', emoji: '🎯' },
+  { key: 'rabia', category: 'Emociones Intensas', label: 'Rabia', emoji: '😤' },
+  { key: 'desahogo', category: 'Emociones Intensas', label: 'Desahogo', emoji: '😮‍💨' },
+  { key: 'melancolico', category: 'Emociones Intensas', label: 'Melancólico', emoji: '🥀' },
+  { key: 'nostalgico', category: 'Emociones Intensas', label: 'Nostálgico', emoji: '🌇' },
 ];

@@ -5,14 +5,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemeColors } from '../../theme/colors';
 import { fonts } from '../../theme/typography';
-import { CANONICAL_GENRES, CanonicalGenre } from '../../lib/genres';
-import { VIBES, VibeKey } from '../../lib/vibes';
+import { CANONICAL_GENRES, CanonicalGenre, GENRE_CATEGORY_ORDER } from '../../lib/genres';
+import { VIBES, VIBE_CATEGORY_ORDER, VibeKey } from '../../lib/vibes';
 import { artistsForGenre, curatedAnchorsByGenre } from '../../api/curatedSeeds';
 import { searchItunesTracks } from '../../api/itunes';
 import { Track } from '../../api/types';
 import { DeckAnchor } from '../../hooks/useDeck';
 import { useSwipeStore } from '../../state/swipeStore';
 import { GradientChip } from '../ui/GradientChip';
+import { CategorizedChipPicker } from '../ui/CategorizedChipPicker';
 import { SwipeDeck } from '../swipe/SwipeDeck';
 
 const ONBOARDING_SWIPE_TARGET = 8;
@@ -134,17 +135,13 @@ export function OnboardingFlow({ colors, onComplete, initialAnswers, editMode = 
           <>
             <Text style={[styles.title, { color: colors.textPrimary }]}>¿Qué géneros te laten?</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Elige los que quieras -- al menos uno.</Text>
-            <View style={styles.chipWrap}>
-              {CANONICAL_GENRES.map((g) => (
-                <GradientChip
-                  key={g.key}
-                  colors={colors}
-                  label={`${g.emoji} ${g.label}`}
-                  selected={genres.includes(g.key)}
-                  onPress={() => toggleGenre(g.key)}
-                />
-              ))}
-            </View>
+            <CategorizedChipPicker
+              colors={colors}
+              items={CANONICAL_GENRES}
+              categoryOrder={GENRE_CATEGORY_ORDER}
+              isSelected={(key) => genres.includes(key)}
+              onSelect={toggleGenre}
+            />
           </>
         )}
 
@@ -164,17 +161,13 @@ export function OnboardingFlow({ colors, onComplete, initialAnswers, editMode = 
           <>
             <Text style={[styles.title, { color: colors.textPrimary }]}>¿Con qué ánimo vienes casi siempre?</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Opcional -- puedes cambiarlo por sesión más adelante.</Text>
-            <View style={styles.chipWrap}>
-              {VIBES.map((v) => (
-                <GradientChip
-                  key={v.key}
-                  colors={colors}
-                  label={`${v.emoji} ${v.label}`}
-                  selected={vibe === v.key}
-                  onPress={() => setVibe(vibe === v.key ? null : v.key)}
-                />
-              ))}
-            </View>
+            <CategorizedChipPicker
+              colors={colors}
+              items={VIBES}
+              categoryOrder={VIBE_CATEGORY_ORDER}
+              isSelected={(key) => vibe === key}
+              onSelect={(key) => setVibe(vibe === key ? null : key)}
+            />
           </>
         )}
 

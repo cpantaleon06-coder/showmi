@@ -4,13 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemeColors } from '../../theme/colors';
 import { fonts } from '../../theme/typography';
-import { CANONICAL_GENRES, CanonicalGenre } from '../../lib/genres';
-import { VIBES, VibeKey } from '../../lib/vibes';
+import { CANONICAL_GENRES, CanonicalGenre, GENRE_CATEGORY_ORDER } from '../../lib/genres';
+import { VIBES, VIBE_CATEGORY_ORDER, VibeKey } from '../../lib/vibes';
 import { pickSessionGreeting } from '../../lib/greetings';
 import { suggestNextSessionSelection } from '../../lib/sessionTree';
 import { fetchSessionTreeProfile } from '../../api/tasteEngineClient';
 import { VIBE_COLORS, getVibeColor } from '../../theme/vibeColors';
-import { GradientChip } from '../ui/GradientChip';
+import { CategorizedChipPicker } from '../ui/CategorizedChipPicker';
 
 interface SessionFilterSheetProps {
   colors: ThemeColors;
@@ -23,6 +23,14 @@ interface SessionFilterSheetProps {
  * pasa tal cual a useDeck (género ancla el deck, vibra alimenta
  * sessionMultipliers sobre la dimensión real vibra:x) -- no es decorativa
  * como el encabezado rotativo.
+ *
+ * 2026-09-01: las dos filas de scroll horizontal (una por vibra, otra por
+ * género) se reemplazaron por CategorizedChipPicker -- con 37 géneros y 18
+ * vibras, una fila de scroll ya no se puede escanear de un vistazo (varios
+ * quedaban "escondidos" fuera de la pantalla inicial sin pista de que
+ * seguían ahí). El contenido ahora scrollea verticalmente completo (antes
+ * era un View fijo con dos ScrollViews horizontales anidados) porque el
+ * picker categorizado es bastante más alto.
  */
 export function SessionFilterSheet({ colors, onDone }: SessionFilterSheetProps) {
   const [genre, setGenre] = useState<CanonicalGenre | null>(null);
@@ -55,39 +63,31 @@ export function SessionFilterSheet({ colors, onDone }: SessionFilterSheetProps) 
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>{greeting}</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Elige vibra y/o género para esta sesión -- puedes omitirlo.
         </Text>
 
         <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Vibra</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-          {VIBES.map((v) => (
-            <GradientChip
-              key={v.key}
-              colors={colors}
-              label={`${v.emoji} ${v.label}`}
-              selected={vibe === v.key}
-              onPress={() => setVibe(vibe === v.key ? null : v.key)}
-              fillColor={VIBE_COLORS[v.key]}
-            />
-          ))}
-        </ScrollView>
+        <CategorizedChipPicker
+          colors={colors}
+          items={VIBES}
+          categoryOrder={VIBE_CATEGORY_ORDER}
+          isSelected={(key) => vibe === key}
+          onSelect={(key) => setVibe(vibe === key ? null : key)}
+          fillColorFor={(key) => VIBE_COLORS[key]}
+        />
 
         <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Género</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-          {CANONICAL_GENRES.map((g) => (
-            <GradientChip
-              key={g.key}
-              colors={colors}
-              label={`${g.emoji} ${g.label}`}
-              selected={genre === g.key}
-              onPress={() => setGenre(genre === g.key ? null : g.key)}
-            />
-          ))}
-        </ScrollView>
-      </View>
+        <CategorizedChipPicker
+          colors={colors}
+          items={CANONICAL_GENRES}
+          categoryOrder={GENRE_CATEGORY_ORDER}
+          isSelected={(key) => genre === key}
+          onSelect={(key) => setGenre(genre === key ? null : key)}
+        />
+      </ScrollView>
 
       <View style={styles.footer}>
         <Pressable
@@ -112,9 +112,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    flex: 1,
     paddingHorizontal: 24,
     paddingTop: 24,
+    paddingBottom: 12,
   },
   title: {
     fontSize: 24,
@@ -133,13 +133,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 10,
   },
-  chipRow: {
-    gap: 8,
-    paddingBottom: 24,
-  },
   footer: {
     paddingHorizontal: 24,
     paddingBottom: 24,
+    paddingTop: 12,
     gap: 12,
   },
   primaryButton: {

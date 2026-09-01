@@ -60,8 +60,30 @@ export type CanonicalGenre =
   | 'gospel_cristiana'
   | 'punk';
 
+/**
+ * 2026-09-01: agregado `category` -- con 37 géneros, una sola fila de scroll
+ * horizontal (o un wrap plano) ya no se puede escanear de un vistazo. El
+ * selector ahora agrupa por categoría con "mostrar más" por sección (ver
+ * CategorizedChipPicker.tsx, inspirado en el picker de intereses de apps
+ * tipo Hinge que mandó el usuario de referencia) en vez de una lista larga
+ * sin estructura.
+ */
+export type GenreCategory = 'Latino' | 'Rock/Alternativo' | 'Pop/Urbano' | 'Electrónica/Chill' | 'Raíces' | 'Del Mundo';
+
+/** Orden de aparición de las secciones en el selector -- Latino primero porque sigue siendo
+ *  el foco principal del mercado de Showmi (ver memoria de producto), no alfabético. */
+export const GENRE_CATEGORY_ORDER: GenreCategory[] = [
+  'Latino',
+  'Rock/Alternativo',
+  'Pop/Urbano',
+  'Electrónica/Chill',
+  'Raíces',
+  'Del Mundo',
+];
+
 export interface GenreDef {
   key: CanonicalGenre;
+  category: GenreCategory;
   label: string;
   emoji: string;
   lastfmTagSynonyms: string[];
@@ -70,12 +92,14 @@ export interface GenreDef {
 export const CANONICAL_GENRES: GenreDef[] = [
   {
     key: 'corridos_tumbados_regional',
+    category: 'Latino',
     label: 'Corridos/Regional',
     emoji: '🤠',
     lastfmTagSynonyms: ['corridos tumbados', 'corrido tumbado', 'corrido bélico', 'sad sierreño', 'sierreño', 'corridos'],
   },
   {
     key: 'banda_norteno',
+    category: 'Latino',
     label: 'Banda/Norteño',
     emoji: '🪗',
     // "regional mexicano" es un tag paraguas ambiguo -- solo se usa como
@@ -84,210 +108,245 @@ export const CANONICAL_GENRES: GenreDef[] = [
   },
   {
     key: 'reggaeton',
+    category: 'Latino',
     label: 'Reggaetón',
     emoji: '🎤',
     lastfmTagSynonyms: ['reggaeton', 'reggaetón', 'urbano latino', 'latin urban'],
   },
   {
     key: 'trap_latino',
+    category: 'Latino',
     label: 'Trap Latino',
     emoji: '🕶️',
     lastfmTagSynonyms: ['trap latino', 'latin trap', 'trap en español'],
   },
   {
     key: 'salsa',
+    category: 'Latino',
     label: 'Salsa',
     emoji: '💃',
     lastfmTagSynonyms: ['salsa', 'salsa romantica', 'salsa dura'],
   },
   {
     key: 'bachata',
+    category: 'Latino',
     label: 'Bachata',
     emoji: '🌹',
     lastfmTagSynonyms: ['bachata', 'bachata romantica'],
   },
   {
     key: 'cumbia',
+    category: 'Latino',
     label: 'Cumbia',
     emoji: '🪘',
     lastfmTagSynonyms: ['cumbia', 'cumbia sonidera', 'cumbia pop'],
   },
   {
     key: 'vallenato',
+    category: 'Latino',
     label: 'Vallenato',
     emoji: '🌴',
     lastfmTagSynonyms: ['vallenato', 'vallenato romantico'],
   },
   {
     key: 'merengue',
+    category: 'Latino',
     label: 'Merengue',
     emoji: '🥁',
     lastfmTagSynonyms: ['merengue', 'merengue tipico'],
   },
   {
     key: 'ranchera_mariachi',
+    category: 'Latino',
     label: 'Ranchera/Mariachi',
     emoji: '🌵',
     lastfmTagSynonyms: ['ranchera', 'rancheras', 'mariachi'],
   },
   {
     key: 'pop_latino',
+    category: 'Latino',
     label: 'Pop Latino',
     emoji: '✨',
     lastfmTagSynonyms: ['pop latino', 'latin pop', 'latino'],
   },
   {
     key: 'rock',
+    category: 'Rock/Alternativo',
     label: 'Rock',
     emoji: '🎸',
     lastfmTagSynonyms: ['rock', 'alternative rock', 'grunge', 'classic rock', 'hard rock'],
   },
   {
     key: 'metal',
+    category: 'Rock/Alternativo',
     label: 'Metal',
     emoji: '⚡',
     lastfmTagSynonyms: ['metal', 'heavy metal', 'thrash metal', 'death metal'],
   },
   {
     key: 'indie_lofi',
+    category: 'Rock/Alternativo',
     label: 'Indie/Lo-fi',
     emoji: '🎧',
     lastfmTagSynonyms: ['indie', 'indie pop', 'indie rock', 'lo-fi', 'lofi', 'bedroom pop'],
   },
   {
     key: 'pop',
+    category: 'Pop/Urbano',
     label: 'Pop',
     emoji: '🎶',
     lastfmTagSynonyms: ['pop', 'pop rock', 'dance pop', 'synth-pop'],
   },
   {
     key: 'hip_hop_rap',
+    category: 'Pop/Urbano',
     label: 'Hip-Hop/Rap',
     emoji: '🎙️',
     lastfmTagSynonyms: ['hip hop', 'hip-hop', 'rap', 'trap'],
   },
   {
     key: 'rnb_soul',
+    category: 'Pop/Urbano',
     label: 'R&B/Soul',
     emoji: '🎵',
     lastfmTagSynonyms: ['r&b', 'rnb', 'soul', 'neo soul'],
   },
   {
     key: 'electronica',
+    category: 'Electrónica/Chill',
     label: 'Electrónica',
     emoji: '🎛️',
     lastfmTagSynonyms: ['electronic', 'electronica', 'edm', 'house', 'techno', 'synthwave'],
   },
   {
     key: 'jazz',
+    category: 'Raíces',
     label: 'Jazz',
     emoji: '🎷',
     lastfmTagSynonyms: ['jazz', 'smooth jazz', 'jazz fusion', 'bebop'],
   },
   {
     key: 'blues',
+    category: 'Raíces',
     label: 'Blues',
     emoji: '🎺',
     lastfmTagSynonyms: ['blues', 'delta blues', 'electric blues'],
   },
   {
     key: 'k_pop',
+    category: 'Pop/Urbano',
     label: 'K-Pop',
     emoji: '💜',
     lastfmTagSynonyms: ['k-pop', 'kpop', 'korean pop'],
   },
   {
     key: 'j_pop',
+    category: 'Pop/Urbano',
     label: 'J-Pop',
     emoji: '🎌',
     lastfmTagSynonyms: ['j-pop', 'jpop', 'japanese pop'],
   },
   {
     key: 'mandopop_cantopop',
+    category: 'Pop/Urbano',
     label: 'Mandopop/Cantopop',
     emoji: '🐉',
     lastfmTagSynonyms: ['mandopop', 'cantopop', 'chinese pop'],
   },
   {
     key: 'bollywood',
+    category: 'Del Mundo',
     label: 'Bollywood',
     emoji: '🎬',
     lastfmTagSynonyms: ['bollywood', 'indian pop', 'hindi pop'],
   },
   {
     key: 'arabic_pop',
+    category: 'Del Mundo',
     label: 'Pop Árabe',
     emoji: '🕌',
     lastfmTagSynonyms: ['arabic pop', 'khaleeji', 'arab pop'],
   },
   {
     key: 'turkish_pop',
+    category: 'Del Mundo',
     label: 'Pop Turco',
     emoji: '🌟',
     lastfmTagSynonyms: ['turkish pop', 'pop turco', 'türkçe pop'],
   },
   {
     key: 'bossa_nova_mpb',
+    category: 'Del Mundo',
     label: 'Bossa Nova/MPB',
     emoji: '🌊',
     lastfmTagSynonyms: ['bossa nova', 'mpb', 'musica popular brasileira'],
   },
   {
     key: 'soca_calypso',
+    category: 'Del Mundo',
     label: 'Soca/Calypso',
     emoji: '🏝️',
     lastfmTagSynonyms: ['soca', 'calypso'],
   },
   {
     key: 'nordic_pop',
+    category: 'Del Mundo',
     label: 'Pop Nórdico',
     emoji: '❄️',
     lastfmTagSynonyms: ['nordic pop', 'scandipop', 'swedish pop'],
   },
   {
     key: 'country_folk',
+    category: 'Raíces',
     label: 'Country/Folk',
     emoji: '🪕',
     lastfmTagSynonyms: ['country', 'folk', 'americana', 'singer-songwriter'],
   },
   {
     key: 'classical',
+    category: 'Raíces',
     label: 'Clásica',
     emoji: '🎻',
     lastfmTagSynonyms: ['classical', 'orchestral', 'soundtrack'],
   },
   {
     key: 'ambient_new_age',
+    category: 'Electrónica/Chill',
     label: 'Ambient/New Age',
     emoji: '🕊️',
     lastfmTagSynonyms: ['ambient', 'new age', 'meditation'],
   },
   {
     key: 'funk_disco',
+    category: 'Raíces',
     label: 'Funk/Disco',
     emoji: '🕺',
     lastfmTagSynonyms: ['funk', 'disco', 'boogie'],
   },
   {
     key: 'reggae',
+    category: 'Del Mundo',
     label: 'Reggae',
     emoji: '🦁',
     lastfmTagSynonyms: ['reggae', 'dancehall', 'dub', 'ska'],
   },
   {
     key: 'afrobeats',
+    category: 'Del Mundo',
     label: 'Afrobeats',
     emoji: '🌍',
     lastfmTagSynonyms: ['afrobeats', 'afropop', 'amapiano'],
   },
   {
     key: 'gospel_cristiana',
+    category: 'Raíces',
     label: 'Gospel/Cristiana',
     emoji: '🙏',
     lastfmTagSynonyms: ['gospel', 'christian', 'musica cristiana'],
   },
   {
     key: 'punk',
+    category: 'Rock/Alternativo',
     label: 'Punk',
     emoji: '🤘',
     lastfmTagSynonyms: ['punk', 'punk rock', 'pop punk', 'hardcore punk'],
