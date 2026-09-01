@@ -1,74 +1,88 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { HeartIcon, XIcon } from 'phosphor-react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { HeartIcon, UploadSimpleIcon, XIcon } from 'phosphor-react-native';
 
 import { ThemeColors } from '../../theme/colors';
-import { fonts } from '../../theme/typography';
 
 interface ActionButtonsProps {
   colors: ThemeColors;
-  /** Color reactivo de vibra de sesión (ver SwipeDeck.tsx) -- reemplaza colors.brand en el
-   *  botón central. */
+  /** Color reactivo de vibra de sesión (ver SwipeDeck.tsx) -- usado en el ícono del botón
+   *  central en vez de colors.brand. */
   accentColor: string;
   onPass: () => void;
   onLike: () => void;
   onHeard: () => void;
 }
 
+/**
+ * 2026-09-01: rediseño completo a botones circulares solo-ícono (sin texto),
+ * siguiendo la referencia de swipe cards estilo Tinder que mandó el usuario:
+ * círculos de fondo claro (colors.surface) con el ícono en color, sombra
+ * suave, tamaño alternado (pasar/guardar más grandes, escuchada al medio y
+ * más chico) -- reemplaza los botones rectangulares con texto de antes.
+ * Pasar = X, Guardar = corazón, Ya la escuché = ícono de upload (nunca
+ * texto, tal como se pidió).
+ */
 export function ActionButtons({ colors, accentColor, onPass, onLike, onHeard }: ActionButtonsProps) {
   return (
     <View style={styles.row}>
       <Pressable
         onPress={onPass}
-        style={[styles.button, styles.sideButton, { borderColor: colors.pass }]}
+        style={[styles.circle, styles.sideCircle, { backgroundColor: colors.surface, borderColor: colors.pass }]}
         hitSlop={8}
       >
-        <XIcon weight="fill" size={22} color={colors.pass} />
+        <XIcon weight="bold" size={28} color={colors.pass} />
       </Pressable>
 
       <Pressable
         onPress={onHeard}
-        style={[styles.button, styles.centerButton, { borderColor: accentColor, backgroundColor: accentColor }]}
+        style={[styles.circle, styles.centerCircle, { backgroundColor: colors.surface, borderColor: accentColor }]}
         hitSlop={8}
       >
-        <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>YA LA ESCUCHÉ</Text>
+        <UploadSimpleIcon weight="bold" size={22} color={accentColor} />
       </Pressable>
 
       <Pressable
         onPress={onLike}
-        style={[styles.button, styles.sideButton, { borderColor: colors.like }]}
+        style={[styles.circle, styles.sideCircle, { backgroundColor: colors.surface, borderColor: colors.like }]}
         hitSlop={8}
       >
-        <HeartIcon weight="fill" size={22} color={colors.like} />
+        <HeartIcon weight="fill" size={28} color={colors.like} />
       </Pressable>
     </View>
   );
 }
+
+const shadow = {
+  shadowColor: '#000000',
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.18,
+  shadowRadius: 6,
+  elevation: 4,
+};
 
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 22,
     paddingHorizontal: 20,
     paddingBottom: 24,
+    paddingTop: 8,
   },
-  button: {
-    borderWidth: 3,
-    borderRadius: 10,
-    paddingVertical: 12,
+  circle: {
+    borderRadius: 999,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadow,
   },
-  sideButton: {
-    flex: 1,
+  sideCircle: {
+    width: 60,
+    height: 60,
   },
-  centerButton: {
-    flex: 1.3,
-  },
-  buttonText: {
-    fontSize: 13,
-    letterSpacing: 0.4,
-    fontFamily: fonts.bodyExtraBold,
+  centerCircle: {
+    width: 50,
+    height: 50,
   },
 });

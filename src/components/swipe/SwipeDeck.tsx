@@ -195,11 +195,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  // paddingVertical (no solo paddingBottom) a propósito -- la tarjeta usa
+  // StyleSheet.absoluteFill dentro de este contenedor, así que este padding
+  // es lo que le da el margen arriba/abajo visto en la referencia en vez de
+  // ocupar el 100% del alto disponible de borde a borde.
   stack: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
   },
   cardSlot: {
     alignItems: 'center',

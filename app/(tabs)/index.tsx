@@ -86,6 +86,17 @@ export default function SwipeScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <View style={styles.header}>
+        <View style={styles.headerSide} />
+        {/* Placeholder de texto -- reemplazar por el isotipo real de Showmi en cuanto
+         *  exista el archivo (ver conversación, pendiente de que el usuario lo mande
+         *  como archivo -- no se puede extraer de una imagen pegada en el chat). */}
+        <Text style={[styles.wordmark, { color: colors.textPrimary }]}>SHOWMI</Text>
+        <View style={[styles.headerSide, styles.headerSideRight]}>
+          <ProfileButton colors={colors} />
+        </View>
+      </View>
+
       {(genreDef || vibeDef) && (
         <View style={styles.filterRow}>
           {genreDef && (
@@ -113,7 +124,6 @@ export default function SwipeScreen() {
       )}
 
       <SwipeDeck vibe={vibe} genre={genre} />
-      <ProfileButton colors={colors} style={styles.floating} />
     </SafeAreaView>
   );
 }
@@ -124,10 +134,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  floating: {
-    position: 'absolute',
-    top: 12,
-    right: 20,
+  // 2026-09-01: reemplaza el ProfileButton absoluto de antes, que flotaba ENCIMA de la
+  // tarjeta activa -- justo lo que se pidió corregir ("los botones superiores no
+  // interceden con las tarjetas"). Ahora es una fila normal, con su propio espacio,
+  // así el mazo de abajo arranca recién después de que termina el header.
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  headerSide: {
+    width: 32,
+  },
+  headerSideRight: {
+    alignItems: 'flex-end',
+  },
+  wordmark: {
+    fontSize: 18,
+    fontFamily: fonts.display,
+    letterSpacing: 1,
   },
   filterRow: {
     flexDirection: 'row',
