@@ -8,6 +8,7 @@ import { useLibraryStore } from '../../src/state/libraryStore';
 import { TrackRow } from '../../src/components/library/TrackRow';
 import { GradientChip } from '../../src/components/ui/GradientChip';
 import { ProfileButton } from '../../src/components/ui/ProfileButton';
+import { FLOATING_TAB_BAR_CLEARANCE } from '../../src/theme/layout';
 
 export default function LibraryScreen() {
   const colors = useThemeStore((s) => s.colors);
@@ -155,7 +156,8 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 24,
+    // Colchón para la isla flotante de pestañas -- ver theme/layout.ts.
+    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
   },
   empty: {
     paddingTop: 40,

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemeColors } from '../../theme/colors';
 import { fonts } from '../../theme/typography';
+import { FLOATING_TAB_BAR_CLEARANCE } from '../../theme/layout';
 import { CANONICAL_GENRES, CanonicalGenre, GENRE_CATEGORY_ORDER } from '../../lib/genres';
 import { VIBES, VIBE_CATEGORY_ORDER, VibeKey } from '../../lib/vibes';
 import { artistsForGenre, curatedAnchorsByGenre } from '../../api/curatedSeeds';
@@ -272,7 +273,8 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 24,
+    // Colchón para la isla flotante de pestañas -- ver theme/layout.ts.
+    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
     paddingTop: 12,
   },
   primaryButton: {
@@ -359,7 +361,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 24,
     right: 24,
-    bottom: 32,
+    // Colchón para la isla flotante de pestañas -- ver theme/layout.ts.
+    bottom: FLOATING_TAB_BAR_CLEARANCE,
     pointerEvents: 'box-none',
   },
 });

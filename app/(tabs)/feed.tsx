@@ -22,6 +22,7 @@ import {
 import { ProfileButton } from '../../src/components/ui/ProfileButton';
 import { GradientChip } from '../../src/components/ui/GradientChip';
 import { ThemeColors } from '../../src/theme/colors';
+import { FLOATING_TAB_BAR_CLEARANCE } from '../../src/theme/layout';
 
 const FOR_YOU = '__for_you__';
 
@@ -251,7 +252,8 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 24,
+    // Colchón para la isla flotante de pestañas -- ver theme/layout.ts.
+    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
     gap: 12,
   },
   picksSection: {

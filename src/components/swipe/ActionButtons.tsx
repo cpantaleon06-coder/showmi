@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { HeartIcon, UploadSimpleIcon, XIcon } from 'phosphor-react-native';
 
 import { ThemeColors } from '../../theme/colors';
+import { FLOATING_TAB_BAR_CLEARANCE } from '../../theme/layout';
 
 interface ActionButtonsProps {
   colors: ThemeColors;
@@ -67,7 +68,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 22,
     paddingHorizontal: 20,
-    paddingBottom: 24,
+    // La isla flotante (position: absolute) no reserva su propio espacio en el layout --
+    // sin este colchón, estos botones quedaban literalmente tapados detrás de ella.
+    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
     paddingTop: 8,
   },
   circle: {
