@@ -33,22 +33,26 @@ import { DeckAnchor, Track } from './types';
  * teoría admite la taxonomía; un arreglo de un solo elemento es el caso degenerado correcto.
  *
  * `genero` (para el filtro duro) es DISTINTO de `genre` (el string crudo de iTunes que ya usa
- * el motor de scoring, sin tocar): se resuelve a la taxonomía canónica de 8 géneros vía
- * `resolveCanonicalGenre`, reusando exactamente la función que ya existía para esto (pensada
- * para tags de Last.fm, no para `primaryGenreName` de iTunes -- por eso la cobertura es
- * parcial: "Rock"/"Electronic"/"Jazz" matchean por igualdad exacta con un sinónimo, pero
- * "Latino"/"Alternative"/"Hip-Hop/Rap" no tienen sinónimo exacto y quedan sin género
- * canónico, así que ese track simplemente no participa en ningún filtro POR género —
- * comportamiento seguro, no un crash, y estrictamente mejor que no resolver nada).
+ * el motor de scoring, sin tocar): se resuelve a la taxonomía canónica (22 géneros) vía
+ * `resolveCanonicalGenre`, reusando exactamente la función que ya existía para esto.
+ *
+ * 2026-08-31: `resolveCanonicalGenre` ahora recibe el string de iTunes MÁS los tags reales de
+ * Last.fm (`extraTags`, ver `getTrackTopTags` en lastfm.ts) en vez de un array de un solo
+ * elemento -- antes la cobertura era parcial ("Latino"/"Alternative"/"Hip-Hop/Rap" no tenían
+ * sinónimo exacto con el string crudo de iTunes y el track quedaba sin género canónico, ver
+ * historial de este comentario); con varios tags reales de la comunidad la resolución acierta
+ * muchas más veces. `extraTags` es opcional y best-effort (quien llama en useDeck.ts ya lo
+ * trae con `.catch(() => [])` resuelto) -- sin él, el comportamiento es idéntico al de antes.
  */
-export function trackToCandidate(track: Track, vibe?: string): FilterableCandidate {
+export function trackToCandidate(track: Track, vibe?: string, extraTags: string[] = []): FilterableCandidate {
+  const genreTags = [track.genre, ...extraTags].filter((t): t is string => !!t);
   return {
     trackId: track.id,
     artistIds: [normalizeForMatch(track.artist)],
     releaseDate: track.releaseDate ?? '',
     genre: track.genre ?? undefined,
     vibe,
-    genero: track.genre ? (resolveCanonicalGenre([track.genre]) ?? undefined) : undefined,
+    genero: genreTags.length > 0 ? (resolveCanonicalGenre(genreTags) ?? undefined) : undefined,
     vibras: vibe ? [vibe] : undefined,
     idioma: resolveIdioma(track.title, track.artist) ?? undefined,
     epoca: resolveEpoca(track.releaseDate) ?? undefined,

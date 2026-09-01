@@ -16,10 +16,16 @@ import { VibeKey } from '../lib/vibes';
  * suave por vibra competiría visualmente con el resto de la paleta en vez
  * de leerse como una señal clara de "esta es la vibra activa".
  *
- * Todavía SIN consumidores (paso 1 = solo tokens, ver orden de
- * implementación en colors.ts) -- los componentes que hoy usan
- * `nagaiGradient` se migran a esto en el paso 2+ cuando se toque swipe
- * card / chips / Perfil, no en este mismo cambio.
+ * Consumido hoy por SwipeCard/SwipeDeck/ActionButtons (acento reactivo del
+ * deck) y GradientChip/SessionFilterSheet (fill de la vibra seleccionada) --
+ * Perfil/Camerino todavía usan `nagaiGradient`, esa migración sigue
+ * pendiente (fuera del orden de 5 pasos ya completado, ver colors.ts).
+ *
+ * 2026-08-31: 10 vibras nuevas agregadas junto con la ampliación de
+ * vibes.ts -- cada una con un tono propio, evitando reusar un hue ya
+ * ocupado por otra vibra existente (18 colores distintos es difícil de
+ * separar perfectamente, pero se revisó a mano que no haya dos casi
+ * idénticos uno al lado del otro en la UI).
  */
 export const VIBE_COLORS: Record<VibeKey, string> = {
   fiesta: '#E8362A',
@@ -30,6 +36,16 @@ export const VIBE_COLORS: Record<VibeKey, string> = {
   heartbreak: '#8C1C13',
   introspectivo: '#3A3752',
   desahogo: '#D9631E',
+  motivacional: '#B45309',
+  melancolico: '#5B5F97',
+  enamorado: '#EC4899',
+  sensual: '#9D174D',
+  empoderamiento: '#6D28D9',
+  rabia: '#7F1D1D',
+  alegre: '#FACC15',
+  relajacion: '#3B82F6',
+  viaje: '#059669',
+  enfoque: '#1E3A8A',
 };
 
 /** Fallback explícito para cuando no hay vibra activa (ej. deck mixto sin selector). */

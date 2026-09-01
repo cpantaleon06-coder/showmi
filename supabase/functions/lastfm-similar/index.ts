@@ -17,9 +17,12 @@ interface SimilarResult {
 }
 
 async function getTrackSimilar(artist: string, title: string, apiKey: string): Promise<SimilarResult[]> {
+  // limit subido de 20 a 60 (2026-08-31) -- parte del rediseño para que el
+  // pool de un deck llegue a 50-85 candidatos en vez de topearse en ~20 tal
+  // como venía (ver comentario en fetchCandidatePool, src/hooks/useDeck.ts).
   const url = `${LASTFM_BASE}?method=track.getsimilar&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(
     title
-  )}&api_key=${apiKey}&format=json&limit=20`;
+  )}&api_key=${apiKey}&format=json&limit=60`;
   const res = await fetch(url);
   if (!res.ok) return [];
   const json = await res.json();
@@ -34,7 +37,7 @@ async function getTrackSimilar(artist: string, title: string, apiKey: string): P
 async function getArtistSimilar(artist: string, apiKey: string): Promise<SimilarResult[]> {
   const url = `${LASTFM_BASE}?method=artist.getsimilar&artist=${encodeURIComponent(
     artist
-  )}&api_key=${apiKey}&format=json&limit=10`;
+  )}&api_key=${apiKey}&format=json&limit=40`;
   const res = await fetch(url);
   if (!res.ok) return [];
   const json = await res.json();

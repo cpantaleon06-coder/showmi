@@ -30,21 +30,29 @@ export async function getSimilarTracks(artist: string, title: string): Promise<S
     return curatedFallback(artist, title);
   }
 
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/lastfm-similar`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-    body: JSON.stringify({ artist, title }),
-  });
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/lastfm-similar`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ artist, title }),
+    });
 
-  if (!res.ok) {
+    if (!res.ok) {
+      return curatedFallback(artist, title);
+    }
+
+    const json = (await res.json()) as LastfmSimilarResponse;
+    return json.similar.map((s) => ({ title: s.title, artist: s.artist, matchScore: s.matchScore }));
+  } catch {
+    // fetch() en sí puede tirar (bloqueo de CORS, sin red, DNS) -- no solo `!res.ok` --
+    // sobre todo ahora que fetchRawSuggestions (useDeck.ts) combina esta llamada con
+    // getTagTopTracks vía Promise.allSettled: cada fuente debe degradar sola, nunca
+    // dejar caer a las demás.
     return curatedFallback(artist, title);
   }
-
-  const json = (await res.json()) as LastfmSimilarResponse;
-  return json.similar.map((s) => ({ title: s.title, artist: s.artist, matchScore: s.matchScore }));
 }
 
 function curatedFallback(artist: string, title: string): SimilarTrackSeed[] {
@@ -56,4 +64,75 @@ function curatedFallback(artist: string, title: string): SimilarTrackSeed[] {
   // deck never comes back empty while running without live Last.fm access.
   const pools = Object.values(curatedSimilarSeeds);
   return pools[Math.floor(Math.random() * pools.length)] ?? [];
+}
+
+interface LastfmTagTracksResponse {
+  tracks: { artist: string; title: string; matchScore: number }[];
+}
+
+/**
+ * Calls `lastfm-tag-tracks` (Last.fm tag.getTopTracks) -- fuente de VOLUMEN
+ * para el pool de un deck, a diferencia de getSimilarTracks (que encadena
+ * similitud desde UNA canción y se topa mucho antes del mínimo de 50-85
+ * candidatos que necesita una sesión, ver fetchCandidatePool en useDeck.ts).
+ * Sin Supabase configurado, cae a un pool curado al azar (misma lógica que
+ * curatedFallback arriba) -- no hay dataset curado por tag todavía, así que
+ * no intenta ser específico al tag pedido en ese modo degradado.
+ */
+export async function getTagTopTracks(tag: string, limit = 60): Promise<SimilarTrackSeed[]> {
+  if (!edgeFunctionConfigured()) {
+    const pools = Object.values(curatedSimilarSeeds);
+    return pools[Math.floor(Math.random() * pools.length)] ?? [];
+  }
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/lastfm-tag-tracks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ tag, limit }),
+    });
+
+    if (!res.ok) return [];
+
+    const json = (await res.json()) as LastfmTagTracksResponse;
+    return json.tracks.map((t) => ({ title: t.title, artist: t.artist, matchScore: t.matchScore }));
+  } catch {
+    // fetch() en sí puede tirar (bloqueo de CORS, sin red, DNS) -- ver misma nota en
+    // getSimilarTracks. Antes de este fix, esto tumbaba TODO fetchRawSuggestions (el
+    // Promise.all fallaba entero) apenas lastfm-tag-tracks no estuviera desplegado --
+    // el bug real detrás del deck vacío la primera vez que se probó esto en vivo.
+    return [];
+  }
+}
+
+/**
+ * Calls `lastfm-track-tags` (Last.fm track.getTopTags) -- los tags reales de
+ * UN track puntual, para resolver `genero` con más que el único string de
+ * iTunes (ver resolveCanonicalGenre en lib/genres.ts, ya soporta un array de
+ * tags, solo le faltaba una fuente que trajera más de uno). Nunca bloquea ni
+ * tira: sin Supabase configurado o si la llamada falla, devuelve `[]` --
+ * quien llama simplemente se queda con la resolución de un solo tag de
+ * siempre, no un estado roto.
+ */
+export async function getTrackTopTags(artist: string, title: string): Promise<string[]> {
+  if (!edgeFunctionConfigured()) return [];
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/lastfm-track-tags`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ artist, title }),
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { tags: string[] };
+    return json.tags ?? [];
+  } catch {
+    return [];
+  }
 }

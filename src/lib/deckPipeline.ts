@@ -78,14 +78,14 @@ export type FilterLevel = keyof HardFilterSelection;
 export const RELAXATION_ORDER: readonly FilterLevel[] = ["epoca", "vibras", "genero", "idioma"];
 
 /**
- * Mínimo de canciones que dispara la relajación automática. Propuesto (no
- * medido con datos reales todavía, mismo espíritu que DEFAULT_WEIGHTS/
- * SESSION_DECAY): 12 -- suficiente para sostener una sesión real de swipe sin
- * quedarse sin cartas a los pocos segundos ni forzar un refetch inmediato,
- * pero no tan alto como para relajar de más combinaciones nicho que sí
- * tienen suficientes resultados reales sin necesitar ayuda.
+ * Mínimo de canciones que dispara la relajación automática. Subido de 12 a
+ * 50 (2026-08-31) -- requisito explícito del producto: una sesión de swipe
+ * necesita AL MENOS 50 canciones, con 80-85 como media esperada (ver
+ * fetchRawSuggestions en useDeck.ts, que ahora combina similitud + volumen
+ * por tag para poder sostener esto). 12 alcanzaba para no quedarse sin
+ * cartas pronto, pero no para lo que el producto pide hoy.
  */
-export const MIN_POOL_SIZE = 12;
+export const MIN_POOL_SIZE = 50;
 
 function matchesSelection(track: FilterableFields, selection: HardFilterSelection): boolean {
   if (selection.idioma !== undefined && track.idioma !== selection.idioma) return false;

@@ -2,12 +2,13 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { findItunesTrack } from '../api/itunes';
-import { getSimilarTracks } from '../api/lastfm';
+import { getSimilarTracks, getTagTopTracks, getTrackTopTags } from '../api/lastfm';
+import { normalizeForMatch } from '../api/normalize';
 import { curatedAnchorsByGenre, curatedSimilarSeeds } from '../api/curatedSeeds';
 import { trackToCandidate } from '../api/tasteAdapter';
 import { fetchArtistNeighborsBatch, fetchGlobalStats, fetchTrackVibes } from '../api/tasteEngineClient';
-import { DeckAnchor, Track } from '../api/types';
-import { CanonicalGenre } from '../lib/genres';
+import { DeckAnchor, SimilarTrackSeed, Track } from '../api/types';
+import { CANONICAL_GENRES, CanonicalGenre } from '../lib/genres';
 import { VibeKey } from '../lib/vibes';
 import { HardFilterSelection, buildDeck as runDeckPipeline } from '../lib/deckPipeline';
 import { sessionTreeToMultipliers } from '../lib/sessionTree';
@@ -49,10 +50,61 @@ export function pickDefaultAnchor(genre?: CanonicalGenre | null): DeckAnchor {
   return { artist, title };
 }
 
-async function fetchCandidatePool(anchor: DeckAnchor): Promise<Track[]> {
-  const similar = await getSimilarTracks(anchor.artist, anchor.title);
+/** Tag de Last.fm más representativo de un género canónico -- primer sinónimo de la lista
+ *  (ver genres.ts), usado como query directa a tag.getTopTracks. */
+function primaryTagFor(genre: CanonicalGenre): string {
+  return CANONICAL_GENRES.find((g) => g.key === genre)!.lastfmTagSynonyms[0];
+}
 
-  const settled = await Promise.allSettled(similar.map((s) => findItunesTrack(s.artist, s.title)));
+function pickRandomGenres(count: number): CanonicalGenre[] {
+  const shuffled = [...CANONICAL_GENRES].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count).map((g) => g.key);
+}
+
+const RAW_POOL_TAG_LIMIT = 70;
+
+/**
+ * Pool crudo de sugerencias (artista+título, todavía sin matchear contra iTunes) combinando
+ * dos fuentes -- necesario porque encadenar similitud desde UNA sola canción (getSimilarTracks)
+ * se topaba muy por debajo del mínimo de 50-85 candidatos que pide una sesión real:
+ *  1. getSimilarTracks(anchor): personalizado, hasta 60 sugerencias encadenadas desde el ancla
+ *     de esta sesión (limit subido de 20 -- ver lastfm-similar/index.ts).
+ *  2. getTagTopTracks: volumen, tracks populares para uno o más tags de género directamente
+ *     (hasta RAW_POOL_TAG_LIMIT cada uno). Con género de sesión elegido pega directo a ESE tag;
+ *     sin género (deck mixto), samplea 2 géneros al azar en vez de depender solo de la cadena
+ *     de similitud del ancla.
+ * Deduplicado por artista+título normalizado (no por trackId de iTunes -- eso pasa después, en
+ * fetchCandidatePool) para no gastar una búsqueda de iTunes en el mismo track sugerido dos
+ * veces por fuentes distintas.
+ */
+async function fetchRawSuggestions(anchor: DeckAnchor, genre?: CanonicalGenre | null): Promise<SimilarTrackSeed[]> {
+  const tagsToQuery = genre ? [genre] : pickRandomGenres(2);
+
+  // allSettled, no all -- ambas funciones ya se tragan sus propios errores de red, pero esto
+  // es una segunda red de seguridad: ninguna fuente individual (ej. lastfm-tag-tracks sin
+  // desplegar todavía) debe poder tumbar a las demás con solo rechazar su promesa.
+  const settled = await Promise.allSettled([
+    getSimilarTracks(anchor.artist, anchor.title),
+    ...tagsToQuery.map((g) => getTagTopTracks(primaryTagFor(g), RAW_POOL_TAG_LIMIT)),
+  ]);
+  const batches = settled.map((r) => (r.status === 'fulfilled' ? r.value : []));
+
+  const seen = new Set<string>();
+  const deduped: SimilarTrackSeed[] = [];
+  for (const s of batches.flat()) {
+    if (!s.title) continue; // fallback artist.getsimilar sin título -- nada que buscar en iTunes
+    const key = `${normalizeForMatch(s.artist)}::${normalizeForMatch(s.title)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(s);
+  }
+  return deduped;
+}
+
+async function fetchCandidatePool(anchor: DeckAnchor, genre?: CanonicalGenre | null): Promise<Track[]> {
+  const raw = await fetchRawSuggestions(anchor, genre);
+
+  const settled = await Promise.allSettled(raw.map((s) => findItunesTrack(s.artist, s.title)));
 
   const seen = new Set<string>();
   const deck: Track[] = [];
@@ -64,6 +116,22 @@ async function fetchCandidatePool(anchor: DeckAnchor): Promise<Track[]> {
     deck.push(track);
   }
   return deck;
+}
+
+/**
+ * Tags reales de Last.fm por track (track.getTopTags), en batch best-effort -- alimenta
+ * `resolveCanonicalGenre` con más que el único string de género de iTunes (ver tasteAdapter.ts).
+ * `getTrackTopTags` ya nunca tira (try/catch interno), así que esto siempre resuelve, en el
+ * peor caso con `[]` por track.
+ */
+async function fetchTopTagsByTrackId(pool: Track[]): Promise<Record<string, string[]>> {
+  const settled = await Promise.allSettled(pool.map((track) => getTrackTopTags(track.artist, track.title)));
+  const result: Record<string, string[]> = {};
+  pool.forEach((track, i) => {
+    const r = settled[i];
+    result[track.id] = r.status === 'fulfilled' ? r.value : [];
+  });
+  return result;
 }
 
 /**
@@ -118,15 +186,19 @@ async function buildDeck(
   vibe?: VibeKey | null,
   genre?: CanonicalGenre | null,
 ): Promise<Track[]> {
-  const pool = await fetchCandidatePool(anchor);
+  const pool = await fetchCandidatePool(anchor, genre);
   if (pool.length === 0) return pool;
 
-  // Vibra canónica por track (voto mayoritario, puede no existir todavía para
-  // canciones con pocos votos) -- batch en vez de una llamada por track.
-  const vibesByTrackId = await fetchTrackVibes(pool.map((track) => track.id));
+  // Vibra canónica por track (voto mayoritario, puede no existir todavía para canciones con
+  // pocos votos) y tags reales de Last.fm por track (para resolver `genero` con más que el
+  // string único de iTunes, ver trackToCandidate) -- ambos en batch, no uno por track cada uno.
+  const [vibesByTrackId, tagsByTrackId] = await Promise.all([
+    fetchTrackVibes(pool.map((track) => track.id)),
+    fetchTopTagsByTrackId(pool),
+  ]);
 
   const candidatesByTrackId = new Map(
-    pool.map((track) => [track.id, trackToCandidate(track, vibesByTrackId[track.id])]),
+    pool.map((track) => [track.id, trackToCandidate(track, vibesByTrackId[track.id], tagsByTrackId[track.id])]),
   );
   const candidates = [...candidatesByTrackId.values()];
 

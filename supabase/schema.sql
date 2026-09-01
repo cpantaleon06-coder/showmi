@@ -330,8 +330,13 @@ create table track_vibe_votes (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid not null references users(id) on delete cascade,
   track_id text not null,
+  -- Lista de 18 vibras (ampliada 2026-08-31, ver ALTER al final del archivo
+  -- para el proyecto ya corriendo -- este CREATE TABLE solo cubre un bootstrap
+  -- nuevo desde cero) -- debe calzar exacto con VibeKey en src/lib/vibes.ts.
   vibe text not null check (vibe in
-    ('fiesta','romantico','nostalgico','hype','chill','heartbreak','introspectivo','desahogo')),
+    ('fiesta','romantico','nostalgico','hype','chill','heartbreak','introspectivo','desahogo',
+     'motivacional','melancolico','enamorado','sensual','empoderamiento','rabia','alegre',
+     'relajacion','viaje','enfoque')),
   created_at timestamptz not null default now(),
   unique (user_id, track_id)
 );
@@ -590,3 +595,19 @@ returns table(node_key text, weight real)
 language sql stable security definer set search_path = public as $$
   select node_key, weight from session_tree_weights where user_id = auth.uid();
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Ampliación de vibras 8 -> 18 (2026-08-31)
+-- ---------------------------------------------------------------------------
+-- track_vibe_votes ya existe en el proyecto real (se aplicó como parte del
+-- bloque base, antes del corte del 2026-08-28 documentado en el encabezado de
+-- este archivo) -- por eso esto es un ALTER, no se puede editar in-place el
+-- CREATE TABLE de arriba y esperar que el constraint ya corriendo cambie
+-- solo. Postgres no deja modificar un CHECK existente: hay que borrarlo y
+-- crear uno nuevo. Pendiente de correr a mano contra el proyecto real, igual
+-- que el resto de los bloques fechados de esta sección.
+alter table track_vibe_votes drop constraint track_vibe_votes_vibe_check;
+alter table track_vibe_votes add constraint track_vibe_votes_vibe_check check (vibe in
+  ('fiesta','romantico','nostalgico','hype','chill','heartbreak','introspectivo','desahogo',
+   'motivacional','melancolico','enamorado','sensual','empoderamiento','rabia','alegre',
+   'relajacion','viaje','enfoque'));
