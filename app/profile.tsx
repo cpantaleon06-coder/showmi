@@ -109,7 +109,7 @@ export default function ProfileScreen() {
         <Pressable onPress={() => router.push('/premium')} style={[styles.row, { borderColor: colors.premiumAccent }]} hitSlop={8}>
           <CrownIcon weight="fill" size={20} color={colors.premiumAccent} />
           <Text style={[styles.rowText, { color: colors.premiumAccent }]}>
-            {isPremium ? 'Showmi Premium ✓' : 'Hazte Showmi Premium'}
+            {isPremium ? 'Showmi More ✓' : 'Hazte Showmi More'}
           </Text>
         </Pressable>
 

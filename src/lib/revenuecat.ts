@@ -3,8 +3,15 @@ import Purchases, { CustomerInfo, PurchasesOffering, PurchasesPackage } from 're
 
 /**
  * Identificador de entitlement configurado en el dashboard de RevenueCat -- convención propia
- * de este proyecto, no algo que el SDK imponga. Si el usuario nombra su entitlement distinto
- * al crear el proyecto en RevenueCat, hay que actualizar esta constante para que coincida.
+ * de este proyecto, no algo que el SDK imponga. Si el entitlement se nombra distinto al crear
+ * el proyecto en RevenueCat, hay que actualizar esta constante para que coincida (si no, la
+ * compra se procesa pero `isPremiumFromCustomerInfo` nunca la ve y el tier jamás se activa).
+ *
+ * Nota de nombres: el tier se llama **"Showmi More"** de cara al usuario (2026-09-01, antes
+ * "Showmi Premium"). En el código el concepto genérico sigue siendo `premium` -- `isPremium`,
+ * `es_premium`, `premiumAccent`, esta constante -- a propósito: es el nombre del CONCEPTO
+ * (nivel de pago), no de la marca, así que un cambio de marca futuro no obliga a tocar el
+ * esquema de la base ni media docena de archivos. Solo los strings visibles dicen "Showmi More".
  */
 export const PREMIUM_ENTITLEMENT_ID = 'premium';
 

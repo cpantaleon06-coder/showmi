@@ -45,7 +45,7 @@ export interface ThemeColors {
    */
   nagaiGradient: [string, string, string];
   /**
-   * Dorado reservado para la insignia/CTA de "Showmi Premium" (paywall, badge en Feed/Perfil)
+   * Dorado reservado para la insignia/CTA de "Showmi More" (paywall, badge en Feed/Perfil)
    * -- mismo espíritu de "acento reservado" que nagaiGradient (documentado ahí arriba): un
    * solo uso consistente en toda la app, nunca decorativo en otro lado, para que de verdad
    * lea como estatus y no se diluya. Igual en ambos modos a propósito (es la identidad de la

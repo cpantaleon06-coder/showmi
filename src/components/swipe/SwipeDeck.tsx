@@ -113,10 +113,10 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
         <CrownIcon weight="fill" size={40} color={colors.premiumAccent} />
         <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>Se acabaron tus swipes de hoy</Text>
         <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-          Con Showmi Premium tienes swipes ilimitados, todos los días.
+          Con Showmi More tienes swipes ilimitados, todos los días.
         </Text>
         <Text style={[styles.retry, { color: colors.premiumAccent }]} onPress={() => router.push('/premium')}>
-          Ver Showmi Premium
+          Ver Showmi More
         </Text>
       </View>
     );

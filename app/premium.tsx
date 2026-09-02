@@ -21,7 +21,7 @@ const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = 
   },
   {
     icon: CrownIcon,
-    title: 'Insignia Premium',
+    title: 'Insignia de More',
     description: 'Visible junto a tu nombre en el Feed y tu Perfil.',
   },
   {
@@ -95,7 +95,12 @@ export default function PremiumScreen() {
     try {
       const info = await restorePurchases();
       applyCustomerInfo(info);
-      Alert.alert('Listo', isPremiumFromCustomerInfo(info) ? 'Tu Premium fue restaurado.' : 'No encontramos compras previas para restaurar.');
+      Alert.alert(
+        'Listo',
+        isPremiumFromCustomerInfo(info)
+          ? 'Tu Showmi More fue restaurado.'
+          : 'No encontramos compras previas para restaurar.',
+      );
     } catch {
       Alert.alert('No se pudo restaurar', 'Intenta de nuevo en unos momentos.');
     } finally {
@@ -110,14 +115,14 @@ export default function PremiumScreen() {
       <View style={[styles.header, { backgroundColor: colors.brand }]}>
         <BackButton colors={colors} />
         <CrownIcon weight="fill" size={40} color={colors.premiumAccent} />
-        <Text style={styles.headerTitle}>Showmi Premium</Text>
+        <Text style={styles.headerTitle}>Showmi More</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         {isPremium ? (
           <View style={[styles.activeBanner, { borderColor: colors.premiumAccent }]}>
             <CheckCircleIcon weight="fill" size={22} color={colors.premiumAccent} />
-            <Text style={[styles.activeBannerText, { color: colors.textPrimary }]}>Ya eres Premium -- gracias por tu apoyo.</Text>
+            <Text style={[styles.activeBannerText, { color: colors.textPrimary }]}>Ya tienes Showmi More -- gracias por tu apoyo.</Text>
           </View>
         ) : null}
 

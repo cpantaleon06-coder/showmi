@@ -686,7 +686,7 @@ select cron.schedule('classify-tracks-daily', '0 4 * * *', -- 4am, antes de seed
 );
 
 -- ---------------------------------------------------------------------------
--- Showmi Premium: RevenueCat + insignia visible (2026-09-01)
+-- Showmi More (tier de pago): RevenueCat + insignia visible (2026-09-01)
 -- ---------------------------------------------------------------------------
 -- `es_premium` es la copia server-side del entitlement de RevenueCat (fuente real de verdad:
 -- el SDK del cliente, ver src/lib/revenuecat.ts) -- existe SOLO para que el Feed pueda mostrar
