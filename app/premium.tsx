@@ -27,7 +27,7 @@ const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = 
   {
     icon: TShirtIcon,
     title: 'Cosméticos exclusivos del Camerino',
-    description: 'De compra directa (nunca aleatorios) -- próximamente, cuando el Camerino esté listo.',
+    description: 'Corona, lentes dorados y estampado de estrellas para tu mascota. Los ves antes de pagar -- nunca son aleatorios.',
   },
 ];
 

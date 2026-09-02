@@ -7,6 +7,7 @@ import { registerSwipeRemote } from '../api/tasteEngineClient';
 import { createRemotePost } from '../api/postsClient';
 import { Track } from '../api/types';
 import { dimensionKeys } from '../lib/tasteEngine';
+import { useCamerinoStore } from './camerinoStore';
 import { buildSessionSelection, useSessionTreeStore } from './sessionTreeStore';
 import { useSwipeStore } from './swipeStore';
 import { useTasteStateStore } from './tasteStateStore';
@@ -69,9 +70,10 @@ export const usePostStore = create<PostState>()(
         registerSwipeRemote(track.id, liked, intensity, dimensionKeys(candidate)).catch(() => {});
         createRemotePost(track.id, rating, track.genre).catch(() => {});
 
-        // TODO: cuando exista el sistema de mascota/cosméticos (Camerino real), este es
-        // el punto donde se dispara el progreso de género -- cualquier rating de 1 a 5
-        // cuenta como "reseñó la canción", sin importar qué tan alta o baja sea.
+        // Progreso del Camerino (antes un TODO, construido 2026-09-01): cualquier rating de
+        // 1 a 5 cuenta igual como "reseñó la canción", sin importar qué tan alta o baja sea
+        // -- premiar solo las notas altas empujaría a inflar las estrellas.
+        useCamerinoStore.getState().recordRating(track.genre);
       },
     }),
     {
