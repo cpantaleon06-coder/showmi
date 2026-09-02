@@ -400,17 +400,60 @@ export function registerSwipe(
   return state;
 }
 
-/** Siembra el estado inicial a partir del cuestionario de onboarding (cold start) */
+/**
+ * Fuerza del sembrado del cuestionario, en pseudo-observaciones (alpha + beta). Igualada a
+ * PRIOR_STRENGTH a propósito: lo que una persona declara explícitamente sobre su propio gusto
+ * debe pesar AL MENOS tanto como el consenso anónimo de la comunidad, que es exactamente lo
+ * que ese prior representa. Antes era 3 (alpha 2 / beta 1) -- literalmente la mitad, o sea el
+ * cuestionario contaba menos que "a la gente en general le gusta esto".
+ *
+ * Sigue muy por debajo del techo de muestra efectiva del motor (~33, ver DECAY), así que unos
+ * pocos días de swipes reales lo superan sin problema: esto inclina el arranque en frío, no lo
+ * congela en un eco permanente de las respuestas iniciales.
+ */
+const ONBOARDING_SEED_STRENGTH = PRIOR_STRENGTH;
+
+/** Tasa de like implícita de una respuesta del cuestionario (0.75 = 3 likes por cada dislike). */
+const ONBOARDING_SEED_RATE = 0.75;
+
+/**
+ * La vibra se siembra a la mitad de fuerza que género/artista. No es un descuido: la vibra
+ * preferida es una sola respuesta (single-select) y es inherentemente más volátil que el
+ * gusto por un género -- alguien "de reggaetón" lo sigue siendo el mes que viene, pero su
+ * vibra cambia de una sesión a otra. Además la vibra elegida POR SESIÓN ya recibe un empujón
+ * aparte y más fuerte (SESSION_VIBE_BOOST en useDeck.ts); sembrarla aquí igual de fuerte que
+ * el género la sobrerrepresentaría al sumarse ambos.
+ */
+const ONBOARDING_VIBE_SEED_FACTOR = 0.5;
+
+function seedParams(strength: number): BetaParams {
+  return { alpha: strength * ONBOARDING_SEED_RATE, beta: strength * (1 - ONBOARDING_SEED_RATE) };
+}
+
+/**
+ * Siembra el estado inicial a partir del cuestionario de onboarding (cold start).
+ *
+ * `preferredVibe` es opcional pero NO decorativo: el cuestionario ya preguntaba la vibra
+ * preferida y la guardaba en Supabase, pero hasta 2026-09-01 esta función solo sembraba
+ * `artista:`/`genero:` -- o sea se le pedía un dato a la persona y luego se ignoraba para el
+ * arranque en frío, a pesar de que la vibra es la quinta dimensión de primera clase del motor
+ * desde la Fase 8 (ver WEIGHTS.vibe y dimensionKeys).
+ */
 export function seedFromOnboarding(
   preferredArtistIds: string[],
   preferredGenres: string[],
   state: UserState = {},
+  preferredVibe?: string | null,
 ): UserState {
+  const base = seedParams(ONBOARDING_SEED_STRENGTH);
   for (const artistId of preferredArtistIds) {
-    state[`artista:${artistId}`] = { alpha: 2, beta: 1 };
+    state[`artista:${artistId}`] = { ...base };
   }
   for (const genre of preferredGenres) {
-    state[`genero:${genre}`] = { alpha: 2, beta: 1 };
+    state[`genero:${genre}`] = { ...base };
+  }
+  if (preferredVibe) {
+    state[`vibra:${preferredVibe}`] = seedParams(ONBOARDING_SEED_STRENGTH * ONBOARDING_VIBE_SEED_FACTOR);
   }
   return state;
 }

@@ -52,14 +52,15 @@ export default function EditOnboardingScreen() {
         colors={colors}
         editMode
         initialAnswers={initialAnswers}
+        // En modo edición no hay swipes intermedios, así que OnboardingFlow dispara esto en
+        // el mismo "Guardar cambios" -- resiembra el estado local con las respuestas nuevas.
+        onAnswersReady={(result: OnboardingResult) =>
+          seedFromOnboardingAnswers(result.referenceArtists, result.favoriteGenres, result.preferredVibe)
+        }
         onComplete={(result: OnboardingResult) => {
-          if (userId) {
-            // Mismo par de efectos que el onboarding inicial (ver app/(tabs)/index.tsx):
-            // re-sembrar el estado local de gustos con las respuestas actualizadas y
-            // persistir la fila remota (upsert, no bloqueante).
-            seedFromOnboardingAnswers(result.referenceArtists, result.favoriteGenres);
-            submitOnboarding(userId, result).catch(() => {});
-          }
+          // Persiste la fila remota (upsert, no bloqueante) -- el sembrado local ya ocurrió
+          // en onAnswersReady, ver app/(tabs)/index.tsx para el mismo par de efectos.
+          if (userId) submitOnboarding(userId, result).catch(() => {});
           router.back();
         }}
       />

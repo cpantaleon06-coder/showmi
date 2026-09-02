@@ -55,8 +55,12 @@ export default function SwipeScreen() {
     return (
       <OnboardingFlow
         colors={colors}
+        // Siembra el motor apenas hay respuestas, ANTES de los 8 swipes iniciales -- así el
+        // primer deck ya refleja lo que la persona eligió (ver startSwipes en OnboardingFlow).
+        onAnswersReady={(result: OnboardingResult) =>
+          seedFromOnboardingAnswers(result.referenceArtists, result.favoriteGenres, result.preferredVibe)
+        }
         onComplete={(result: OnboardingResult) => {
-          seedFromOnboardingAnswers(result.referenceArtists, result.favoriteGenres);
           submitOnboarding(userId, result).catch(() => {});
           queryClient.setQueryData(['onboarding-complete', userId], true);
           clearAnchor();

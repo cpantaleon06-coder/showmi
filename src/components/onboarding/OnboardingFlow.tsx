@@ -32,6 +32,13 @@ export interface OnboardingResult {
 interface OnboardingFlowProps {
   colors: ThemeColors;
   onComplete: (result: OnboardingResult) => void;
+  /**
+   * Se dispara en cuanto las respuestas están completas y ANTES de cualquier swipe, para
+   * sembrar el taste_profile local. Separado de `onComplete` a propósito (ver startSwipes):
+   * onComplete corre al final de los 8 swipes iniciales, que es demasiado tarde para que el
+   * primer deck se beneficie de lo que la persona acaba de responder.
+   */
+  onAnswersReady: (result: OnboardingResult) => void;
   /** Precarga el formulario con respuestas ya guardadas -- ver EditOnboardingScreen
    *  (app/edit-onboarding.tsx). Ausente = onboarding normal de primera vez. */
   initialAnswers?: OnboardingResult;
@@ -53,7 +60,13 @@ interface OnboardingFlowProps {
  * El mismo componente sirve para el modo edición (`editMode`+`initialAnswers`):
  * son las MISMAS pantallas, no una segunda implementación, tal como se confirmó.
  */
-export function OnboardingFlow({ colors, onComplete, initialAnswers, editMode = false }: OnboardingFlowProps) {
+export function OnboardingFlow({
+  colors,
+  onComplete,
+  onAnswersReady,
+  initialAnswers,
+  editMode = false,
+}: OnboardingFlowProps) {
   const [step, setStep] = useState<Step>('genres');
   const [genres, setGenres] = useState<CanonicalGenre[]>(initialAnswers?.favoriteGenres ?? []);
   const [artists, setArtists] = useState<string[]>(initialAnswers?.referenceArtists ?? []);
@@ -83,7 +96,26 @@ export function OnboardingFlow({ colors, onComplete, initialAnswers, editMode = 
     }
   };
 
+  /** Sin ancla nueva elegida: conserva la que ya tenía (edición) en vez de borrarla --
+   *  buscar una canción nueva es opcional en los dos modos, no confirmarla no debería
+   *  vaciar lo que la persona ya tenía guardado. */
+  const buildAnswers = (): OnboardingResult => ({
+    favoriteGenres: genres,
+    referenceArtists: artists,
+    preferredVibe: vibe,
+    anchorArtist: anchor?.artist ?? initialAnswers?.anchorArtist ?? null,
+    anchorTitle: anchor?.title ?? initialAnswers?.anchorTitle ?? null,
+  });
+
   const startSwipes = () => {
+    // Sembrar ANTES de los swipes iniciales, y antes del reanchor que dispara el fetch del
+    // deck. Hasta 2026-09-01 el sembrado vivía solo en onComplete -- que corre al TERMINAR
+    // los 8 swipes -- así que el primer deck que veía la persona (justo el de su propio
+    // onboarding) se rankeaba con un UserState vacío, ignorando los géneros/artistas/vibra
+    // que acababa de elegir. Era exactamente el arranque en frío que este cuestionario
+    // existe para evitar.
+    onAnswersReady(buildAnswers());
+
     const deckAnchor: DeckAnchor = anchor
       ? { artist: anchor.artist, title: anchor.title }
       : curatedAnchorsByGenre[genres[0] ?? 'indie_lofi'];
@@ -92,16 +124,12 @@ export function OnboardingFlow({ colors, onComplete, initialAnswers, editMode = 
   };
 
   const finish = () => {
-    // Sin ancla nueva elegida: conserva la que ya tenía (edición) en vez de borrarla --
-    // buscar una canción nueva es opcional en los dos modos, no confirmarla no debería
-    // vaciar lo que la persona ya tenía guardado.
-    onComplete({
-      favoriteGenres: genres,
-      referenceArtists: artists,
-      preferredVibe: vibe,
-      anchorArtist: anchor?.artist ?? initialAnswers?.anchorArtist ?? null,
-      anchorTitle: anchor?.title ?? initialAnswers?.anchorTitle ?? null,
-    });
+    // En modo edición no hay swipes intermedios (ver `editMode`), así que este es el único
+    // momento posible para resembrar. En el flujo normal NO se resiembra acá a propósito:
+    // ya se sembró en startSwipes, y los 8 swipes iniciales modificaron esas mismas claves
+    // -- volver a sembrarlas ahora borraría justo lo que esos swipes acaban de enseñar.
+    if (editMode) onAnswersReady(buildAnswers());
+    onComplete(buildAnswers());
   };
 
   const candidateArtists = Array.from(new Set(genres.flatMap(artistsForGenre)));

@@ -15,7 +15,11 @@ interface TasteState {
    *  del selector de sesión (efímero, nunca toca este store), esto sí persiste. Normaliza
    *  los nombres de artista igual que trackToCandidate, para que la misma clave se refuerce
    *  después cuando el usuario swipee ese artista de verdad. */
-  seedFromOnboardingAnswers: (referenceArtists: string[], favoriteGenres: string[]) => void;
+  seedFromOnboardingAnswers: (
+    referenceArtists: string[],
+    favoriteGenres: string[],
+    preferredVibe?: string | null,
+  ) => void;
 }
 
 /**
@@ -45,10 +49,10 @@ export const useTasteStateStore = create<TasteState>()(
           registerSwipe(candidate, liked, next, intensity);
           return { state: next };
         }),
-      seedFromOnboardingAnswers: (referenceArtists, favoriteGenres) =>
+      seedFromOnboardingAnswers: (referenceArtists, favoriteGenres, preferredVibe) =>
         set((current) => {
           const next = { ...current.state };
-          seedFromOnboarding(referenceArtists.map(normalizeForMatch), favoriteGenres, next);
+          seedFromOnboarding(referenceArtists.map(normalizeForMatch), favoriteGenres, next, preferredVibe);
           return { state: next };
         }),
     }),
