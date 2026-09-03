@@ -102,9 +102,15 @@ export default function ClosetScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      {/* Hermano directo del SafeAreaView, no anidado dentro del ScrollView con padding --
+          mismo patrón que profile.tsx/premium.tsx, para que top:16/left:16 (ver BackButton.tsx)
+          quede pegado al borde real de la pantalla en las 3 pantallas por igual. Anidarlo
+          dentro de `stage` (como estaba antes) lo desplazaba ~20px extra por el padding del
+          ScrollView, un blanco de toque en un lugar distinto al que las otras pantallas
+          enseñan a esperar. */}
+      <BackButton colors={colors} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.stage, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <BackButton colors={colors} />
           <Mascot colors={colors} equipped={shown} size={180} />
         </View>
 
