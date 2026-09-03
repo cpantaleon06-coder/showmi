@@ -63,8 +63,8 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
     (track: Track, direction: SwipeDirection) => {
       advance(track, direction);
       consumeFreeSwipe();
-      // TODO: once Supabase is wired up, persist this swipe to the `swipes`
-      // table too (user_id, track_id, isrc, direction, timestamp).
+      // (El ledger remoto ya no es un pendiente: `advance` dispara registerSwipeRemote sin
+      // bloquear, ver swipeStore.ts. El TODO que vivía acá quedó obsoleto desde la Fase 4.)
       if (direction === 'right') {
         addToCollection('para_escuchar', track);
       } else if (direction === 'up') {
