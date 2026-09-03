@@ -2,14 +2,22 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowsClockwiseIcon, CheckCircleIcon, CrownIcon, InfinityIcon, TShirtIcon } from 'phosphor-react-native';
+import { ArrowsClockwiseIcon, CheckCircleIcon, CrownIcon, GearIcon, InfinityIcon, TShirtIcon } from 'phosphor-react-native';
 import type { PurchasesPackage } from 'react-native-purchases';
 
 import { useThemeStore } from '../src/theme/useThemeStore';
 import { fonts } from '../src/theme/typography';
 import { BackButton } from '../src/components/ui/BackButton';
 import { useSubscriptionStore, DAILY_FREE_SWIPE_LIMIT } from '../src/state/subscriptionStore';
-import { fetchCurrentOffering, isPremiumFromCustomerInfo, isRevenueCatConfigured, purchasePackage, restorePurchases } from '../src/lib/revenuecat';
+import {
+  fetchCurrentOffering,
+  fetchCustomerInfo,
+  isPremiumFromCustomerInfo,
+  isRevenueCatConfigured,
+  presentCustomerCenter,
+  purchasePackage,
+  restorePurchases,
+} from '../src/lib/revenuecat';
 import { syncPremiumStatus } from '../src/api/subscriptionClient';
 import { ThemeColors } from '../src/theme/colors';
 
@@ -64,6 +72,7 @@ export default function PremiumScreen() {
   const setPremium = useSubscriptionStore((s) => s.setPremium);
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [openingCenter, setOpeningCenter] = useState(false);
 
   const offeringQuery = useQuery({
     queryKey: ['revenuecat-current-offering'],
@@ -108,6 +117,19 @@ export default function PremiumScreen() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    setOpeningCenter(true);
+    try {
+      await presentCustomerCenter();
+      // El Customer Center puede haber cancelado/cambiado el plan mientras estuvo abierto --
+      // el modal no notifica cambios en vivo, así que se refresca CustomerInfo al cerrarlo.
+      const info = await fetchCustomerInfo();
+      if (info) applyCustomerInfo(info);
+    } finally {
+      setOpeningCenter(false);
+    }
+  };
+
   const packages = offeringQuery.data?.availablePackages ?? [];
 
   return (
@@ -120,10 +142,25 @@ export default function PremiumScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         {isPremium ? (
-          <View style={[styles.activeBanner, { borderColor: colors.premiumAccent }]}>
-            <CheckCircleIcon weight="fill" size={22} color={colors.premiumAccent} />
-            <Text style={[styles.activeBannerText, { color: colors.textPrimary }]}>Ya tienes Showmi More -- gracias por tu apoyo.</Text>
-          </View>
+          <>
+            <View style={[styles.activeBanner, { borderColor: colors.premiumAccent }]}>
+              <CheckCircleIcon weight="fill" size={22} color={colors.premiumAccent} />
+              <Text style={[styles.activeBannerText, { color: colors.textPrimary }]}>Ya tienes Showmi More -- gracias por tu apoyo.</Text>
+            </View>
+            {isRevenueCatConfigured() && (
+              <Pressable
+                onPress={handleManageSubscription}
+                disabled={openingCenter}
+                style={[styles.manageRow, { borderColor: colors.border, opacity: openingCenter ? 0.6 : 1 }]}
+                hitSlop={8}
+              >
+                <GearIcon weight="bold" size={16} color={colors.textPrimary} />
+                <Text style={[styles.manageRowText, { color: colors.textPrimary }]}>
+                  {openingCenter ? 'Abriendo…' : 'Gestionar suscripción'}
+                </Text>
+              </Pressable>
+            )}
+          </>
         ) : null}
 
         <View style={styles.perks}>
@@ -207,6 +244,22 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontFamily: fonts.bodySemiBold,
+  },
+  manageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 2,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    width: '100%',
+    marginTop: -8,
+  },
+  manageRowText: {
+    fontSize: 13,
+    fontFamily: fonts.bodyBold,
   },
   perks: {
     width: '100%',

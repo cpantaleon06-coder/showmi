@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import Purchases, { CustomerInfo, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
+import RevenueCatUI from 'react-native-purchases-ui';
 
 /**
  * Identificador de entitlement configurado en el dashboard de RevenueCat -- convención propia
@@ -9,11 +10,18 @@ import Purchases, { CustomerInfo, PurchasesOffering, PurchasesPackage } from 're
  *
  * Nota de nombres: el tier se llama **"Showmi More"** de cara al usuario (2026-09-01, antes
  * "Showmi Premium"). En el código el concepto genérico sigue siendo `premium` -- `isPremium`,
- * `es_premium`, `premiumAccent`, esta constante -- a propósito: es el nombre del CONCEPTO
- * (nivel de pago), no de la marca, así que un cambio de marca futuro no obliga a tocar el
- * esquema de la base ni media docena de archivos. Solo los strings visibles dicen "Showmi More".
+ * `es_premium`, `premiumAccent` -- a propósito: es el nombre del CONCEPTO (nivel de pago), no
+ * de la marca, así que un cambio de marca futuro no obliga a tocar el esquema de la base ni
+ * media docena de archivos. Solo los strings visibles dicen "Showmi More".
+ *
+ * Esta constante SÍ es la excepción: tiene que ser el identificador EXACTO configurado en el
+ * dashboard de RevenueCat (Entitlements), que el usuario ya creó como `showmi_more` (no
+ * `premium`, que era la suposición original de este archivo antes de que existiera el
+ * proyecto real). Un desajuste acá no truena nada -- la compra se procesa igual en la tienda
+ * -- simplemente `isPremiumFromCustomerInfo` nunca encuentra la entitlement activa y el tier
+ * jamás se activa del lado de la app. Bug silencioso, no un error visible.
  */
-export const PREMIUM_ENTITLEMENT_ID = 'premium';
+export const PREMIUM_ENTITLEMENT_ID = 'showmi_more';
 
 const IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS ?? '';
 const ANDROID_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID ?? '';
@@ -85,4 +93,25 @@ export function addCustomerInfoListener(listener: (info: CustomerInfo) => void):
   if (!isRevenueCatConfigured()) return () => {};
   Purchases.addCustomerInfoUpdateListener(listener);
   return () => Purchases.removeCustomerInfoUpdateListener(listener);
+}
+
+/**
+ * Modal nativo de RevenueCat para gestionar una suscripción YA activa (cancelar, cambiar de
+ * plan, pedir reembolso en iOS, contactar soporte) -- configurado desde el dashboard, no algo
+ * que este archivo controle. A diferencia del paywall (hecho a mano en app/premium.tsx para
+ * respetar el sistema de diseño propio de Showmi, ver comentario ahí), el Customer Center es
+ * una pantalla de UTILIDAD -- gestionar algo que ya se compró -- no de conversión/venta, así
+ * que usar la vista nativa de RevenueCat acá no compite con la identidad visual del producto
+ * de la misma forma que un paywall genérico sí lo haría.
+ *
+ * La promesa resuelve cuando la persona cierra el modal -- quien llama debe refrescar
+ * CustomerInfo después (pudo haber cancelado), ver el uso en app/premium.tsx.
+ */
+export async function presentCustomerCenter(): Promise<void> {
+  if (!isRevenueCatConfigured()) return;
+  try {
+    await RevenueCatUI.presentCustomerCenter();
+  } catch (e) {
+    console.warn('[revenuecat] presentCustomerCenter falló:', e);
+  }
 }
