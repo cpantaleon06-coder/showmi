@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CaretLeftIcon } from 'phosphor-react-native';
 
 import { ThemeColors } from '../../theme/colors';
 import { fonts } from '../../theme/typography';
@@ -20,6 +21,12 @@ import { SwipeDeck } from '../swipe/SwipeDeck';
 const ONBOARDING_SWIPE_TARGET = 8;
 
 type Step = 'genres' | 'artists' | 'vibe' | 'anchor' | 'swipes';
+
+/** Orden real de los 4 pasos con formulario -- 'swipes' vive fuera de esta lista a propósito:
+ *  es una pantalla aparte (con su propio overlay de "Listo"), retroceder desde ahí implicaría
+ *  deshacer swipes ya hechos contra swipeStore, un problema distinto al que se está resolviendo
+ *  acá (poder corregir una respuesta antes de llegar a los swipes). */
+const STEP_ORDER: Step[] = ['genres', 'artists', 'vibe', 'anchor'];
 
 export interface OnboardingResult {
   favoriteGenres: CanonicalGenre[];
@@ -84,6 +91,14 @@ export function OnboardingFlow({
 
   const toggleArtist = (a: string) =>
     setArtists((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]));
+
+  /** Retrocede un paso sin perder nada ya elegido -- genres/artists/vibe/anchor viven en
+   *  useState propio de este componente, no se limpian al cambiar `step`, así que volver
+   *  adelante después de retroceder conserva las respuestas tal como quedaron. */
+  const goBack = () => {
+    const idx = STEP_ORDER.indexOf(step);
+    if (idx > 0) setStep(STEP_ORDER[idx - 1]);
+  };
 
   const runSearch = async () => {
     if (!anchorQuery.trim()) return;
@@ -159,6 +174,21 @@ export function OnboardingFlow({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Altura fija siempre reservada (en vez de no renderizar la fila en 'genres') para que
+          el contenido no salte de posición al cambiar de paso -- el botón en sí solo se ve
+          (opacity) y responde a toques (pointerEvents) desde 'artists' en adelante; en
+          'genres' no hay paso previo al que volver. */}
+      <View style={styles.stepHeader} pointerEvents="box-none">
+        <Pressable
+          onPress={goBack}
+          hitSlop={10}
+          disabled={step === 'genres'}
+          style={[styles.backButton, { opacity: step === 'genres' ? 0 : 1 }]}
+        >
+          <CaretLeftIcon weight="bold" size={22} color={colors.textPrimary} />
+        </Pressable>
+      </View>
+
       <ScrollView contentContainerStyle={styles.content}>
         {step === 'genres' && (
           <>
@@ -279,9 +309,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  stepHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    padding: 4,
+  },
   content: {
     paddingHorizontal: 24,
-    paddingTop: 32,
+    paddingTop: 16,
     paddingBottom: 24,
   },
   title: {
