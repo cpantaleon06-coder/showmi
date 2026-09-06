@@ -136,7 +136,11 @@ export default function PremiumScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={[styles.header, { backgroundColor: colors.brand }]}>
         <BackButton colors={colors} />
-        <CrownIcon weight="fill" size={40} color={colors.premiumAccent} />
+        {/* Blanco fijo, no colors.premiumAccent -- este header siempre es colors.brand (rojo)
+            en los dos temas, igual que headerTitle de abajo. El dorado de premiumAccent se
+            calibró contra colors.surface (contraste 4.93:1 en claro / 7.33:1 en oscuro, ver
+            colors.ts) -- sobre rojo da apenas 1.15:1, prácticamente ilegible. */}
+        <CrownIcon weight="fill" size={40} color="#FFFFFF" />
         <Text style={styles.headerTitle}>Showmi More</Text>
       </View>
 

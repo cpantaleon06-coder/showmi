@@ -48,14 +48,19 @@ export interface ThemeColors {
    * Dorado reservado para la insignia/CTA de "Showmi More" (paywall, badge en Feed/Perfil)
    * -- mismo espíritu de "acento reservado" que nagaiGradient (documentado ahí arriba): un
    * solo uso consistente en toda la app, nunca decorativo en otro lado, para que de verdad
-   * lea como estatus y no se diluya. Igual en ambos modos a propósito (es la identidad de la
-   * insignia, no debe cambiar con el tema).
+   * lea como estatus y no se diluya.
+   *
+   * 2026-09-06: deja de ser un valor único -- `#C9A227` da 7.33:1 sobre `surface` oscuro
+   * (bien) pero solo 2.38:1 sobre `surface` claro (falla WCAG AA, que pide 4.5:1 para texto
+   * normal), encontrado en una pasada de pulido visual viendo "Hazte Showmi More" lavado en
+   * modo claro. Mismo tipo de bug que el ámbar-sobre-blanco de la Fase 3 (ver historial de
+   * `brand` más abajo) -- el dorado claro se oscurece a `#8A6B14` (4.93:1) para quedar
+   * legible sin dejar de leerse como "la misma familia de color" en los dos modos.
    */
   premiumAccent: string;
 }
 
 const NAGAI_GRADIENT: [string, string, string] = ['#FF8C5A', '#D9718C', '#0F6E7D'];
-const PREMIUM_ACCENT = '#C9A227';
 
 /** Rojo de cartel constructivista -- reemplaza el azul como color interactivo primario. */
 export const darkColors: ThemeColors = {
@@ -68,7 +73,7 @@ export const darkColors: ThemeColors = {
   pass: '#F87171',
   border: '#F2ECE4',
   nagaiGradient: NAGAI_GRADIENT,
-  premiumAccent: PREMIUM_ACCENT,
+  premiumAccent: '#C9A227',
 };
 
 export const lightColors: ThemeColors = {
@@ -81,7 +86,7 @@ export const lightColors: ThemeColors = {
   pass: '#EF4444',
   border: '#141414',
   nagaiGradient: NAGAI_GRADIENT,
-  premiumAccent: PREMIUM_ACCENT,
+  premiumAccent: '#8A6B14',
 };
 
 export function colorsForMode(mode: ThemeMode): ThemeColors {

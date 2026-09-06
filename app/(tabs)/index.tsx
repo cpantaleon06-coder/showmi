@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { SwipeDeck } from '../../src/components/swipe/SwipeDeck';
@@ -16,11 +18,13 @@ import { curatedAnchorsByGenre } from '../../src/api/curatedSeeds';
 import { hasCompletedOnboarding, submitOnboarding } from '../../src/api/onboardingClient';
 import { ProfileButton } from '../../src/components/ui/ProfileButton';
 import { fonts } from '../../src/theme/typography';
+import { floatingTabBarStyle } from '../../src/theme/layout';
 import { useSessionTreeConsolidation } from '../../src/hooks/useSessionTreeConsolidation';
 
 export default function SwipeScreen() {
   useSessionTreeConsolidation();
   const colors = useThemeStore((s) => s.colors);
+  const navigation = useNavigation();
   const userId = useAuthStore((s) => s.session?.user.id);
   const resolvedThisSession = useSessionFilterStore((s) => s.resolvedThisSession);
   const genre = useSessionFilterStore((s) => s.genre);
@@ -39,6 +43,17 @@ export default function SwipeScreen() {
     enabled: !!userId,
     staleTime: Infinity,
   });
+
+  // Antes de este fix (2026-09-06), la isla flotante de pestañas seguía visible durante el
+  // onboarding y el selector de sesión -- ninguno de los dos es saltable, así que mostrar
+  // navegación a otras pestañas ahí no tiene sentido de producto, tocable o no. Hook antes de
+  // cualquier return temprano (regla de hooks), por eso vive acá y no más abajo.
+  const showingGate = (!!userId && (onboardingQuery.isLoading || onboardingQuery.data === false)) || !resolvedThisSession;
+  useEffect(() => {
+    navigation.setOptions({
+      tabBarStyle: showingGate ? { display: 'none' } : floatingTabBarStyle(colors.surface),
+    });
+  }, [showingGate, colors.surface, navigation]);
 
   // Sin userId (falló el sign-in anónimo, sin red) no hay nada mejor que
   // dejar pasar directo al deck normal -- bloquear la app entera por esto

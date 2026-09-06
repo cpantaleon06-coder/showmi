@@ -14,3 +14,28 @@
  * con la isla cuando se hizo más delgada (antes 24+64).
  */
 export const FLOATING_TAB_BAR_CLEARANCE = 90;
+
+/**
+ * Estilo de la isla flotante, factorizado desde app/(tabs)/_layout.tsx (2026-09-06) para que
+ * app/(tabs)/index.tsx pueda restaurarlo con `navigation.setOptions({ tabBarStyle })` después
+ * de ocultarlo -- ver esa pantalla para el motivo (ocultar la barra durante onboarding). Sin
+ * esta fuente compartida, "ocultar y restaurar" tendría que reconstruir el objeto a mano y
+ * arriesgarse a que las dos copias se desincronicen si alguien cambia solo una.
+ */
+export function floatingTabBarStyle(surfaceColor: string) {
+  return {
+    position: 'absolute' as const,
+    left: 24,
+    right: 24,
+    bottom: 16,
+    height: 52,
+    borderRadius: 22,
+    backgroundColor: surfaceColor,
+    borderTopWidth: 0,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  };
+}

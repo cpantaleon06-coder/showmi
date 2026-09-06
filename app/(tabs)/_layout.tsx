@@ -3,6 +3,7 @@ import type { ColorValue } from 'react-native';
 import { CardsIcon, DiscIcon, NewspaperIcon } from 'phosphor-react-native';
 
 import { useThemeStore } from '../../src/theme/useThemeStore';
+import { floatingTabBarStyle } from '../../src/theme/layout';
 
 // Naranja del wordmark (letra "O"), elegido por ser el que menos se confunde
 // con el verde/coral del swipe y el ámbar de marca -- exclusivo del ícono de
@@ -54,21 +55,7 @@ export default function TabsLayout() {
         // como una tarjeta flotando sobre colors.background, no como un color aparte.
         // Altura y margen bajados (64->52, 24->16) -- la primera versión ocupaba más
         // espacio del necesario para 3 íconos solos, sin texto (feedback del usuario).
-        tabBarStyle: {
-          position: 'absolute',
-          left: 24,
-          right: 24,
-          bottom: 16,
-          height: 52,
-          borderRadius: 22,
-          backgroundColor: colors.surface,
-          borderTopWidth: 0,
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-          elevation: 8,
-        },
+        tabBarStyle: floatingTabBarStyle(colors.surface),
       }}
     >
       <Tabs.Screen name="library" options={{ title: 'Biblioteca', tabBarIcon: LibraryTabIcon }} />
