@@ -102,7 +102,7 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
         <Text style={[styles.recommended, { color: colors.textSecondary }]}>Recomendado</Text>
       )}
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vibeRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.noGrow} contentContainerStyle={styles.vibeRow}>
         {VIBES.map((v) => (
           <GradientChip
             key={v.key}
@@ -192,7 +192,7 @@ export default function FeedScreen() {
         <ProfileButton colors={colors} />
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.channelRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.noGrow} contentContainerStyle={styles.channelRow}>
         <GradientChip colors={colors} label="Para ti" selected={channel === FOR_YOU} onPress={() => setChannel(FOR_YOU)} />
         {(channelsQuery.data ?? []).map((c) => (
           <GradientChip key={c.genreTag} colors={colors} label={c.genreTag} selected={channel === c.genreTag} onPress={() => setChannel(c.genreTag)} />
@@ -249,6 +249,15 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 22,
     fontFamily: fonts.display,
+  },
+  // react-native-web pone flexGrow:1 por default en <ScrollView> sin `style` propio -- sin
+  // esto, esta fila horizontal (hermana del FlatList de posts, ambos hijos directos de un
+  // contenedor flex-column sin alto fijo) se estira para repartirse el espacio libre con el
+  // FlatList, dejando ~260px de fila vacía en vez de los ~40px reales del contenido. Bug real
+  // encontrado en una pasada de pulido -- mismo fix aplicado también a vibeRow (dentro de cada
+  // post) y a profile.tsx (sin efecto visible ahí hoy, pero mismo riesgo si el layout cambia).
+  noGrow: {
+    flexGrow: 0,
   },
   channelRow: {
     gap: 8,

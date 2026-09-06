@@ -33,7 +33,11 @@ function StatSection({ colors, title, children }: { colors: ThemeColors; title: 
   return (
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{title}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={chipStyles.row}>
+      {/* style={{flexGrow:0}}: react-native-web pone flexGrow:1 por default en <ScrollView>
+          sin `style` propio -- acá no se ve todavía (StatSection no tiene un hermano tipo
+          FlatList compitiendo por espacio), pero es el mismo bug real que sí se manifestó en
+          feed.tsx (ver noGrow ahí) -- mismo fix preventivo. */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.noGrow} contentContainerStyle={chipStyles.row}>
         {children}
       </ScrollView>
     </View>
@@ -170,6 +174,9 @@ const styles = StyleSheet.create({
   },
   section: {
     width: '100%',
+  },
+  noGrow: {
+    flexGrow: 0,
   },
   sectionTitle: {
     fontSize: 11,
