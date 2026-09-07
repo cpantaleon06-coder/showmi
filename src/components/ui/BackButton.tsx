@@ -19,7 +19,7 @@ export function BackButton({ colors }: BackButtonProps) {
 
   return (
     <Pressable onPress={() => router.back()} hitSlop={10} style={styles.button}>
-      <CaretLeftIcon weight="fill" size={22} color="#FFFFFF" />
+      <CaretLeftIcon weight="light" size={24} color="#FFFFFF" />
     </Pressable>
   );
 }

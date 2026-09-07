@@ -185,7 +185,7 @@ export function OnboardingFlow({
           disabled={step === 'genres'}
           style={[styles.backButton, { opacity: step === 'genres' ? 0 : 1 }]}
         >
-          <CaretLeftIcon weight="bold" size={22} color={colors.textPrimary} />
+          <CaretLeftIcon weight="light" size={24} color={colors.textPrimary} />
         </Pressable>
       </View>
 
