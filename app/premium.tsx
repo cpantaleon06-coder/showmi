@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowsClockwiseIcon, CheckCircleIcon, CrownIcon, GearIcon, InfinityIcon, TShirtIcon } from 'phosphor-react-native';
+import { ArrowsClockwiseIcon, CheckCircleIcon, CrownIcon, GearIcon, InfinityIcon, ProhibitIcon, TShirtIcon } from 'phosphor-react-native';
 import type { PurchasesPackage } from 'react-native-purchases';
 
 import { useThemeStore } from '../src/theme/useThemeStore';
@@ -36,6 +36,15 @@ const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = 
     icon: TShirtIcon,
     title: 'Cosméticos exclusivos del Camerino',
     description: 'Corona, lentes dorados y estampado de estrellas para tu mascota. Los ves antes de pagar -- nunca son aleatorios.',
+  },
+  {
+    // 2026-09-06: antes deliberadamente NO se prometía esto (ver revenuecat.ts, "honestidad
+    // consciente" -- no existía ningún sistema de anuncios construido). Ahora sí existe
+    // (tarjetas patrocinadas en el deck y el Feed, ver lib/ads.ts) y Showmi More las oculta
+    // de verdad -- ya no es una promesa vacía.
+    icon: ProhibitIcon,
+    title: 'Sin anuncios',
+    description: 'Ni en el deck ni en el Feed -- solo música y gente real.',
   },
 ];
 

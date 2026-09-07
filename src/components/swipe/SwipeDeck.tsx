@@ -12,13 +12,25 @@ import { SwipeDirection, useSwipeStore } from '../../state/swipeStore';
 import { useLibraryStore } from '../../state/libraryStore';
 import { StarRating, usePostStore } from '../../state/postStore';
 import { useSubscriptionStore } from '../../state/subscriptionStore';
+import { areAdsSupportedOnThisPlatform } from '../../lib/ads';
 import { CanonicalGenre } from '../../lib/genres';
 import { VibeKey } from '../../lib/vibes';
 import { SwipeCard, SwipeCardHandle } from './SwipeCard';
 import { ActionButtons } from './ActionButtons';
 import { StarRatingPicker } from './StarRatingPicker';
+import { SponsoredCard } from '../ads/SponsoredCard';
 
 const VISIBLE_STACK_SIZE = 3;
+
+/**
+ * Cada cuántos swipes reales se intercala una tarjeta patrocinada -- "RevenueCat Ads" pedido
+ * explícitamente por el usuario (2026-09-06), aclarado en la conversación: RevenueCat no sirve
+ * anuncios, solo los trackea (Purchases.adTracker) encima de una red real -- ver lib/ads.ts.
+ * 10 se alinea con el mismo ritmo que ya usa el resto del producto (DAILY_FREE_SWIPE_LIMIT=50,
+ * LOAD_MORE_WHEN_REMAINING=20 en useDeck.ts) -- ni tan seguido que se sienta invasivo, ni tan
+ * espaciado que nunca aparezca en una sesión típica.
+ */
+const AD_INTERVAL = 10;
 
 interface SwipeDeckProps {
   /** Vibra elegida en el selector de sesión (o null) -- ver app/(tabs)/index.tsx. */
@@ -38,11 +50,24 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
   const rateTrack = usePostStore((s) => s.rateTrack);
   const canSwipe = useSubscriptionStore((s) => s.hasFreeSwipesLeft());
   const consumeFreeSwipe = useSubscriptionStore((s) => s.consumeFreeSwipe);
+  const isPremium = useSubscriptionStore((s) => s.isPremium);
   const router = useRouter();
 
   const { data: deck, isLoading, isError, refetch, resolvedAnchor } = useDeck(anchor, vibe, genre, currentIndex);
   const [pendingRating, setPendingRating] = useState<Track | null>(null);
   const activeCardRef = useRef<SwipeCardHandle>(null);
+
+  // Showmi More = sin anuncios (decisión confirmada con el usuario, completa el perk que
+  // quedó pendiente en premium.tsx). `adDismissedAtIndex` evita que el mismo slot reaparezca
+  // en cada re-render mientras currentIndex no cambia -- se "gasta" al tocar "Seguir viendo
+  // música" (ver SponsoredCard.tsx), no en cuanto se muestra.
+  const [adDismissedAtIndex, setAdDismissedAtIndex] = useState<number | null>(null);
+  const showAdSlot =
+    !isPremium &&
+    areAdsSupportedOnThisPlatform() &&
+    currentIndex > 0 &&
+    currentIndex % AD_INTERVAL === 0 &&
+    adDismissedAtIndex !== currentIndex;
 
   // Sistema reactivo de color por vibra (ver theme/vibeColors.ts, paso 1 de la identidad
   // visual): reacciona a la vibra elegida en el selector de SESIÓN, no a la vibra canónica
@@ -168,6 +193,22 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
           >
             Buscar más
           </Text>
+        </View>
+      );
+    } else if (showAdSlot) {
+      // Reemplaza la pila normal por completo en vez de intercalarse ENTRE tarjetas -- SwipeCard
+      // no sabe nada de anuncios (gestos de arrastre, audio) y no debería tener que saberlo;
+      // esto mantiene el ad fuera de ese sistema por completo. No consume un índice real del
+      // deck (currentIndex no avanza) -- solo se "pasa" con el botón propio de SponsoredCard.
+      content = (
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <View style={styles.stack}>
+            <SponsoredCard
+              colors={colors}
+              placement="swipe_deck"
+              onContinue={() => setAdDismissedAtIndex(currentIndex)}
+            />
+          </View>
         </View>
       );
     } else {

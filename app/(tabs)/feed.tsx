@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useThemeStore } from '../../src/theme/useThemeStore';
 import { fonts } from '../../src/theme/typography';
 import { useAuthStore } from '../../src/state/authStore';
+import { useSubscriptionStore } from '../../src/state/subscriptionStore';
+import { areAdsSupportedOnThisPlatform } from '../../src/lib/ads';
 import { VIBES } from '../../src/lib/vibes';
 import { resolveStoredTrackId } from '../../src/api/itunes';
 import { fetchTopSets, registerVibeVoteRemote } from '../../src/api/tasteEngineClient';
@@ -21,10 +23,39 @@ import {
 } from '../../src/api/postsClient';
 import { ProfileButton } from '../../src/components/ui/ProfileButton';
 import { GradientChip } from '../../src/components/ui/GradientChip';
+import { SponsoredPost } from '../../src/components/ads/SponsoredPost';
 import { ThemeColors } from '../../src/theme/colors';
 import { FLOATING_TAB_BAR_CLEARANCE } from '../../src/theme/layout';
 
 const FOR_YOU = '__for_you__';
+
+/** Cada cuántos posts se intercala uno patrocinado -- ver AD_INTERVAL en SwipeDeck.tsx para
+ *  el contexto de "RevenueCat Ads" (RevenueCat solo trackea, el anuncio real es de AdMob, ver
+ *  lib/ads.ts). Más seguido que en el deck (10) porque desplazarse por el Feed es más rápido
+ *  que swipear una canción entera -- con el mismo ritmo, un ad ahí casi nunca se alcanzaría a
+ *  ver en una sesión típica. */
+const FEED_AD_INTERVAL = 6;
+
+type FeedListItem = { kind: 'post'; post: RemotePost } | { kind: 'ad'; id: string };
+
+/** Intercala un slot de anuncio cada FEED_AD_INTERVAL posts -- nunca como el primer item (se
+ *  vería como que el Feed ES un anuncio) y nunca si hay muy pocos posts para que valga la pena
+ *  (un ad entre 2 posts reales se siente invasivo, no "orgánico"). */
+function buildFeedItems(posts: RemotePost[], showAds: boolean): FeedListItem[] {
+  const items: FeedListItem[] = posts.map((post) => ({ kind: 'post', post }));
+  if (!showAds || posts.length < FEED_AD_INTERVAL) return items;
+
+  const withAds: FeedListItem[] = [];
+  let adCount = 0;
+  items.forEach((item, i) => {
+    withAds.push(item);
+    if ((i + 1) % FEED_AD_INTERVAL === 0 && i !== items.length - 1) {
+      adCount += 1;
+      withAds.push({ kind: 'ad', id: `ad-${adCount}` });
+    }
+  });
+  return withAds;
+}
 
 function useResolvedTrack(trackId: string | null) {
   return useQuery({
@@ -184,6 +215,9 @@ export default function FeedScreen() {
   });
 
   const posts = postsQuery.data && postsQuery.data.length > 0 ? postsQuery.data : fallbackQuery.data ?? [];
+  const isPremium = useSubscriptionStore((s) => s.isPremium);
+  const showAds = !isPremium && areAdsSupportedOnThisPlatform();
+  const feedItems = useMemo(() => buildFeedItems(posts, showAds), [posts, showAds]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -200,8 +234,8 @@ export default function FeedScreen() {
       </ScrollView>
 
       <FlatList
-        data={posts}
-        keyExtractor={(p) => p.postId}
+        data={feedItems}
+        keyExtractor={(item) => (item.kind === 'post' ? item.post.postId : item.id)}
         contentContainerStyle={styles.listContent}
         onRefresh={() => queryClient.invalidateQueries({ queryKey: ['feed-posts'] })}
         refreshing={postsQuery.isFetching}
@@ -218,7 +252,13 @@ export default function FeedScreen() {
             </View>
           ) : null
         }
-        renderItem={({ item }) => <PostCard post={item} colors={colors} isMine={item.userId === userId} />}
+        renderItem={({ item }) =>
+          item.kind === 'ad' ? (
+            <SponsoredPost colors={colors} placement="feed" />
+          ) : (
+            <PostCard post={item.post} colors={colors} isMine={item.post.userId === userId} />
+          )
+        }
         ListEmptyComponent={
           postsQuery.isLoading ? (
             <ActivityIndicator color={colors.brand} size="large" style={styles.loading} />

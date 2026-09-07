@@ -9,11 +9,14 @@ import { PlusJakartaSans_600SemiBold } from '@expo-google-fonts/plus-jakarta-san
 import { PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans/700Bold';
 import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans/800ExtraBold';
 
+import { useEffect } from 'react';
+
 import { asyncStoragePersister, queryClient } from '../src/lib/queryClient';
 import { useThemeStore } from '../src/theme/useThemeStore';
 import { useAuthBootstrap } from '../src/hooks/useAuthBootstrap';
 import { useRevenueCatSync } from '../src/hooks/useRevenueCatSync';
 import { useAuthStore } from '../src/state/authStore';
+import { initializeAds } from '../src/lib/ads';
 
 export default function RootLayout() {
   const mode = useThemeStore((s) => s.mode);
@@ -28,6 +31,10 @@ export default function RootLayout() {
   const authReady = useAuthStore((s) => s.isReady);
   const userId = useAuthStore((s) => s.session?.user.id);
   useRevenueCatSync(userId);
+  // No-op en web (ver areAdsSupportedOnThisPlatform en lib/ads.ts) -- seguro llamarlo siempre.
+  useEffect(() => {
+    initializeAds();
+  }, []);
 
   // Nada de texto visible con la fuente del sistema, ni siquiera un parpadeo
   // inicial -- se espera a que carguen antes de montar cualquier pantalla.
