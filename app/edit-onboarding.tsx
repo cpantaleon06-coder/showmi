@@ -9,6 +9,7 @@ import { useAuthStore } from '../src/state/authStore';
 import { useTasteStateStore } from '../src/state/tasteStateStore';
 import { fetchOnboardingAnswers, submitOnboarding } from '../src/api/onboardingClient';
 import { OnboardingFlow, OnboardingResult } from '../src/components/onboarding/OnboardingFlow';
+import { goBackOrHome } from '../src/lib/navigation';
 
 /**
  * Ruta dedicada para el mecanismo de edición confirmado en la sección 1
@@ -61,11 +62,11 @@ export default function EditOnboardingScreen() {
           // Persiste la fila remota (upsert, no bloqueante) -- el sembrado local ya ocurrió
           // en onAnswersReady, ver app/(tabs)/index.tsx para el mismo par de efectos.
           if (userId) submitOnboarding(userId, result).catch(() => {});
-          router.back();
+          goBackOrHome(router);
         }}
       />
       <SafeAreaView style={styles.cancelWrap} edges={['top']} pointerEvents="box-none">
-        <Pressable onPress={() => router.back()} hitSlop={10} style={styles.cancelButton}>
+        <Pressable onPress={() => goBackOrHome(router)} hitSlop={10} style={styles.cancelButton}>
           <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancelar</Text>
         </Pressable>
       </SafeAreaView>

@@ -15,6 +15,7 @@ import {
   upgradeAnonymousAccount,
 } from '../src/api/authClient';
 import { getGoogleIdToken } from '../src/api/googleAuth';
+import { goBackOrHome } from '../src/lib/navigation';
 
 type Mode = 'upgrade' | 'signin';
 
@@ -76,7 +77,7 @@ export default function AuthScreen() {
       setError(result.error);
       return;
     }
-    router.back();
+    goBackOrHome(router);
   };
 
   const submitGoogle = async () => {
@@ -95,7 +96,7 @@ export default function AuthScreen() {
         setError(result.error);
         return;
       }
-      router.back();
+      goBackOrHome(router);
     } catch (e) {
       setSubmitting(false);
       setError(e instanceof Error ? e.message : 'No se pudo iniciar sesión con Google.');
@@ -116,7 +117,7 @@ export default function AuthScreen() {
         setError(result.error);
         return;
       }
-      router.back();
+      goBackOrHome(router);
     } catch (e: any) {
       setSubmitting(false);
       // ERR_REQUEST_CANCELED -- el usuario canceló, no es un error real para mostrar.
@@ -128,7 +129,7 @@ export default function AuthScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable onPress={() => goBackOrHome(router)} hitSlop={10}>
           <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancelar</Text>
         </Pressable>
       </View>
