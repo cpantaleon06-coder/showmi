@@ -19,6 +19,7 @@ import {
 } from '../src/lib/cosmetics';
 import { Mascot } from '../src/components/camerino/Mascot';
 import { BackButton } from '../src/components/ui/BackButton';
+import { PageTransition } from '../src/components/ui/PageTransition';
 import { ThemeColors } from '../src/theme/colors';
 
 function ProgressRow({ colors, label, ratings }: { colors: ThemeColors; label: string; ratings: number }) {
@@ -101,69 +102,71 @@ export default function ClosetScreen() {
   const totalRatings = Object.values(ratingsByCategory).reduce((a, b) => a + (b ?? 0), 0);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      {/* Hermano directo del SafeAreaView, no anidado dentro del ScrollView con padding --
-          mismo patrón que profile.tsx/premium.tsx, para que top:16/left:16 (ver BackButton.tsx)
-          quede pegado al borde real de la pantalla en las 3 pantallas por igual. Anidarlo
-          dentro de `stage` (como estaba antes) lo desplazaba ~20px extra por el padding del
-          ScrollView, un blanco de toque en un lugar distinto al que las otras pantallas
-          enseñan a esperar. */}
-      <BackButton colors={colors} />
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={[styles.stage, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Mascot colors={colors} equipped={shown} size={180} />
-        </View>
+    <PageTransition>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+        {/* Hermano directo del SafeAreaView, no anidado dentro del ScrollView con padding --
+            mismo patrón que profile.tsx/premium.tsx, para que top:16/left:16 (ver BackButton.tsx)
+            quede pegado al borde real de la pantalla en las 3 pantallas por igual. Anidarlo
+            dentro de `stage` (como estaba antes) lo desplazaba ~20px extra por el padding del
+            ScrollView, un blanco de toque en un lugar distinto al que las otras pantallas
+            enseñan a esperar. */}
+        <BackButton colors={colors} />
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={[styles.stage, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Mascot colors={colors} equipped={shown} size={180} />
+          </View>
 
-        <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Camerino</Text>
+          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Camerino</Text>
 
-        {totalRatings === 0 && (
-          <Text style={[styles.note, { color: colors.textSecondary }]}>
-            Califica canciones con estrellas (swipe hacia arriba) para subir de nivel y desbloquear piezas.
-          </Text>
-        )}
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>PROGRESO POR GÉNERO</Text>
-          {GENRE_CATEGORY_ORDER.map((category) => (
-            <ProgressRow key={category} colors={colors} label={category} ratings={ratingsByCategory[category] ?? 0} />
-          ))}
-        </View>
-
-        {COSMETIC_SLOTS.map((slot) => {
-          const items = COSMETICS.filter((c) => c.slot === slot.key);
-          return (
-            <View key={slot.key} style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{slot.label.toUpperCase()}</Text>
-              <View style={styles.grid}>
-                {items.map((item) => (
-                  <CosmeticCard
-                    key={item.id}
-                    colors={colors}
-                    item={item}
-                    unlocked={isUnlocked(item.id, isPremium)}
-                    equipped={shown[slot.key] === item.id}
-                    onPress={() => toggleEquip(item.id)}
-                  />
-                ))}
-              </View>
-            </View>
-          );
-        })}
-
-        {!isPremium && (
-          <Pressable
-            onPress={() => router.push('/premium')}
-            style={[styles.moreCta, { borderColor: colors.premiumAccent }]}
-            hitSlop={8}
-          >
-            <CrownIcon weight="fill" size={18} color={colors.premiumAccent} />
-            <Text style={[styles.moreCtaText, { color: colors.premiumAccent }]}>
-              Desbloquea las piezas exclusivas con Showmi More
+          {totalRatings === 0 && (
+            <Text style={[styles.note, { color: colors.textSecondary }]}>
+              Califica canciones con estrellas (swipe hacia arriba) para subir de nivel y desbloquear piezas.
             </Text>
-          </Pressable>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+          )}
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>PROGRESO POR GÉNERO</Text>
+            {GENRE_CATEGORY_ORDER.map((category) => (
+              <ProgressRow key={category} colors={colors} label={category} ratings={ratingsByCategory[category] ?? 0} />
+            ))}
+          </View>
+
+          {COSMETIC_SLOTS.map((slot) => {
+            const items = COSMETICS.filter((c) => c.slot === slot.key);
+            return (
+              <View key={slot.key} style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{slot.label.toUpperCase()}</Text>
+                <View style={styles.grid}>
+                  {items.map((item) => (
+                    <CosmeticCard
+                      key={item.id}
+                      colors={colors}
+                      item={item}
+                      unlocked={isUnlocked(item.id, isPremium)}
+                      equipped={shown[slot.key] === item.id}
+                      onPress={() => toggleEquip(item.id)}
+                    />
+                  ))}
+                </View>
+              </View>
+            );
+          })}
+
+          {!isPremium && (
+            <Pressable
+              onPress={() => router.push('/premium')}
+              style={[styles.moreCta, { borderColor: colors.premiumAccent }]}
+              hitSlop={8}
+            >
+              <CrownIcon weight="fill" size={18} color={colors.premiumAccent} />
+              <Text style={[styles.moreCtaText, { color: colors.premiumAccent }]}>
+                Desbloquea las piezas exclusivas con Showmi More
+              </Text>
+            </Pressable>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </PageTransition>
   );
 }
 

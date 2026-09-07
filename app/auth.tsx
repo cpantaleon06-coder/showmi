@@ -16,6 +16,7 @@ import {
 } from '../src/api/authClient';
 import { getGoogleIdToken } from '../src/api/googleAuth';
 import { goBackOrHome } from '../src/lib/navigation';
+import { PageTransition } from '../src/components/ui/PageTransition';
 
 type Mode = 'upgrade' | 'signin';
 
@@ -127,118 +128,120 @@ export default function AuthScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.headerRow}>
-        <Pressable onPress={() => goBackOrHome(router)} hitSlop={10}>
-          <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancelar</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.content}>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>
-          {mode === 'upgrade' ? 'Guarda tu progreso' : 'Inicia sesión'}
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {mode === 'upgrade'
-            ? 'Convierte tu cuenta de invitado en una cuenta real -- no pierdes nada de lo que ya swipeaste.'
-            : 'Entra a una cuenta que ya tienes de otro dispositivo. Esto reemplaza tu sesión de invitado actual.'}
-        </Text>
-
-        {Platform.OS !== 'web' && (
-          <View style={styles.socialColumn}>
-            <GoogleSigninButton
-              size={GoogleSigninButton.Size.Wide}
-              color={GoogleSigninButton.Color.Dark}
-              onPress={submitGoogle}
-              disabled={submitting}
-              style={styles.googleButton}
-            />
-            {Platform.OS === 'ios' && appleAvailable && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                // Blanco en modo oscuro, negro en modo claro -- mismo criterio de contraste
-                // que pide la guía de Apple para su botón oficial, no una elección de estilo.
-                buttonStyle={
-                  themeMode === 'dark'
-                    ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-                    : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-                }
-                cornerRadius={10}
-                style={styles.appleButton}
-                onPress={submitApple}
-              />
-            )}
-
-            <View style={styles.dividerRow}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.textSecondary }]}>o con email</Text>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-            </View>
-          </View>
-        )}
-
-        <View style={styles.modeRow}>
-          <Pressable
-            onPress={() => setMode('upgrade')}
-            style={[
-              styles.modeButton,
-              { borderColor: mode === 'upgrade' ? colors.brand : colors.border },
-              mode === 'upgrade' && { backgroundColor: colors.brand },
-            ]}
-          >
-            <Text style={[styles.modeButtonText, { color: mode === 'upgrade' ? '#FFFFFF' : colors.textSecondary }]}>
-              Crear cuenta
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setMode('signin')}
-            style={[
-              styles.modeButton,
-              { borderColor: mode === 'signin' ? colors.brand : colors.border },
-              mode === 'signin' && { backgroundColor: colors.brand },
-            ]}
-          >
-            <Text style={[styles.modeButtonText, { color: mode === 'signin' ? '#FFFFFF' : colors.textSecondary }]}>
-              Ya tengo cuenta
-            </Text>
+    <PageTransition>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.headerRow}>
+          <Pressable onPress={() => goBackOrHome(router)} hitSlop={10}>
+            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancelar</Text>
           </Pressable>
         </View>
 
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Email"
-          placeholderTextColor={colors.textSecondary}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          style={[styles.input, { color: colors.textPrimary, borderColor: colors.textPrimary }]}
-        />
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Contraseña"
-          placeholderTextColor={colors.textSecondary}
-          secureTextEntry
-          style={[styles.input, { color: colors.textPrimary, borderColor: colors.textPrimary }]}
-        />
+        <View style={styles.content}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>
+            {mode === 'upgrade' ? 'Guarda tu progreso' : 'Inicia sesión'}
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            {mode === 'upgrade'
+              ? 'Convierte tu cuenta de invitado en una cuenta real -- no pierdes nada de lo que ya swipeaste.'
+              : 'Entra a una cuenta que ya tienes de otro dispositivo. Esto reemplaza tu sesión de invitado actual.'}
+          </Text>
 
-        {error && <Text style={[styles.error, { color: colors.pass }]}>{error}</Text>}
+          {Platform.OS !== 'web' && (
+            <View style={styles.socialColumn}>
+              <GoogleSigninButton
+                size={GoogleSigninButton.Size.Wide}
+                color={GoogleSigninButton.Color.Dark}
+                onPress={submitGoogle}
+                disabled={submitting}
+                style={styles.googleButton}
+              />
+              {Platform.OS === 'ios' && appleAvailable && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                  // Blanco en modo oscuro, negro en modo claro -- mismo criterio de contraste
+                  // que pide la guía de Apple para su botón oficial, no una elección de estilo.
+                  buttonStyle={
+                    themeMode === 'dark'
+                      ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                      : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                  }
+                  cornerRadius={10}
+                  style={styles.appleButton}
+                  onPress={submitApple}
+                />
+              )}
 
-        <Pressable
-          onPress={submit}
-          disabled={submitting}
-          style={[styles.submitButton, { backgroundColor: colors.brand, opacity: submitting ? 0.6 : 1 }]}
-          hitSlop={8}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <Text style={styles.submitButtonText}>{mode === 'upgrade' ? 'Crear cuenta' : 'Iniciar sesión'}</Text>
+              <View style={styles.dividerRow}>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                <Text style={[styles.dividerText, { color: colors.textSecondary }]}>o con email</Text>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              </View>
+            </View>
           )}
-        </Pressable>
-      </View>
-    </SafeAreaView>
+
+          <View style={styles.modeRow}>
+            <Pressable
+              onPress={() => setMode('upgrade')}
+              style={[
+                styles.modeButton,
+                { borderColor: mode === 'upgrade' ? colors.brand : colors.border },
+                mode === 'upgrade' && { backgroundColor: colors.brand },
+              ]}
+            >
+              <Text style={[styles.modeButtonText, { color: mode === 'upgrade' ? '#FFFFFF' : colors.textSecondary }]}>
+                Crear cuenta
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setMode('signin')}
+              style={[
+                styles.modeButton,
+                { borderColor: mode === 'signin' ? colors.brand : colors.border },
+                mode === 'signin' && { backgroundColor: colors.brand },
+              ]}
+            >
+              <Text style={[styles.modeButtonText, { color: mode === 'signin' ? '#FFFFFF' : colors.textSecondary }]}>
+                Ya tengo cuenta
+              </Text>
+            </Pressable>
+          </View>
+
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Email"
+            placeholderTextColor={colors.textSecondary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            style={[styles.input, { color: colors.textPrimary, borderColor: colors.textPrimary }]}
+          />
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Contraseña"
+            placeholderTextColor={colors.textSecondary}
+            secureTextEntry
+            style={[styles.input, { color: colors.textPrimary, borderColor: colors.textPrimary }]}
+          />
+
+          {error && <Text style={[styles.error, { color: colors.pass }]}>{error}</Text>}
+
+          <Pressable
+            onPress={submit}
+            disabled={submitting}
+            style={[styles.submitButton, { backgroundColor: colors.brand, opacity: submitting ? 0.6 : 1 }]}
+            hitSlop={8}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.submitButtonText}>{mode === 'upgrade' ? 'Crear cuenta' : 'Iniciar sesión'}</Text>
+            )}
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </PageTransition>
   );
 }
 

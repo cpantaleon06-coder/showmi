@@ -10,6 +10,7 @@ import { useTasteStateStore } from '../src/state/tasteStateStore';
 import { fetchOnboardingAnswers, submitOnboarding } from '../src/api/onboardingClient';
 import { OnboardingFlow, OnboardingResult } from '../src/components/onboarding/OnboardingFlow';
 import { goBackOrHome } from '../src/lib/navigation';
+import { PageTransition } from '../src/components/ui/PageTransition';
 
 /**
  * Ruta dedicada para el mecanismo de edición confirmado en la sección 1
@@ -48,29 +49,31 @@ export default function EditOnboardingScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <OnboardingFlow
-        colors={colors}
-        editMode
-        initialAnswers={initialAnswers}
-        // En modo edición no hay swipes intermedios, así que OnboardingFlow dispara esto en
-        // el mismo "Guardar cambios" -- resiembra el estado local con las respuestas nuevas.
-        onAnswersReady={(result: OnboardingResult) =>
-          seedFromOnboardingAnswers(result.referenceArtists, result.favoriteGenres, result.preferredVibe)
-        }
-        onComplete={(result: OnboardingResult) => {
-          // Persiste la fila remota (upsert, no bloqueante) -- el sembrado local ya ocurrió
-          // en onAnswersReady, ver app/(tabs)/index.tsx para el mismo par de efectos.
-          if (userId) submitOnboarding(userId, result).catch(() => {});
-          goBackOrHome(router);
-        }}
-      />
-      <SafeAreaView style={styles.cancelWrap} edges={['top']} pointerEvents="box-none">
-        <Pressable onPress={() => goBackOrHome(router)} hitSlop={10} style={styles.cancelButton}>
-          <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancelar</Text>
-        </Pressable>
-      </SafeAreaView>
-    </View>
+    <PageTransition>
+      <View style={styles.container}>
+        <OnboardingFlow
+          colors={colors}
+          editMode
+          initialAnswers={initialAnswers}
+          // En modo edición no hay swipes intermedios, así que OnboardingFlow dispara esto en
+          // el mismo "Guardar cambios" -- resiembra el estado local con las respuestas nuevas.
+          onAnswersReady={(result: OnboardingResult) =>
+            seedFromOnboardingAnswers(result.referenceArtists, result.favoriteGenres, result.preferredVibe)
+          }
+          onComplete={(result: OnboardingResult) => {
+            // Persiste la fila remota (upsert, no bloqueante) -- el sembrado local ya ocurrió
+            // en onAnswersReady, ver app/(tabs)/index.tsx para el mismo par de efectos.
+            if (userId) submitOnboarding(userId, result).catch(() => {});
+            goBackOrHome(router);
+          }}
+        />
+        <SafeAreaView style={styles.cancelWrap} edges={['top']} pointerEvents="box-none">
+          <Pressable onPress={() => goBackOrHome(router)} hitSlop={10} style={styles.cancelButton}>
+            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancelar</Text>
+          </Pressable>
+        </SafeAreaView>
+      </View>
+    </PageTransition>
   );
 }
 

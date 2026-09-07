@@ -48,8 +48,24 @@ export default function RootLayout() {
         client={queryClient}
         persistOptions={{ persister: asyncStoragePersister, maxAge: 1000 * 60 * 60 * 24 }}
       >
+        {/*
+          2026-09-07: transiciones nativas explícitas -- antes no se declaraba `animation` en
+          ningún lado, así que cada pantalla heredaba el default de la plataforma (razonable
+          en iOS, pero inconsistente entre sí y con Android). Perfil/Camerino/editar-onboarding
+          se quedan con el push default (ya se leen como "una pantalla más" del flujo, con su
+          propio BackButton) -- lo que se agrega es un slide-desde-abajo tipo hoja para auth y
+          premium, que son interrupciones puntuales (login, paywall) y no continuaciones del
+          flujo, un patrón estándar en apps con paywalls/login modales.
+
+          OJO al probar en el preview web (Browser pane): react-native-screens resuelve su
+          ScreenStack a un <View> plano en web (sin animación alguna, confirmado leyendo
+          ScreenStack.web.js) -- esto solo se ve en un build nativo real (iOS/Android), no en
+          localhost:8081.
+        */}
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="auth" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="premium" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         </Stack>
         <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       </PersistQueryClientProvider>

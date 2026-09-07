@@ -14,6 +14,7 @@ import { fetchTopSets } from '../src/api/tasteEngineClient';
 import { VIBES } from '../src/lib/vibes';
 import { NagaiHeader } from '../src/components/ui/NagaiHeader';
 import { BackButton } from '../src/components/ui/BackButton';
+import { PageTransition } from '../src/components/ui/PageTransition';
 import { ThemeColors } from '../src/theme/colors';
 
 function titleCase(s: string): string {
@@ -73,86 +74,88 @@ export default function ProfileScreen() {
   const hasAnyStats = (genresQuery.data?.length ?? 0) + (artistsQuery.data?.length ?? 0) + (vibesQuery.data?.length ?? 0) > 0;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <NagaiHeader colors={colors} title="Perfil" />
-      <BackButton colors={colors} />
+    <PageTransition>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+        <NagaiHeader colors={colors} title="Perfil" />
+        <BackButton colors={colors} />
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {hasAnyStats ? (
-          <>
-            {(genresQuery.data?.length ?? 0) > 0 && (
-              <StatSection colors={colors} title="Géneros favoritos">
-                {genresQuery.data!.map((g) => (
-                  <StatChip key={g.dimKey} colors={colors} label={g.dimKey.replace('genero:', '')} count={g.likedCount} />
-                ))}
-              </StatSection>
-            )}
-            {(artistsQuery.data?.length ?? 0) > 0 && (
-              <StatSection colors={colors} title="Artistas recurrentes">
-                {artistsQuery.data!.map((a) => (
-                  <StatChip key={a.dimKey} colors={colors} label={titleCase(a.dimKey.replace('artista:', ''))} count={a.likedCount} />
-                ))}
-              </StatSection>
-            )}
-            {(vibesQuery.data?.length ?? 0) > 0 && (
-              <StatSection colors={colors} title="Vibras predominantes">
-                {vibesQuery.data!.map((v) => {
-                  const key = v.dimKey.replace('vibra:', '');
-                  const def = VIBES.find((x) => x.key === key);
-                  return <StatChip key={v.dimKey} colors={colors} label={def ? `${def.emoji} ${def.label}` : key} count={v.likedCount} />;
-                })}
-              </StatSection>
-            )}
-          </>
-        ) : (
-          <Text style={[styles.note, { color: colors.textSecondary }]}>
-            Tus estadísticas aparecen aquí en cuanto empieces a dar like y calificar canciones.
-          </Text>
-        )}
+        <ScrollView contentContainerStyle={styles.content}>
+          {hasAnyStats ? (
+            <>
+              {(genresQuery.data?.length ?? 0) > 0 && (
+                <StatSection colors={colors} title="Géneros favoritos">
+                  {genresQuery.data!.map((g) => (
+                    <StatChip key={g.dimKey} colors={colors} label={g.dimKey.replace('genero:', '')} count={g.likedCount} />
+                  ))}
+                </StatSection>
+              )}
+              {(artistsQuery.data?.length ?? 0) > 0 && (
+                <StatSection colors={colors} title="Artistas recurrentes">
+                  {artistsQuery.data!.map((a) => (
+                    <StatChip key={a.dimKey} colors={colors} label={titleCase(a.dimKey.replace('artista:', ''))} count={a.likedCount} />
+                  ))}
+                </StatSection>
+              )}
+              {(vibesQuery.data?.length ?? 0) > 0 && (
+                <StatSection colors={colors} title="Vibras predominantes">
+                  {vibesQuery.data!.map((v) => {
+                    const key = v.dimKey.replace('vibra:', '');
+                    const def = VIBES.find((x) => x.key === key);
+                    return <StatChip key={v.dimKey} colors={colors} label={def ? `${def.emoji} ${def.label}` : key} count={v.likedCount} />;
+                  })}
+                </StatSection>
+              )}
+            </>
+          ) : (
+            <Text style={[styles.note, { color: colors.textSecondary }]}>
+              Tus estadísticas aparecen aquí en cuanto empieces a dar like y calificar canciones.
+            </Text>
+          )}
 
-        <Pressable onPress={() => router.push('/premium')} style={[styles.row, { borderColor: colors.premiumAccent }]} hitSlop={8}>
-          <CrownIcon weight="fill" size={20} color={colors.premiumAccent} />
-          <Text style={[styles.rowText, { color: colors.premiumAccent }]}>
-            {isPremium ? 'Showmi More ✓' : 'Hazte Showmi More'}
-          </Text>
-        </Pressable>
-
-        <Pressable onPress={() => router.push('/closet')} style={[styles.row, { borderColor: colors.border }]} hitSlop={8}>
-          <TShirtIcon weight="fill" size={20} color={colors.textPrimary} />
-          <Text style={[styles.rowText, { color: colors.textPrimary }]}>Camerino</Text>
-        </Pressable>
-
-        <Pressable onPress={() => router.push('/edit-onboarding')} style={[styles.row, { borderColor: colors.border }]} hitSlop={8}>
-          <PencilSimpleIcon weight="fill" size={20} color={colors.textPrimary} />
-          <Text style={[styles.rowText, { color: colors.textPrimary }]}>Editar preferencias</Text>
-        </Pressable>
-
-        {isAnonymous ? (
-          <Pressable onPress={() => router.push('/auth')} style={[styles.row, { borderColor: colors.brand }]} hitSlop={8}>
-            <UserPlusIcon weight="fill" size={20} color={colors.brand} />
-            <Text style={[styles.rowText, { color: colors.brand }]}>Guarda tu progreso</Text>
+          <Pressable onPress={() => router.push('/premium')} style={[styles.row, { borderColor: colors.premiumAccent }]} hitSlop={8}>
+            <CrownIcon weight="fill" size={20} color={colors.premiumAccent} />
+            <Text style={[styles.rowText, { color: colors.premiumAccent }]}>
+              {isPremium ? 'Showmi More ✓' : 'Hazte Showmi More'}
+            </Text>
           </Pressable>
-        ) : (
-          <>
-            {email && <Text style={[styles.accountEmail, { color: colors.textSecondary }]}>{email}</Text>}
-            <Pressable
-              onPress={() => signOut().catch(() => {})}
-              style={[styles.row, { borderColor: colors.border }]}
-              hitSlop={8}
-            >
-              <SignOutIcon weight="fill" size={20} color={colors.textPrimary} />
-              <Text style={[styles.rowText, { color: colors.textPrimary }]}>Cerrar sesión</Text>
-            </Pressable>
-          </>
-        )}
 
-        <Pressable onPress={toggleMode} style={[styles.toggle, { borderColor: colors.brand }]} hitSlop={8}>
-          <Text style={[styles.toggleText, { color: colors.brand }]}>
-            Modo {mode === 'dark' ? 'oscuro' : 'claro'} — cambiar a {mode === 'dark' ? 'claro' : 'oscuro'}
-          </Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+          <Pressable onPress={() => router.push('/closet')} style={[styles.row, { borderColor: colors.border }]} hitSlop={8}>
+            <TShirtIcon weight="fill" size={20} color={colors.textPrimary} />
+            <Text style={[styles.rowText, { color: colors.textPrimary }]}>Camerino</Text>
+          </Pressable>
+
+          <Pressable onPress={() => router.push('/edit-onboarding')} style={[styles.row, { borderColor: colors.border }]} hitSlop={8}>
+            <PencilSimpleIcon weight="fill" size={20} color={colors.textPrimary} />
+            <Text style={[styles.rowText, { color: colors.textPrimary }]}>Editar preferencias</Text>
+          </Pressable>
+
+          {isAnonymous ? (
+            <Pressable onPress={() => router.push('/auth')} style={[styles.row, { borderColor: colors.brand }]} hitSlop={8}>
+              <UserPlusIcon weight="fill" size={20} color={colors.brand} />
+              <Text style={[styles.rowText, { color: colors.brand }]}>Guarda tu progreso</Text>
+            </Pressable>
+          ) : (
+            <>
+              {email && <Text style={[styles.accountEmail, { color: colors.textSecondary }]}>{email}</Text>}
+              <Pressable
+                onPress={() => signOut().catch(() => {})}
+                style={[styles.row, { borderColor: colors.border }]}
+                hitSlop={8}
+              >
+                <SignOutIcon weight="fill" size={20} color={colors.textPrimary} />
+                <Text style={[styles.rowText, { color: colors.textPrimary }]}>Cerrar sesión</Text>
+              </Pressable>
+            </>
+          )}
+
+          <Pressable onPress={toggleMode} style={[styles.toggle, { borderColor: colors.brand }]} hitSlop={8}>
+            <Text style={[styles.toggleText, { color: colors.brand }]}>
+              Modo {mode === 'dark' ? 'oscuro' : 'claro'} — cambiar a {mode === 'dark' ? 'claro' : 'oscuro'}
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
+    </PageTransition>
   );
 }
 

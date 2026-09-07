@@ -19,6 +19,7 @@ import {
   restorePurchases,
 } from '../src/lib/revenuecat';
 import { syncPremiumStatus } from '../src/api/subscriptionClient';
+import { PageTransition } from '../src/components/ui/PageTransition';
 import { ThemeColors } from '../src/theme/colors';
 
 const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = [
@@ -142,82 +143,84 @@ export default function PremiumScreen() {
   const packages = offeringQuery.data?.availablePackages ?? [];
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <View style={[styles.header, { backgroundColor: colors.brand }]}>
-        <BackButton colors={colors} />
-        {/* Blanco fijo, no colors.premiumAccent -- este header siempre es colors.brand (rojo)
-            en los dos temas, igual que headerTitle de abajo. El dorado de premiumAccent se
-            calibró contra colors.surface (contraste 4.93:1 en claro / 7.33:1 en oscuro, ver
-            colors.ts) -- sobre rojo da apenas 1.15:1, prácticamente ilegible. */}
-        <CrownIcon weight="fill" size={40} color="#FFFFFF" />
-        <Text style={styles.headerTitle}>Showmi More</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        {isPremium ? (
-          <>
-            <View style={[styles.activeBanner, { borderColor: colors.premiumAccent }]}>
-              <CheckCircleIcon weight="fill" size={22} color={colors.premiumAccent} />
-              <Text style={[styles.activeBannerText, { color: colors.textPrimary }]}>Ya tienes Showmi More -- gracias por tu apoyo.</Text>
-            </View>
-            {isRevenueCatConfigured() && (
-              <Pressable
-                onPress={handleManageSubscription}
-                disabled={openingCenter}
-                style={[styles.manageRow, { borderColor: colors.border, opacity: openingCenter ? 0.6 : 1 }]}
-                hitSlop={8}
-              >
-                <GearIcon weight="bold" size={16} color={colors.textPrimary} />
-                <Text style={[styles.manageRowText, { color: colors.textPrimary }]}>
-                  {openingCenter ? 'Abriendo…' : 'Gestionar suscripción'}
-                </Text>
-              </Pressable>
-            )}
-          </>
-        ) : null}
-
-        <View style={styles.perks}>
-          {PERKS.map((perk) => (
-            <PerkRow key={perk.title} colors={colors} icon={perk.icon} title={perk.title} description={perk.description} />
-          ))}
+    <PageTransition>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+        <View style={[styles.header, { backgroundColor: colors.brand }]}>
+          <BackButton colors={colors} />
+          {/* Blanco fijo, no colors.premiumAccent -- este header siempre es colors.brand (rojo)
+              en los dos temas, igual que headerTitle de abajo. El dorado de premiumAccent se
+              calibró contra colors.surface (contraste 4.93:1 en claro / 7.33:1 en oscuro, ver
+              colors.ts) -- sobre rojo da apenas 1.15:1, prácticamente ilegible. */}
+          <CrownIcon weight="fill" size={40} color="#FFFFFF" />
+          <Text style={styles.headerTitle}>Showmi More</Text>
         </View>
 
-        {!isPremium && (
-          <>
-            {!isRevenueCatConfigured() ? (
-              <Text style={[styles.note, { color: colors.textSecondary }]}>
-                Los planes todavía se están configurando -- vuelve pronto.
-              </Text>
-            ) : offeringQuery.isLoading ? (
-              <ActivityIndicator color={colors.premiumAccent} size="small" style={styles.loading} />
-            ) : packages.length === 0 ? (
-              <Text style={[styles.note, { color: colors.textSecondary }]}>
-                No hay planes disponibles todavía -- vuelve pronto.
-              </Text>
-            ) : (
-              <View style={styles.packages}>
-                {packages.map((pkg) => (
-                  <PackageButton
-                    key={pkg.identifier}
-                    colors={colors}
-                    pkg={pkg}
-                    busy={purchasingId === pkg.identifier}
-                    onPress={() => handlePurchase(pkg)}
-                  />
-                ))}
+        <ScrollView contentContainerStyle={styles.content}>
+          {isPremium ? (
+            <>
+              <View style={[styles.activeBanner, { borderColor: colors.premiumAccent }]}>
+                <CheckCircleIcon weight="fill" size={22} color={colors.premiumAccent} />
+                <Text style={[styles.activeBannerText, { color: colors.textPrimary }]}>Ya tienes Showmi More -- gracias por tu apoyo.</Text>
               </View>
-            )}
-          </>
-        )}
+              {isRevenueCatConfigured() && (
+                <Pressable
+                  onPress={handleManageSubscription}
+                  disabled={openingCenter}
+                  style={[styles.manageRow, { borderColor: colors.border, opacity: openingCenter ? 0.6 : 1 }]}
+                  hitSlop={8}
+                >
+                  <GearIcon weight="bold" size={16} color={colors.textPrimary} />
+                  <Text style={[styles.manageRowText, { color: colors.textPrimary }]}>
+                    {openingCenter ? 'Abriendo…' : 'Gestionar suscripción'}
+                  </Text>
+                </Pressable>
+              )}
+            </>
+          ) : null}
 
-        <Pressable onPress={handleRestore} disabled={restoring} style={styles.restoreRow} hitSlop={8}>
-          <ArrowsClockwiseIcon weight="bold" size={16} color={colors.textSecondary} />
-          <Text style={[styles.restoreText, { color: colors.textSecondary }]}>
-            {restoring ? 'Restaurando…' : 'Restaurar compras'}
-          </Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+          <View style={styles.perks}>
+            {PERKS.map((perk) => (
+              <PerkRow key={perk.title} colors={colors} icon={perk.icon} title={perk.title} description={perk.description} />
+            ))}
+          </View>
+
+          {!isPremium && (
+            <>
+              {!isRevenueCatConfigured() ? (
+                <Text style={[styles.note, { color: colors.textSecondary }]}>
+                  Los planes todavía se están configurando -- vuelve pronto.
+                </Text>
+              ) : offeringQuery.isLoading ? (
+                <ActivityIndicator color={colors.premiumAccent} size="small" style={styles.loading} />
+              ) : packages.length === 0 ? (
+                <Text style={[styles.note, { color: colors.textSecondary }]}>
+                  No hay planes disponibles todavía -- vuelve pronto.
+                </Text>
+              ) : (
+                <View style={styles.packages}>
+                  {packages.map((pkg) => (
+                    <PackageButton
+                      key={pkg.identifier}
+                      colors={colors}
+                      pkg={pkg}
+                      busy={purchasingId === pkg.identifier}
+                      onPress={() => handlePurchase(pkg)}
+                    />
+                  ))}
+                </View>
+              )}
+            </>
+          )}
+
+          <Pressable onPress={handleRestore} disabled={restoring} style={styles.restoreRow} hitSlop={8}>
+            <ArrowsClockwiseIcon weight="bold" size={16} color={colors.textSecondary} />
+            <Text style={[styles.restoreText, { color: colors.textSecondary }]}>
+              {restoring ? 'Restaurando…' : 'Restaurar compras'}
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
+    </PageTransition>
   );
 }
 
