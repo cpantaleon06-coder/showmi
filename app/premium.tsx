@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   },
   packageButton: {
     borderWidth: 2,
-    borderRadius: 16,
+    borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 16,
     alignItems: 'center',

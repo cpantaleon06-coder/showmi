@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   modeButton: {
     flex: 1,
     borderWidth: 2,
-    borderRadius: 10,
+    borderRadius: 18,
     paddingVertical: 10,
     alignItems: 'center',
   },
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 2,
-    borderRadius: 10,
+    borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
   },
   submitButton: {
-    borderRadius: 10,
+    borderRadius: 20,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,

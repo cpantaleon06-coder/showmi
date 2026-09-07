@@ -11,6 +11,15 @@
  * se toquen esos componentes -- ver orden de implementación de la sección
  * 8 (tokens -> swipe card -> onboarding -> edición -> Feed), esto es solo
  * el paso 1.
+ *
+ * 2026-09-08: `brand` se calma -- el rojo de cartel puro (#C81E13/#E8362A) leía
+ * demasiado agresivo para el tono amigable que se quiere ahora (junto con
+ * botones más redondos y la mascota más chibi, mismo pedido). Se mueve de rojo
+ * puro a terracota/coral: mismo hue vecino, menos saturación, misma familia de
+ * marca -- no un cambio de identidad, un ablande. Contraste contra texto blanco
+ * verificado (4.67:1 claro / 3.64:1 oscuro, ambos sobre AA para texto grande o
+ * negrita -- el original rondaba 4.15:1 en oscuro, así que sigue en el mismo
+ * rango, no se sacrificó legibilidad por calidez).
  */
 export type ThemeMode = 'light' | 'dark';
 
@@ -68,7 +77,7 @@ export const darkColors: ThemeColors = {
   surface: '#1C1620',
   textPrimary: '#F5F5F5',
   textSecondary: '#A0A0A0',
-  brand: '#E8362A',
+  brand: '#DC5C48',
   like: '#34D399',
   pass: '#F87171',
   border: '#F2ECE4',
@@ -81,7 +90,7 @@ export const lightColors: ThemeColors = {
   surface: '#FFFDF8',
   textPrimary: '#141414',
   textSecondary: '#5C5449',
-  brand: '#C81E13',
+  brand: '#C64C3C',
   like: '#22C55E',
   pass: '#EF4444',
   border: '#141414',

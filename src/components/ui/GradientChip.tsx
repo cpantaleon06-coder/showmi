@@ -23,8 +23,12 @@ interface GradientChipProps {
  * sólido (ver comentario de pivote en theme/colors.ts) -- coherente con el
  * resto del sistema maximalista de bloques planos (SwipeCard/ActionButtons),
  * un degradado de 3 paradas en un chip chico competía visualmente en vez de
- * leerse como señal clara de selección. Mantiene el spring-in (`progress`)
- * y bordes angulares (radius 4, no 18) en vez de pill.
+ * leerse como señal clara de selección. Mantiene el spring-in (`progress`).
+ *
+ * 2026-09-08: bordes angulares -> pill completo (radius 18, antes 10) --
+ * pedido explícito de "botones más redondos y amigables", mismo giro que
+ * `brand` calmándose y la mascota volviéndose más chibi. Ya no aplica la
+ * nota vieja de este comentario que decía "angular a propósito, no pill".
  */
 export function GradientChip({ colors, label, selected, onPress, fillColor }: GradientChipProps) {
   const progress = useSharedValue(selected ? 1 : 0);
@@ -58,7 +62,7 @@ const styles = StyleSheet.create({
   },
   chip: {
     borderWidth: 2,
-    borderRadius: 10,
+    borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 8,
     overflow: 'hidden',

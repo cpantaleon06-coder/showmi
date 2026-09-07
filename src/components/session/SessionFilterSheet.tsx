@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   primaryButton: {
-    borderRadius: 10,
+    borderRadius: 20,
     paddingVertical: 14,
     alignItems: 'center',
   },

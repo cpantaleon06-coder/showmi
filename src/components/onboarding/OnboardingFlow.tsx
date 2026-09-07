@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   primaryButton: {
-    borderRadius: 10,
+    borderRadius: 20,
     paddingVertical: 14,
     alignItems: 'center',
   },
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     borderWidth: 2,
-    borderRadius: 10,
+    borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   },
   searchButton: {
     borderWidth: 2,
-    borderRadius: 10,
+    borderRadius: 16,
     paddingHorizontal: 16,
     justifyContent: 'center',
   },
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     borderWidth: 2,
-    borderRadius: 10,
+    borderRadius: 14,
     padding: 8,
     marginBottom: 8,
   },
