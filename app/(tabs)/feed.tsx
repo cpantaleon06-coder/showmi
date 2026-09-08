@@ -1,5 +1,14 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CrownIcon, StarIcon, TrophyIcon } from 'phosphor-react-native';
@@ -24,6 +33,7 @@ import {
 import { ProfileButton } from '../../src/components/ui/ProfileButton';
 import { GradientChip } from '../../src/components/ui/GradientChip';
 import { SponsoredPost } from '../../src/components/ads/SponsoredPost';
+import { DotGridBackground } from '../../src/components/backgrounds/DotGridBackground';
 import { ThemeColors } from '../../src/theme/colors';
 import { FLOATING_TAB_BAR_CLEARANCE } from '../../src/theme/layout';
 
@@ -172,6 +182,8 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
 
 export default function FeedScreen() {
   const colors = useThemeStore((s) => s.colors);
+  const mode = useThemeStore((s) => s.mode);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const userId = useAuthStore((s) => s.session?.user.id);
   const [channel, setChannel] = useState<string>(FOR_YOU);
   const queryClient = useQueryClient();
@@ -233,44 +245,54 @@ export default function FeedScreen() {
         ))}
       </ScrollView>
 
-      <FlatList
-        data={feedItems}
-        keyExtractor={(item) => (item.kind === 'post' ? item.post.postId : item.id)}
-        contentContainerStyle={styles.listContent}
-        onRefresh={() => queryClient.invalidateQueries({ queryKey: ['feed-posts'] })}
-        refreshing={postsQuery.isFetching}
-        ListHeaderComponent={
-          channel === FOR_YOU && (communityPicksQuery.data?.length ?? 0) > 0 ? (
-            <View style={styles.picksSection}>
-              <View style={styles.picksHeader}>
-                <TrophyIcon weight="fill" size={16} color={colors.brand} />
-                <Text style={[styles.picksTitle, { color: colors.textPrimary }]}>Community Picks de esta semana</Text>
+      {/* Igual que en Biblioteca: la retícula solo existe mientras no hay posts que mostrar.
+          Se excluye el estado de carga a propósito -- ahí ya hay un spinner, y montar el fondo
+          para quitarlo medio segundo después sería un parpadeo, no una transición. */}
+      <View style={styles.listArea}>
+        {feedItems.length === 0 && !postsQuery.isLoading && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <DotGridBackground width={screenWidth} height={screenHeight} mode={mode} />
+          </View>
+        )}
+        <FlatList
+          data={feedItems}
+          keyExtractor={(item) => (item.kind === 'post' ? item.post.postId : item.id)}
+          contentContainerStyle={styles.listContent}
+          onRefresh={() => queryClient.invalidateQueries({ queryKey: ['feed-posts'] })}
+          refreshing={postsQuery.isFetching}
+          ListHeaderComponent={
+            channel === FOR_YOU && (communityPicksQuery.data?.length ?? 0) > 0 ? (
+              <View style={styles.picksSection}>
+                <View style={styles.picksHeader}>
+                  <TrophyIcon weight="fill" size={16} color={colors.brand} />
+                  <Text style={[styles.picksTitle, { color: colors.textPrimary }]}>Community Picks de esta semana</Text>
+                </View>
+                {communityPicksQuery.data!.slice(0, 5).map((pick) => (
+                  <CommunityPickCard key={pick.trackId} pick={pick} colors={colors} />
+                ))}
               </View>
-              {communityPicksQuery.data!.slice(0, 5).map((pick) => (
-                <CommunityPickCard key={pick.trackId} pick={pick} colors={colors} />
-              ))}
-            </View>
-          ) : null
-        }
-        renderItem={({ item }) =>
-          item.kind === 'ad' ? (
-            <SponsoredPost colors={colors} placement="feed" />
-          ) : (
-            <PostCard post={item.post} colors={colors} isMine={item.post.userId === userId} />
-          )
-        }
-        ListEmptyComponent={
-          postsQuery.isLoading ? (
-            <ActivityIndicator color={colors.brand} size="large" style={styles.loading} />
-          ) : (
-            <View style={styles.empty}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                Cuando califiques una canción con estrellas (swipe hacia arriba en Swipe), aparece aquí.
-              </Text>
-            </View>
-          )
-        }
-      />
+            ) : null
+          }
+          renderItem={({ item }) =>
+            item.kind === 'ad' ? (
+              <SponsoredPost colors={colors} placement="feed" />
+            ) : (
+              <PostCard post={item.post} colors={colors} isMine={item.post.userId === userId} />
+            )
+          }
+          ListEmptyComponent={
+            postsQuery.isLoading ? (
+              <ActivityIndicator color={colors.brand} size="large" style={styles.loading} />
+            ) : (
+              <View style={styles.empty}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  Cuando califiques una canción con estrellas (swipe hacia arriba en Swipe), aparece aquí.
+                </Text>
+              </View>
+            )
+          }
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -278,6 +300,10 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  listArea: {
+    flex: 1,
+    overflow: 'hidden',
   },
   headerRow: {
     flexDirection: 'row',

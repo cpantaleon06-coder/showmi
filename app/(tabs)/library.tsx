@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { DotGridBackground } from '../../src/components/backgrounds/DotGridBackground';
 import { useThemeStore } from '../../src/theme/useThemeStore';
 import { fonts } from '../../src/theme/typography';
 import { useLibraryStore } from '../../src/state/libraryStore';
@@ -12,6 +13,8 @@ import { FLOATING_TAB_BAR_CLEARANCE } from '../../src/theme/layout';
 
 export default function LibraryScreen() {
   const colors = useThemeStore((s) => s.colors);
+  const mode = useThemeStore((s) => s.mode);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const collections = useLibraryStore((s) => s.collections);
   const items = useLibraryStore((s) => s.items);
   const removeFromCollection = useLibraryStore((s) => s.removeFromCollection);
@@ -89,25 +92,36 @@ export default function LibraryScreen() {
         />
       </View>
 
-      <FlatList
-        data={tracks}
-        keyExtractor={(t) => t.id}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <TrackRow track={item} colors={colors} onRemove={() => removeFromCollection(activeCollection.id, item.id)} />
-        )}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              {activeCollection.type === 'para_escuchar'
-                ? 'Guarda canciones deslizando a la derecha en Swipe.'
-                : activeCollection.type === 'escuchadas'
-                  ? 'Las canciones que marques "ya la escuché" aparecen aquí.'
-                  : 'Todavía no has agregado canciones a esta colección.'}
-            </Text>
+      {/* La retícula solo se monta con la colección vacía -- con filas reales encima
+          competiría con ellas, justo lo que el sistema de diseño evita (ver colors.ts).
+          overflow:'hidden' en el contenedor porque el SVG se dimensiona a la ventana
+          completa, no al alto real de esta área. */}
+      <View style={styles.listArea}>
+        {tracks.length === 0 && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <DotGridBackground width={screenWidth} height={screenHeight} mode={mode} />
           </View>
-        }
-      />
+        )}
+        <FlatList
+          data={tracks}
+          keyExtractor={(t) => t.id}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => (
+            <TrackRow track={item} colors={colors} onRemove={() => removeFromCollection(activeCollection.id, item.id)} />
+          )}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                {activeCollection.type === 'para_escuchar'
+                  ? 'Guarda canciones deslizando a la derecha en Swipe.'
+                  : activeCollection.type === 'escuchadas'
+                    ? 'Las canciones que marques "ya la escuché" aparecen aquí.'
+                    : 'Todavía no has agregado canciones a esta colección.'}
+              </Text>
+            </View>
+          }
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -115,6 +129,10 @@ export default function LibraryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  listArea: {
+    flex: 1,
+    overflow: 'hidden',
   },
   headerRow: {
     flexDirection: 'row',

@@ -1,10 +1,21 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CaretLeftIcon } from 'phosphor-react-native';
 
 import { ThemeColors } from '../../theme/colors';
+import { useThemeStore } from '../../theme/useThemeStore';
+import { DiagonalEnergyBackground } from '../backgrounds/DiagonalEnergyBackground';
 import { fonts } from '../../theme/typography';
 import { FLOATING_TAB_BAR_CLEARANCE } from '../../theme/layout';
 import { CANONICAL_GENRES, CanonicalGenre, GENRE_CATEGORY_ORDER } from '../../lib/genres';
@@ -85,6 +96,14 @@ export function OnboardingFlow({
 
   const reanchor = useSwipeStore((s) => s.reanchor);
   const swipeCount = useSwipeStore((s) => s.currentIndex);
+
+  // `colors` llega por prop (este componente se monta desde dos lugares distintos,
+  // ver editMode), pero el modo no -- y los fondos de patrón lo necesitan para
+  // elegir su opacidad. Se lee del store directo, mismo patrón que el resto de la
+  // app; no se agrega a las props para no tocar los dos call sites por un detalle
+  // puramente visual.
+  const mode = useThemeStore((s) => s.mode);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const toggleGenre = (g: CanonicalGenre) =>
     setGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
@@ -174,6 +193,15 @@ export function OnboardingFlow({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Fondo de patrón detrás del contenido real, nunca reemplazándolo. pointerEvents="none"
+          es obligatorio acá: sin eso el SVG a pantalla completa se traga los toques que deben
+          llegar a los chips y al input de búsqueda. Solo cubre los 4 pasos de formulario -- el
+          paso 'swipes' retorna antes (arriba) y se queda con el fondo plano, porque ahí la
+          pantalla ya la ocupa el deck. */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <DiagonalEnergyBackground width={screenWidth} height={screenHeight} mode={mode} />
+      </View>
+
       {/* Altura fija siempre reservada (en vez de no renderizar la fila en 'genres') para que
           el contenido no salte de posición al cambiar de paso -- el botón en sí solo se ve
           (opacity) y responde a toques (pointerEvents) desde 'artists' en adelante; en

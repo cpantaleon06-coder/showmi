@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CrownIcon } from 'phosphor-react-native';
 
@@ -19,6 +19,7 @@ import { SwipeCard, SwipeCardHandle } from './SwipeCard';
 import { ActionButtons } from './ActionButtons';
 import { StarRatingPicker } from './StarRatingPicker';
 import { SponsoredCard } from '../ads/SponsoredCard';
+import { StaticClearingBackground } from '../backgrounds/StaticClearingBackground';
 
 const VISIBLE_STACK_SIZE = 3;
 
@@ -41,6 +42,8 @@ interface SwipeDeckProps {
 
 export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
   const colors = useThemeStore((s) => s.colors);
+  const mode = useThemeStore((s) => s.mode);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const anchor = useSwipeStore((s) => s.anchor);
   const currentIndex = useSwipeStore((s) => s.currentIndex);
   const advance = useSwipeStore((s) => s.advance);
@@ -146,8 +149,18 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
       </View>
     );
   } else if (isLoading) {
+    // El addendum pedía este fondo detrás de la recarga en segundo plano (la que dispara
+    // LOAD_MORE_WHEN_REMAINING en useDeck.ts). No encaja ahí por dos razones: useDeck no expone
+    // `isPending` de esa mutación, y sobre todo esa recarga está DISEÑADA para ser invisible --
+    // ocurre con la pila de tarjetas llena y el usuario swipeando, así que un fondo quedaría
+    // tapado y un overlay interrumpiría la sesión justo a mitad de racha. La carga INICIAL sí
+    // es un momento real de espera con la pantalla vacía, que es donde "la estática se despeja"
+    // se lee como lo que el eslogan dice.
     content = (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <StaticClearingBackground width={screenWidth} height={screenHeight} mode={mode} />
+        </View>
         <ActivityIndicator color={colors.brand} size="large" />
         <Text style={[styles.stateText, { color: colors.textSecondary }]}>Buscando sonidos para ti…</Text>
       </View>
