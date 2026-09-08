@@ -30,8 +30,11 @@ export function DotGridBackground({
 }: DotGridBackgroundProps) {
   const base = baseColor ?? colorsForMode(mode).background;
   // Ver DiagonalEnergyBackground: el verde neón sobre casi-negro contrasta más
-  // que sobre ivory, así que baja en oscuro en vez de subir.
-  const dotOpacity = mode === 'dark' ? 0.3 : 0.5;
+  // que sobre ivory, así que baja en oscuro en vez de subir. 2026-09-08: ambas
+  // bajadas junto con el resto de los patrones -- acá el texto del estado vacío
+  // cae justo encima de la retícula, así que la textura tiene que quedar por
+  // debajo del umbral en el que uno "lee" los puntos en vez de la frase.
+  const dotOpacity = mode === 'dark' ? 0.22 : 0.3;
 
   return (
     <Svg width={width} height={height}>

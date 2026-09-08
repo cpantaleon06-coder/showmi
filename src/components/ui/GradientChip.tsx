@@ -48,7 +48,14 @@ export function GradientChip({ colors, label, selected, onPress, fillColor }: Gr
 
   return (
     <Pressable onPress={onPress} style={styles.wrap}>
-      <View style={[styles.chip, { borderColor: selected ? fill : colors.textPrimary }]}>
+      {/* backgroundColor opaco (no transparente) desde 2026-09-08: sobre las pantallas
+          con fondo de patrón (ver components/backgrounds/), un chip transparente dejaba
+          pasar las franjas por DETRÁS de su propia etiqueta. Se usa `background`, no
+          `surface`, justamente para que en las pantallas sin patrón el chip siga
+          viéndose idéntico a antes -- es del mismo color que la página. */}
+      <View
+        style={[styles.chip, { backgroundColor: colors.background, borderColor: selected ? fill : colors.textPrimary }]}
+      >
         <Animated.View style={[StyleSheet.absoluteFill, fillStyle, { backgroundColor: fill }]} />
         <Text style={[styles.label, { color: selected ? '#FFFFFF' : colors.textPrimary }]}>{label}</Text>
       </View>

@@ -17,6 +17,7 @@ import { HeartIcon, XIcon } from 'phosphor-react-native';
 
 import { Track } from '../../api/types';
 import { ThemeColors } from '../../theme/colors';
+import { cardGlowColor, cardGlowShadow } from '../../theme/glow';
 import { fonts } from '../../theme/typography';
 import { SwipeDirection } from '../../state/swipeStore';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
@@ -194,9 +195,23 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
     opacity: interpolate(translateY.value, [-SWIPE_UP_THRESHOLD, 0], [1, 0], Extrapolation.CLAMP),
   }));
 
+  // Halo reactivo: color derivado del género Y la vibra de ESTA canción (ver theme/glow.ts),
+  // no del acento de sesión -- por eso cambia carta a carta al swipear, en vez de quedarse
+  // fijo toda la sesión como `accentColor`. Cae a accentColor cuando el track no tiene ni
+  // género reconocible ni vibra canónica todavía.
+  const glowColor = cardGlowColor(track.genre, track.vibe, accentColor);
+
   const cardContent = (
     <Animated.View
-      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.textPrimary }, isActive && cardStyle]}
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.textPrimary,
+          boxShadow: cardGlowShadow(glowColor, isActive),
+        },
+        isActive && cardStyle,
+      ]}
     >
       <LinearGradient
         colors={[accentColor, 'transparent']}

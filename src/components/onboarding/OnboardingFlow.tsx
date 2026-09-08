@@ -265,7 +265,12 @@ export function OnboardingFlow({
               Opcional -- la usamos para armar tu primer deck ("dame más como esta").
             </Text>
             {editMode && !anchor && initialAnswers?.anchorArtist && (
-              <Text style={[styles.currentAnchor, { color: colors.textSecondary, borderColor: colors.textPrimary }]}>
+              <Text
+                style={[
+                  styles.currentAnchor,
+                  { backgroundColor: colors.background, color: colors.textSecondary, borderColor: colors.textPrimary },
+                ]}
+              >
                 Ancla actual: {initialAnswers.anchorTitle} — {initialAnswers.anchorArtist}
               </Text>
             )}
@@ -276,7 +281,10 @@ export function OnboardingFlow({
                 onSubmitEditing={runSearch}
                 placeholder="Artista o canción…"
                 placeholderTextColor={colors.textSecondary}
-                style={[styles.searchInput, { color: colors.textPrimary, borderColor: colors.border }]}
+                style={[
+                  styles.searchInput,
+                  { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border },
+                ]}
               />
               <Pressable onPress={runSearch} style={[styles.searchButton, { borderColor: colors.brand }]} hitSlop={8}>
                 {searching ? <ActivityIndicator color={colors.brand} size="small" /> : <Text style={[styles.searchButtonText, { color: colors.brand }]}>Buscar</Text>}
@@ -288,7 +296,10 @@ export function OnboardingFlow({
                 onPress={() => setAnchor(anchor?.id === track.id ? null : track)}
                 style={[
                   styles.resultRow,
-                  { borderColor: anchor?.id === track.id ? colors.brand : colors.border },
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: anchor?.id === track.id ? colors.brand : colors.border,
+                  },
                 ]}
               >
                 <Image source={{ uri: track.artworkUrl }} style={styles.resultArtwork} contentFit="cover" />
@@ -307,27 +318,34 @@ export function OnboardingFlow({
       </ScrollView>
 
       <View style={styles.footer}>
-        <Pressable
-          onPress={() => {
-            if (step === 'genres') setStep('artists');
-            else if (step === 'artists') setStep('vibe');
-            else if (step === 'vibe') setStep('anchor');
-            else if (step === 'anchor') {
-              if (editMode) finish();
-              else startSwipes();
-            }
-          }}
-          disabled={step === 'genres' && genres.length === 0}
-          style={[
-            styles.primaryButton,
-            { backgroundColor: colors.brand, opacity: step === 'genres' && genres.length === 0 ? 0.5 : 1 },
-          ]}
-          hitSlop={8}
-        >
-          <Text style={styles.primaryButtonText}>
-            {step === 'anchor' ? (editMode ? 'Guardar cambios' : 'Empezar a swipear') : 'Continuar'}
-          </Text>
-        </Pressable>
+        {/* Placa opaca bajo el botón: cuando está deshabilitado baja a opacity 0.5, y sobre
+            el fondo de patrón eso dejaba ver las franjas ATRAVESANDO el botón -- se leía como
+            un glitch de render, no como "deshabilitado". Con esta placa del color de la
+            página debajo, el 0.5 mezcla contra un campo plano y el botón simplemente se
+            apaga, que es lo que la opacidad quería comunicar. */}
+        <View style={[styles.primaryButtonBacking, { backgroundColor: colors.background }]}>
+          <Pressable
+            onPress={() => {
+              if (step === 'genres') setStep('artists');
+              else if (step === 'artists') setStep('vibe');
+              else if (step === 'vibe') setStep('anchor');
+              else if (step === 'anchor') {
+                if (editMode) finish();
+                else startSwipes();
+              }
+            }}
+            disabled={step === 'genres' && genres.length === 0}
+            style={[
+              styles.primaryButton,
+              { backgroundColor: colors.brand, opacity: step === 'genres' && genres.length === 0 ? 0.5 : 1 },
+            ]}
+            hitSlop={8}
+          >
+            <Text style={styles.primaryButtonText}>
+              {step === 'anchor' ? (editMode ? 'Guardar cambios' : 'Empezar a swipear') : 'Continuar'}
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -370,6 +388,11 @@ const styles = StyleSheet.create({
     // Colchón para la isla flotante de pestañas -- ver theme/layout.ts.
     paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
     paddingTop: 12,
+  },
+  /** Mismo radio que primaryButton -- si uno cambia, el otro también, o la placa asoma
+   *  por las esquinas del botón. */
+  primaryButtonBacking: {
+    borderRadius: 20,
   },
   primaryButton: {
     borderRadius: 20,

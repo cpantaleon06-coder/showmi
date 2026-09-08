@@ -24,8 +24,12 @@ const LINE_HEIGHT = 4;
 export function StaticClearingBackground({ width, height, mode, baseColor }: StaticClearingBackgroundProps) {
   const base = baseColor ?? colorsForMode(mode).background;
   // Mismo criterio que DiagonalEnergyBackground: el neón sobre casi-negro ya
-  // contrasta de más, así que la rampa arranca más baja en oscuro.
-  const topOpacity = mode === 'dark' ? 0.45 : 0.6;
+  // contrasta de más, así que la rampa arranca más baja en oscuro. Se bajó menos
+  // que los otros dos patrones a propósito: esta pantalla solo tiene un spinner y
+  // una línea de texto centrados, no hay contenido que estorbar -- y es el único
+  // de los tres donde el patrón ES el mensaje ("la estática se despeja"), no
+  // decoración de fondo.
+  const topOpacity = mode === 'dark' ? 0.38 : 0.5;
   const gap = height / LINE_COUNT;
 
   return (

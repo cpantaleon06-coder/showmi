@@ -226,7 +226,14 @@ async function rankPool(pool: Track[], vibe?: VibeKey | null, genre?: CanonicalG
 
   const tracksById = new Map(pool.map((track) => [track.id, track]));
   return deck
-    .map((candidate) => tracksById.get(candidate.trackId))
+    .map((candidate): Track | undefined => {
+      const track = tracksById.get(candidate.trackId);
+      if (!track) return undefined;
+      // La vibra canónica ya se consultó arriba para rankear; antes se descartaba acá al
+      // devolver Track[]. Se adjunta para que la tarjeta pueda reaccionar a ella (halo por
+      // género+vibra, ver theme/glow.ts) sin volver a pedirla.
+      return { ...track, vibe: (vibesByTrackId[track.id] as VibeKey | undefined) ?? null };
+    })
     .filter((track): track is Track => track !== undefined);
 }
 
