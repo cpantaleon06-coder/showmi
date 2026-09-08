@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { SwipeDeck } from '../../src/components/swipe/SwipeDeck';
+import { StaticClearingBackground } from '../../src/components/backgrounds/StaticClearingBackground';
 import { SessionFilterSheet } from '../../src/components/session/SessionFilterSheet';
 import { OnboardingFlow, OnboardingResult } from '../../src/components/onboarding/OnboardingFlow';
 import { useThemeStore } from '../../src/theme/useThemeStore';
@@ -24,6 +25,8 @@ import { useSessionTreeConsolidation } from '../../src/hooks/useSessionTreeConso
 export default function SwipeScreen() {
   useSessionTreeConsolidation();
   const colors = useThemeStore((s) => s.colors);
+  const mode = useThemeStore((s) => s.mode);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const navigation = useNavigation();
   const userId = useAuthStore((s) => s.session?.user.id);
   const resolvedThisSession = useSessionFilterStore((s) => s.resolvedThisSession);
@@ -59,9 +62,15 @@ export default function SwipeScreen() {
   // dejar pasar directo al deck normal -- bloquear la app entera por esto
   // sería peor que perderse el onboarding.
   if (userId && onboardingQuery.isLoading) {
+    // Misma estática que la carga del deck (ver SwipeDeck): esta pantalla es literalmente lo
+    // primero que se ve al abrir la app, y era un spinner pelado sobre fondo plano. Un loader
+    // genérico acá y una estática de marca dos segundos después se sentían como dos apps
+    // distintas.
     return (
       <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={colors.brandText} size="large" />
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <StaticClearingBackground width={screenWidth} height={screenHeight} mode={mode} />
+        </View>
       </View>
     );
   }

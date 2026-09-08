@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CrownIcon } from 'phosphor-react-native';
 
 import { Track } from '../../api/types';
 import { useThemeStore } from '../../theme/useThemeStore';
 import { getVibeColor } from '../../theme/vibeColors';
+import { radii } from '../../theme/radii';
 import { fonts } from '../../theme/typography';
 import { useDeck } from '../../hooks/useDeck';
+import { FilterLevel } from '../../lib/deckPipeline';
 import { SwipeDirection, useSwipeStore } from '../../state/swipeStore';
 import { useLibraryStore } from '../../state/libraryStore';
 import { StarRating, usePostStore } from '../../state/postStore';
@@ -33,6 +35,23 @@ const VISIBLE_STACK_SIZE = 3;
  */
 const AD_INTERVAL = 10;
 
+/**
+ * Traduce los niveles del filtro duro que se relajaron a algo legible. Se nombra lo que se
+ * SOLTÓ (lo que la persona pidió y no alcanzó), no lo que quedó -- es la información que
+ * explica por qué aparece una canción que no calza con el filtro elegido.
+ */
+function describeRelaxed(levels: FilterLevel[]): string {
+  const labels: Record<FilterLevel, string> = {
+    genero: 'ese género',
+    vibras: 'esa vibra',
+    epoca: 'esa época',
+    idioma: 'ese idioma',
+  };
+  const parts = levels.map((l) => labels[l]);
+  if (parts.length === 1) return parts[0];
+  return `${parts.slice(0, -1).join(', ')} y ${parts[parts.length - 1]}`;
+}
+
 interface SwipeDeckProps {
   /** Vibra elegida en el selector de sesión (o null) -- ver app/(tabs)/index.tsx. */
   vibe?: VibeKey | null;
@@ -56,7 +75,11 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
   const isPremium = useSubscriptionStore((s) => s.isPremium);
   const router = useRouter();
 
-  const { data: deck, isLoading, isError, refetch, resolvedAnchor } = useDeck(anchor, vibe, genre, currentIndex);
+  const { data, isLoading, isError, refetch, resolvedAnchor } = useDeck(anchor, vibe, genre, currentIndex);
+  const deck = data?.tracks;
+  // Qué niveles del filtro duro hubo que soltar para juntar este pool (ver deckPipeline.ts).
+  // Vacío = el filtro se respetó tal cual se pidió.
+  const relaxedLevels = data?.relaxedLevels ?? [];
   const [pendingRating, setPendingRating] = useState<Track | null>(null);
   const activeCardRef = useRef<SwipeCardHandle>(null);
 
@@ -166,8 +189,10 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <StaticClearingBackground width={screenWidth} height={screenHeight} mode={mode} />
         </View>
-        <ActivityIndicator color={colors.brandText} size="large" />
-        <Text style={[styles.stateText, { color: colors.textSecondary }]}>Buscando sonidos para ti…</Text>
+        {/* Sin ActivityIndicator a propósito: un spinner circular encima de la estática la
+            devolvía a "loader genérico con rayas de adorno". La estática animada YA comunica
+            que algo está pasando, que es todo el trabajo que hacía el spinner. */}
+        <Text style={[styles.loadingText, { color: colors.textPrimary }]}>Buscando sonidos para ti…</Text>
       </View>
     );
   } else if (isError) {
@@ -278,6 +303,19 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
 
   return (
     <View style={styles.container}>
+      {/* Aviso de filtro relajado. El pipeline SIEMPRE pudo relajar el filtro duro cuando el
+          cruce género∩vibra devolvía muy pocos candidatos (ver RELAXATION_ORDER en
+          deckPipeline.ts) -- lo que faltaba era decirlo. Sin este aviso, pedir "Pop + Chill" y
+          recibir algo etiquetado "Alternative" se lee como un error de la app; con él se lee
+          como lo que es: se acabó lo que calzaba exacto y se amplió la búsqueda a propósito.
+          Solo aparece con el deck ya cargado -- durante isLoading la pantalla es la estática. */}
+      {!isLoading && !isError && relaxedLevels.length > 0 && (
+        <View style={[styles.relaxedNotice, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.relaxedNoticeText, { color: colors.textSecondary }]}>
+            Ampliando tu búsqueda: había pocas canciones de {describeRelaxed(relaxedLevels)}.
+          </Text>
+        </View>
+      )}
       {content}
       {pendingRating && (
         <StarRatingPicker
@@ -320,6 +358,25 @@ const styles = StyleSheet.create({
   stateTitle: {
     fontSize: 20,
     fontFamily: fonts.display,
+  },
+  /** Texto de la pantalla de carga: sobre la estática animada necesita más peso que
+   *  `stateText` (que vive sobre fondo plano) para no perderse entre el ruido. */
+  loadingText: {
+    fontSize: 15,
+    textAlign: 'center',
+    fontFamily: fonts.bodyBold,
+  },
+  relaxedNotice: {
+    marginHorizontal: 20,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1.5,
+    borderRadius: radii.card,
+  },
+  relaxedNoticeText: {
+    fontSize: 12,
+    fontFamily: fonts.bodySemiBold,
   },
   stateText: {
     fontSize: 15,

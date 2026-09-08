@@ -12,6 +12,7 @@ import {
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CaretLeftIcon } from 'phosphor-react-native';
+import { useQuery } from '@tanstack/react-query';
 
 import { ThemeColors } from '../../theme/colors';
 import { useThemeStore } from '../../theme/useThemeStore';
@@ -21,6 +22,7 @@ import { FLOATING_TAB_BAR_CLEARANCE } from '../../theme/layout';
 import { CANONICAL_GENRES, CanonicalGenre, GENRE_CATEGORY_ORDER } from '../../lib/genres';
 import { VIBES, VIBE_CATEGORY_ORDER, VibeKey } from '../../lib/vibes';
 import { artistsForGenre, curatedAnchorsByGenre } from '../../api/curatedSeeds';
+import { fetchArtistSuggestions } from '../../api/artistSuggestions';
 import { searchItunesTracks } from '../../api/itunes';
 import { Track } from '../../api/types';
 import { DeckAnchor } from '../../hooks/useDeck';
@@ -166,16 +168,43 @@ export function OnboardingFlow({
     onComplete(buildAnswers());
   };
 
-  const candidateArtists = Array.from(new Set(genres.flatMap(artistsForGenre)));
+  // Los curados salen al instante (sin red) y la consulta los reemplaza por la lista larga
+  // en cuanto Last.fm responde -- así el paso nunca aparece vacío ni con un spinner, solo se
+  // enriquece. `genres.join()` en la key: el array cambia de identidad en cada render, usarlo
+  // crudo re-dispararía la consulta sin parar.
+  const curatedArtists = Array.from(new Set(genres.flatMap(artistsForGenre)));
+  const suggestionsQuery = useQuery({
+    queryKey: ['artist-suggestions', genres.join('|')],
+    queryFn: () => fetchArtistSuggestions(genres),
+    enabled: genres.length > 0,
+    staleTime: 1000 * 60 * 30,
+  });
+  const candidateArtists = suggestionsQuery.data ?? curatedArtists;
 
   if (step === 'swipes') {
     const done = swipeCount >= ONBOARDING_SWIPE_TARGET;
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* 2026-09-08: este paso era un callejón sin salida real. Se ve IGUAL que el deck
+            normal (mismo SwipeDeck), pero como sigue siendo parte del onboarding la isla de
+            pestañas está oculta (ver showingGate en app/(tabs)/index.tsx) -- así que quien
+            llegaba acá no tenía forma de ir a Biblioteca/Feed/Perfil hasta completar los 8
+            swipes, sin ninguna pista de por qué. El deck REAL nunca tuvo el problema
+            (verificado: su barra inferior navega bien); el atasco era exclusivamente este.
+
+            La salida es saltar, no retroceder: volver implicaría deshacer swipes ya
+            registrados contra swipeStore/el ledger remoto (por eso 'swipes' nunca estuvo en
+            STEP_ORDER). Y saltar es seguro porque el sembrado del motor YA ocurrió en
+            startSwipes -> onAnswersReady; estos 8 swipes solo lo refinan. */}
         <SafeAreaView style={styles.swipeHeader} edges={['top']}>
           <Text style={[styles.progressText, { color: colors.textSecondary }]}>
             {Math.min(swipeCount, ONBOARDING_SWIPE_TARGET)}/{ONBOARDING_SWIPE_TARGET} swipes iniciales
           </Text>
+          {!done && (
+            <Pressable onPress={finish} hitSlop={10}>
+              <Text style={[styles.skipText, { color: colors.brandText }]}>Saltar por ahora</Text>
+            </Pressable>
+          )}
         </SafeAreaView>
         <View style={styles.swipeDeckWrap}>
           <SwipeDeck />
@@ -464,8 +493,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyRegular,
   },
   swipeHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
     paddingVertical: 8,
+  },
+  skipText: {
+    fontSize: 13,
+    fontFamily: fonts.bodyBold,
   },
   progressText: {
     fontSize: 12,

@@ -6,7 +6,9 @@ import { curatedSimilarSeeds } from './curatedSeeds';
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-function edgeFunctionConfigured(): boolean {
+/** Exportada para que quien construya sugerencias sepa distinguir "datos reales de
+ *  Last.fm" de "modo degradado con pool curado al azar" -- ver artistSuggestions.ts. */
+export function edgeFunctionConfigured(): boolean {
   return !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
 }
 

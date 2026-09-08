@@ -10,7 +10,7 @@ import { fetchArtistNeighborsBatch, fetchGlobalStats, fetchTrackCatalog, fetchTr
 import { DeckAnchor, SimilarTrackSeed, Track } from '../api/types';
 import { CANONICAL_GENRES, CanonicalGenre } from '../lib/genres';
 import { VibeKey } from '../lib/vibes';
-import { HardFilterSelection, buildDeck as runDeckPipeline } from '../lib/deckPipeline';
+import { FilterLevel, HardFilterSelection, buildDeck as runDeckPipeline } from '../lib/deckPipeline';
 import { sessionTreeToMultipliers } from '../lib/sessionTree';
 import {
   BetaParams,
@@ -185,8 +185,20 @@ async function seedMissingPriors(candidates: Candidate[]): Promise<void> {
  * ranking -- "cargar más" (ver loadMore más abajo) no es un pipeline distinto, es el mismo
  * pipeline corriendo sobre un pool crudo distinto.
  */
-async function rankPool(pool: Track[], vibe?: VibeKey | null, genre?: CanonicalGenre | null): Promise<Track[]> {
-  if (pool.length === 0) return pool;
+/**
+ * Resultado del deck: los tracks Y qué niveles del filtro duro hubo que relajar para
+ * juntarlos. `relaxedLevels` antes se descartaba acá (rankPool devolvía Track[] pelado),
+ * y esa era justo la queja: el filtro se relajaba en silencio y la persona veía una canción
+ * "de otro género" sin ninguna explicación, lo que se lee como error de la app y no como el
+ * comportamiento diseñado que es. Ahora sube hasta la UI (ver SwipeDeck).
+ */
+export interface DeckResult {
+  tracks: Track[];
+  relaxedLevels: FilterLevel[];
+}
+
+async function rankPool(pool: Track[], vibe?: VibeKey | null, genre?: CanonicalGenre | null): Promise<DeckResult> {
+  if (pool.length === 0) return { tracks: pool, relaxedLevels: [] };
 
   // Vibra canónica por track (voto mayoritario, puede no existir todavía para canciones con
   // pocos votos), tags reales de Last.fm por track (para resolver `genero` con más que el
@@ -222,10 +234,10 @@ async function rankPool(pool: Track[], vibe?: VibeKey | null, genre?: CanonicalG
     vibras: vibe ? [vibe] : undefined,
   };
 
-  const { deck } = runDeckPipeline(candidates, selection, rankedState, sessionMultipliers);
+  const { deck, relaxedLevels } = runDeckPipeline(candidates, selection, rankedState, sessionMultipliers);
 
   const tracksById = new Map(pool.map((track) => [track.id, track]));
-  return deck
+  const tracks = deck
     .map((candidate): Track | undefined => {
       const track = tracksById.get(candidate.trackId);
       if (!track) return undefined;
@@ -235,9 +247,11 @@ async function rankPool(pool: Track[], vibe?: VibeKey | null, genre?: CanonicalG
       return { ...track, vibe: (vibesByTrackId[track.id] as VibeKey | undefined) ?? null };
     })
     .filter((track): track is Track => track !== undefined);
+
+  return { tracks, relaxedLevels };
 }
 
-async function buildDeck(anchor: DeckAnchor, vibe?: VibeKey | null, genre?: CanonicalGenre | null): Promise<Track[]> {
+async function buildDeck(anchor: DeckAnchor, vibe?: VibeKey | null, genre?: CanonicalGenre | null): Promise<DeckResult> {
   const pool = await fetchCandidatePool(anchor, genre);
   return rankPool(pool, vibe, genre);
 }
@@ -252,7 +266,7 @@ async function buildMoreTracks(
   vibe: VibeKey | null | undefined,
   genre: CanonicalGenre | null | undefined,
   excludeTrackIds: Set<string>,
-): Promise<Track[]> {
+): Promise<DeckResult> {
   const pool = await fetchCandidatePool(anchor, genre);
   const freshPool = pool.filter((track) => !excludeTrackIds.has(track.id));
   return rankPool(freshPool, vibe, genre);
@@ -285,13 +299,19 @@ export function useDeck(anchor: DeckAnchor | null, vibe?: VibeKey | null, genre?
 
   const loadMoreMutation = useMutation({
     mutationFn: async () => {
-      const current = queryClient.getQueryData<Track[]>(queryKey) ?? [];
-      const excludeIds = new Set(current.map((track) => track.id));
+      const current = queryClient.getQueryData<DeckResult>(queryKey);
+      const excludeIds = new Set((current?.tracks ?? []).map((track) => track.id));
       return buildMoreTracks(resolvedAnchor, vibe, genre, excludeIds);
     },
     onSuccess: (more) => {
-      if (more.length === 0) return;
-      queryClient.setQueryData<Track[]>(queryKey, (old) => [...(old ?? []), ...more]);
+      if (more.tracks.length === 0) return;
+      // relaxedLevels se REEMPLAZA, no se acumula: describe la tanda que se acaba de traer,
+      // que es lo que la persona está por ver. Acumular dejaría el aviso pegado para siempre
+      // apenas una sola recarga hubiera tenido que relajar algo.
+      queryClient.setQueryData<DeckResult>(queryKey, (old) => ({
+        tracks: [...(old?.tracks ?? []), ...more.tracks],
+        relaxedLevels: more.relaxedLevels,
+      }));
     },
   });
 
@@ -303,7 +323,7 @@ export function useDeck(anchor: DeckAnchor | null, vibe?: VibeKey | null, genre?
   useEffect(() => {
     const deck = query.data;
     if (!deck) return;
-    const remaining = deck.length - currentIndex;
+    const remaining = deck.tracks.length - currentIndex;
     if (remaining > LOAD_MORE_WHEN_REMAINING) {
       hasRequestedMoreRef.current = false;
       return;
