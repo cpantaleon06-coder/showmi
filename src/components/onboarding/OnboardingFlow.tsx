@@ -287,7 +287,7 @@ export function OnboardingFlow({
                 ]}
               />
               <Pressable onPress={runSearch} style={[styles.searchButton, { borderColor: colors.brand }]} hitSlop={8}>
-                {searching ? <ActivityIndicator color={colors.brand} size="small" /> : <Text style={[styles.searchButtonText, { color: colors.brand }]}>Buscar</Text>}
+                {searching ? <ActivityIndicator color={colors.brandText} size="small" /> : <Text style={[styles.searchButtonText, { color: colors.brandText }]}>Buscar</Text>}
               </Pressable>
             </View>
             {anchorResults.map((track) => (

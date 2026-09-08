@@ -3,6 +3,7 @@ import { StarIcon } from 'phosphor-react-native';
 
 import { Track } from '../../api/types';
 import { ThemeColors } from '../../theme/colors';
+import { radii } from '../../theme/radii';
 import { fonts } from '../../theme/typography';
 import { StarRating } from '../../state/postStore';
 
@@ -34,7 +35,7 @@ export function StarRatingPicker({ colors, track, onRate, onDismiss }: StarRatin
         <View style={styles.stars}>
           {RATINGS.map((value) => (
             <Pressable key={value} onPress={() => onRate(value)} hitSlop={6} style={styles.starButton}>
-              <StarIcon weight="fill" size={34} color={colors.brand} />
+              <StarIcon weight="fill" size={34} color={colors.brandText} />
             </Pressable>
           ))}
         </View>
@@ -61,7 +62,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderWidth: 3,
-    borderRadius: 18,
+    borderRadius: radii.card,
     paddingVertical: 24,
     paddingHorizontal: 28,
     alignItems: 'center',

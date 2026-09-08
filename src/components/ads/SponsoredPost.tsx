@@ -4,6 +4,7 @@ import { NativeAdView, NativeAsset, NativeAssetType, NativeMediaView } from 'rea
 import { useNativeAd } from '../../hooks/useNativeAd';
 import { trackAdOpened } from '../../lib/ads';
 import { ThemeColors } from '../../theme/colors';
+import { radii } from '../../theme/radii';
 import { fonts } from '../../theme/typography';
 
 interface SponsoredPostProps {
@@ -65,7 +66,7 @@ export function SponsoredPost({ colors, placement }: SponsoredPostProps) {
 
       <NativeAsset assetType={NativeAssetType.CALL_TO_ACTION}>
         <Pressable onPress={() => trackAdOpened(ad, placement)} style={[styles.ctaButton, { borderColor: colors.brand }]}>
-          <Text style={[styles.ctaText, { color: colors.brand }]}>{ad.callToAction || 'Ver más'}</Text>
+          <Text style={[styles.ctaText, { color: colors.brandText }]}>{ad.callToAction || 'Ver más'}</Text>
         </Pressable>
       </NativeAsset>
     </NativeAdView>
@@ -75,7 +76,7 @@ export function SponsoredPost({ colors, placement }: SponsoredPostProps) {
 const styles = StyleSheet.create({
   card: {
     borderWidth: 2,
-    borderRadius: 10,
+    borderRadius: radii.card,
     padding: 14,
     gap: 10,
   },

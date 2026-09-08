@@ -1,15 +1,50 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DotGridBackground } from '../../src/components/backgrounds/DotGridBackground';
+import { Track } from '../../src/api/types';
 import { useThemeStore } from '../../src/theme/useThemeStore';
 import { fonts } from '../../src/theme/typography';
 import { useLibraryStore } from '../../src/state/libraryStore';
-import { TrackRow } from '../../src/components/library/TrackRow';
+import { TrackTile } from '../../src/components/library/TrackTile';
 import { GradientChip } from '../../src/components/ui/GradientChip';
 import { ProfileButton } from '../../src/components/ui/ProfileButton';
 import { FLOATING_TAB_BAR_CLEARANCE } from '../../src/theme/layout';
+
+/**
+ * Cada cuántas canciones se abre un módulo ancho. 5 = una portada grande arriba de cada
+ * bloque, y las otras cuatro en dos parejas debajo -- el bloque cierra completo y el
+ * patrón se repite. Con 4 la rejilla se sentiría casi toda de módulos grandes; con 6+ el
+ * ritmo se pierde y vuelve a leerse como una galería uniforme.
+ */
+const WIDE_TILE_EVERY = 5;
+
+/**
+ * Agrupa las canciones en filas de la rejilla modular: la primera de cada bloque de cinco
+ * ocupa una fila entera (módulo ancho) y las demás van de a dos.
+ *
+ * Se arma por filas en vez de usar `numColumns` de FlatList porque numColumns exige que
+ * TODAS las celdas midan lo mismo -- que es justo lo que una rejilla modular no hace. La
+ * fila sigue siendo la unidad que virtualiza FlatList, así que no se pierde reciclado.
+ */
+function buildTileRows(tracks: Track[]): Track[][] {
+  const rows: Track[][] = [];
+  let i = 0;
+  while (i < tracks.length) {
+    if (i % WIDE_TILE_EVERY === 0) {
+      rows.push([tracks[i]]);
+      i += 1;
+    } else {
+      // Puede quedar de a uno al final del bloque; en ese caso la pareja es de un solo
+      // elemento y `flex: 1` lo estira -- deliberado, para que la rejilla nunca deje un
+      // hueco fantasma esperando un track que no existe.
+      rows.push(tracks.slice(i, i + 2));
+      i += 2;
+    }
+  }
+  return rows;
+}
 
 export default function LibraryScreen() {
   const colors = useThemeStore((s) => s.colors);
@@ -27,6 +62,7 @@ export default function LibraryScreen() {
 
   const activeCollection = collections.find((c) => c.id === activeId) ?? collections[0];
   const tracks = items[activeCollection.id] ?? [];
+  const tileRows = useMemo(() => buildTileRows(tracks), [tracks]);
 
   const handleCreateCollection = () => {
     const name = creatingName.trim();
@@ -103,11 +139,21 @@ export default function LibraryScreen() {
           </View>
         )}
         <FlatList
-          data={tracks}
-          keyExtractor={(t) => t.id}
+          data={tileRows}
+          keyExtractor={(row) => row.map((t) => t.id).join('+')}
           contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <TrackRow track={item} colors={colors} onRemove={() => removeFromCollection(activeCollection.id, item.id)} />
+          renderItem={({ item: row }) => (
+            <View style={styles.tileRow}>
+              {row.map((track) => (
+                <TrackTile
+                  key={track.id}
+                  track={track}
+                  colors={colors}
+                  variant={row.length === 1 ? 'wide' : 'small'}
+                  onRemove={() => removeFromCollection(activeCollection.id, track.id)}
+                />
+              ))}
+            </View>
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
@@ -133,6 +179,12 @@ const styles = StyleSheet.create({
   listArea: {
     flex: 1,
     overflow: 'hidden',
+  },
+  /** Fila de la rejilla modular: un módulo ancho solo, o dos chicos repartiendose el ancho
+   *  (ver buildTileRows). El gap horizontal vive aca y el vertical en listContent. */
+  tileRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   headerRow: {
     flexDirection: 'row',
@@ -174,6 +226,8 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
+    // Separación vertical entre filas de la rejilla (la horizontal vive en tileRow).
+    gap: 12,
     // Colchón para la isla flotante de pestañas -- ver theme/layout.ts.
     paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
   },

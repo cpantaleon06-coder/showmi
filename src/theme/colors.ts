@@ -29,6 +29,27 @@ export interface ThemeColors {
   textPrimary: string;
   textSecondary: string;
   brand: string;
+  /**
+   * `brand` cuando se usa como PRIMER PLANO (texto, íconos, spinners) sobre
+   * `background`/`surface` -- no como relleno.
+   *
+   * 2026-09-08: nace al mover el fondo oscuro de casi-negro a outer space
+   * (#2C363E). Sobre un fondo más claro, un solo tono no puede cumplir los dos
+   * papeles: para que el terracota pase AA como TEXTO sobre #2C363E hay que
+   * aclararlo a ~#E8836F, pero ahí el blanco ENCIMA del botón cae a 2.66:1 y los
+   * botones quedan peor de lo que estaban. Medido, no estimado -- se barrieron
+   * seis candidatos y no existe un valor que sirva para ambos.
+   *
+   * Así que se separan los papeles (mismo remedio que ya se aplicó a
+   * `premiumAccent` cuando falló sobre `surface` claro, ver abajo): `brand` se
+   * queda para rellenos con texto blanco encima (3.71:1, idéntico a antes del
+   * cambio de fondo), y `brandText` es la variante aclarada para primer plano
+   * (4.64:1 sobre background, 5.40:1 sobre surface).
+   *
+   * En claro son el mismo valor a propósito: #C64C3C ya daba 4.67:1 sobre ivory,
+   * el problema era exclusivamente del tema oscuro.
+   */
+  brandText: string;
   like: string;
   pass: string;
   border: string;
@@ -71,13 +92,32 @@ export interface ThemeColors {
 
 const NAGAI_GRADIENT: [string, string, string] = ['#FF8C5A', '#D9718C', '#0F6E7D'];
 
-/** Rojo de cartel constructivista -- reemplaza el azul como color interactivo primario. */
+/**
+ * Rojo de cartel constructivista -- reemplaza el azul como color interactivo primario.
+ *
+ * 2026-09-08: el fondo deja de ser casi-negro (#121212) y pasa a outer space
+ * (#2C363E), un gris azulado de medio tono. `surface` se rederivó a #232B32, que
+ * es MÁS OSCURO que el fondo -- lo contrario a la convención habitual de "elevado
+ * = más claro", y a propósito: probé primero superficies más claras (#364049,
+ * #38444E) y sobre ellas `textSecondary` caía a 4.04:1 y `premiumAccent` a 4.37:1,
+ * los dos por debajo de AA. Con la superficie hundida ambos suben solos (5.49 y
+ * 5.93) sin tener que retocar ningún otro token. Las tarjetas se leen como huecos
+ * en la página en vez de placas flotando sobre ella, que además le queda bien al
+ * lenguaje de bloques planos del resto del sistema.
+ *
+ * Contrastes verificados contra el fondo nuevo: textPrimary 11.30, textSecondary
+ * 4.71, border 10.50, like 6.41. `pass` (#F87171) queda en 4.45 -- justo debajo
+ * del 4.5 de AA; se dejó igual porque casi siempre es ícono/borde (umbral 3:1) y
+ * su único uso como texto es el mensaje de error de auth.tsx. Vale la pena
+ * revisarlo si ese texto crece en importancia.
+ */
 export const darkColors: ThemeColors = {
-  background: '#121212',
-  surface: '#1C1620',
+  background: '#2C363E',
+  surface: '#232B32',
   textPrimary: '#F5F5F5',
   textSecondary: '#A0A0A0',
   brand: '#DC5C48',
+  brandText: '#E8836F',
   like: '#34D399',
   pass: '#F87171',
   border: '#F2ECE4',
@@ -91,6 +131,8 @@ export const lightColors: ThemeColors = {
   textPrimary: '#141414',
   textSecondary: '#5C5449',
   brand: '#C64C3C',
+  // Mismo valor que `brand`: en claro no hace falta separar los papeles (ver brandText).
+  brandText: '#C64C3C',
   like: '#22C55E',
   pass: '#EF4444',
   border: '#141414',

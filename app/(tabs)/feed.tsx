@@ -35,6 +35,7 @@ import { GradientChip } from '../../src/components/ui/GradientChip';
 import { SponsoredPost } from '../../src/components/ads/SponsoredPost';
 import { DotGridBackground } from '../../src/components/backgrounds/DotGridBackground';
 import { ThemeColors } from '../../src/theme/colors';
+import { radii } from '../../src/theme/radii';
 import { FLOATING_TAB_BAR_CLEARANCE } from '../../src/theme/layout';
 
 const FOR_YOU = '__for_you__';
@@ -83,7 +84,7 @@ function CommunityPickCard({ pick, colors }: { pick: CommunityPick; colors: Them
     <View style={[styles.pickCard, { backgroundColor: colors.surface, borderColor: colors.brand }]}>
       <Image source={{ uri: track.artworkUrl }} style={styles.artwork} contentFit="cover" />
       <View style={styles.headerText}>
-        <Text style={[styles.pickBadge, { color: colors.brand }]}>#{pick.position} DE LA SEMANA</Text>
+        <Text style={[styles.pickBadge, { color: colors.brandText }]}>#{pick.position} DE LA SEMANA</Text>
         <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
           {track.title}
         </Text>
@@ -103,7 +104,7 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
   if (isLoading) {
     return (
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: 'center' }]}>
-        <ActivityIndicator color={colors.brand} size="small" />
+        <ActivityIndicator color={colors.brandText} size="small" />
       </View>
     );
   }
@@ -264,7 +265,7 @@ export default function FeedScreen() {
             channel === FOR_YOU && (communityPicksQuery.data?.length ?? 0) > 0 ? (
               <View style={styles.picksSection}>
                 <View style={styles.picksHeader}>
-                  <TrophyIcon weight="fill" size={16} color={colors.brand} />
+                  <TrophyIcon weight="fill" size={16} color={colors.brandText} />
                   <Text style={[styles.picksTitle, { color: colors.textPrimary }]}>Community Picks de esta semana</Text>
                 </View>
                 {communityPicksQuery.data!.slice(0, 5).map((pick) => (
@@ -282,7 +283,7 @@ export default function FeedScreen() {
           }
           ListEmptyComponent={
             postsQuery.isLoading ? (
-              <ActivityIndicator color={colors.brand} size="large" style={styles.loading} />
+              <ActivityIndicator color={colors.brandText} size="large" style={styles.loading} />
             ) : (
               <View style={styles.empty}>
                 <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
@@ -352,7 +353,7 @@ const styles = StyleSheet.create({
   },
   pickCard: {
     borderWidth: 2,
-    borderRadius: 10,
+    borderRadius: radii.card,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderWidth: 2,
-    borderRadius: 10,
+    borderRadius: radii.card,
     padding: 14,
     gap: 10,
   },
@@ -423,7 +424,7 @@ const styles = StyleSheet.create({
   },
   reviewInput: {
     borderWidth: 2,
-    borderRadius: 10,
+    borderRadius: radii.card,
     padding: 10,
     fontSize: 13,
     minHeight: 40,

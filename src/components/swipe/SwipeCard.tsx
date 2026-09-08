@@ -16,7 +16,9 @@ import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { HeartIcon, XIcon } from 'phosphor-react-native';
 
 import { Track } from '../../api/types';
+import { VibeKey } from '../../lib/vibes';
 import { ThemeColors } from '../../theme/colors';
+import { radii } from '../../theme/radii';
 import { cardGlowColor, cardGlowShadow } from '../../theme/glow';
 import { fonts } from '../../theme/typography';
 import { SwipeDirection } from '../../state/swipeStore';
@@ -32,6 +34,9 @@ interface SwipeCardProps {
   /** Color reactivo de vibra de sesión (ver SwipeDeck.tsx / theme/vibeColors.ts) -- reemplaza
    *  colors.brand como acento de esta tarjeta (edgeLight, stamp "YA LA ESCUCHÉ", tag de género). */
   accentColor: string;
+  /** Vibra elegida en el selector de sesión. Se usa SOLO como respaldo del halo cuando la
+   *  canción todavía no tiene vibra canónica propia -- ver el comentario de glowColor abajo. */
+  sessionVibe?: VibeKey | null;
   isActive: boolean;
   onSwiped: (direction: SwipeDirection) => void;
 }
@@ -45,7 +50,7 @@ export interface SwipeCardHandle {
 }
 
 export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard(
-  { track, colors, accentColor, isActive, onSwiped },
+  { track, colors, accentColor, sessionVibe, isActive, onSwiped },
   ref
 ) {
   const translateX = useSharedValue(0);
@@ -197,9 +202,16 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
 
   // Halo reactivo: color derivado del género Y la vibra de ESTA canción (ver theme/glow.ts),
   // no del acento de sesión -- por eso cambia carta a carta al swipear, en vez de quedarse
-  // fijo toda la sesión como `accentColor`. Cae a accentColor cuando el track no tiene ni
-  // género reconocible ni vibra canónica todavía.
-  const glowColor = cardGlowColor(track.genre, track.vibe, accentColor);
+  // fijo toda la sesión como `accentColor`.
+  //
+  // `track.vibe ?? sessionVibe`: la vibra canónica de una canción sale de
+  // `track_canonical_vibe`, que exige >=3 votos de la comunidad -- o sea que en un proyecto
+  // sin tráfico real todavía es null para CASI TODAS, y la mitad "vibra" del halo nunca se
+  // veía. La vibra de sesión es una declaración explícita de la persona ("hoy vengo con esta
+  // vibra"), así que es un respaldo honesto y no un invento: si la canción ya tiene vibra
+  // votada gana esa, y si no, se usa la que la persona eligió. Sin ninguna de las dos, el
+  // halo es solo de género.
+  const glowColor = cardGlowColor(track.genre, track.vibe ?? sessionVibe, accentColor);
 
   const cardContent = (
     <Animated.View
@@ -276,7 +288,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: SCREEN_WIDTH - 40,
     height: '100%',
-    borderRadius: 10,
+    borderRadius: radii.card,
     borderWidth: 3,
     overflow: 'hidden',
   },

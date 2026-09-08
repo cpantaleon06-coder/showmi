@@ -89,7 +89,7 @@ export function CategorizedChipPicker<T extends string>({
             </View>
             {(hiddenCount > 0 || isExpanded) && categoryItems.length > INITIAL_VISIBLE && (
               <Pressable onPress={() => toggleExpanded(category)} hitSlop={8} style={styles.showMore}>
-                <Text style={[styles.showMoreText, { color: colors.brand }]}>
+                <Text style={[styles.showMoreText, { color: colors.brandText }]}>
                   {isExpanded ? 'Mostrar menos' : `Mostrar ${hiddenCount} más`}
                 </Text>
               </Pressable>

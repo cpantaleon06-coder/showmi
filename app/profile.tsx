@@ -131,8 +131,8 @@ export default function ProfileScreen() {
 
           {isAnonymous ? (
             <Pressable onPress={() => router.push('/auth')} style={[styles.row, { borderColor: colors.brand }]} hitSlop={8}>
-              <UserPlusIcon weight="fill" size={20} color={colors.brand} />
-              <Text style={[styles.rowText, { color: colors.brand }]}>Guarda tu progreso</Text>
+              <UserPlusIcon weight="fill" size={20} color={colors.brandText} />
+              <Text style={[styles.rowText, { color: colors.brandText }]}>Guarda tu progreso</Text>
             </Pressable>
           ) : (
             <>
@@ -149,7 +149,7 @@ export default function ProfileScreen() {
           )}
 
           <Pressable onPress={toggleMode} style={[styles.toggle, { borderColor: colors.brand }]} hitSlop={8}>
-            <Text style={[styles.toggleText, { color: colors.brand }]}>
+            <Text style={[styles.toggleText, { color: colors.brandText }]}>
               Modo {mode === 'dark' ? 'oscuro' : 'claro'} — cambiar a {mode === 'dark' ? 'claro' : 'oscuro'}
             </Text>
           </Pressable>

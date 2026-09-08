@@ -21,6 +21,7 @@ import {
 import { syncPremiumStatus } from '../src/api/subscriptionClient';
 import { PageTransition } from '../src/components/ui/PageTransition';
 import { ThemeColors } from '../src/theme/colors';
+import { radii } from '../src/theme/radii';
 
 const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = [
   {
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 2,
-    borderRadius: 12,
+    borderRadius: radii.card,
     paddingHorizontal: 16,
     paddingVertical: 12,
     width: '100%',

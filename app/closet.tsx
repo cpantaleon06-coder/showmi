@@ -21,6 +21,7 @@ import { Mascot } from '../src/components/camerino/Mascot';
 import { BackButton } from '../src/components/ui/BackButton';
 import { PageTransition } from '../src/components/ui/PageTransition';
 import { ThemeColors } from '../src/theme/colors';
+import { radii } from '../src/theme/radii';
 
 function ProgressRow({ colors, label, ratings }: { colors: ThemeColors; label: string; ratings: number }) {
   const level = levelForRatings(ratings);
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 24,
     borderWidth: 2,
-    borderRadius: 16,
+    borderRadius: radii.card,
     marginTop: 8,
   },
   screenTitle: { fontSize: 22, fontFamily: fonts.display },
@@ -199,7 +200,7 @@ const styles = StyleSheet.create({
   card: {
     width: '31%',
     borderWidth: 2,
-    borderRadius: 16,
+    borderRadius: radii.card,
     padding: 9,
     gap: 5,
     minHeight: 96,

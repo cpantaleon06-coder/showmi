@@ -74,9 +74,14 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
 
   // Sistema reactivo de color por vibra (ver theme/vibeColors.ts, paso 1 de la identidad
   // visual): reacciona a la vibra elegida en el selector de SESIÓN, no a la vibra canónica
-  // por track -- esta última existe (track_canonical_vibe) pero no sobrevive el mapeo
-  // candidate->Track en useDeck.ts, y cambiar de acento carta a carta sería más ruido visual
-  // que señal. Sin vibra de sesión, cae al rojo constructivista de marca.
+  // por track -- cambiar ESTE acento carta a carta sería ruido visual (tiñe el edgeLight, el
+  // sello "YA LA ESCUCHÉ" y el tag de género), así que se mantiene estable toda la sesión.
+  // Lo que sí reacciona por carta es el halo de la tarjeta, que es un canal aparte y más
+  // silencioso (ver cardGlowColor en SwipeCard.tsx). Sin vibra de sesión, cae al rojo de marca.
+  //
+  // (Corrección 2026-09-08: este comentario decía que la vibra canónica por track "no
+  // sobrevive el mapeo candidate->Track en useDeck.ts". Sí sobrevive desde que rankPool la
+  // adjunta a Track.vibe; la razón para no usarla acá es de diseño, no técnica.)
   const accentColor = getVibeColor(vibe, colors.brand);
 
   // Sin género de sesión, `anchor` queda null y useDeck resuelve uno al azar internamente
@@ -161,7 +166,7 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <StaticClearingBackground width={screenWidth} height={screenHeight} mode={mode} />
         </View>
-        <ActivityIndicator color={colors.brand} size="large" />
+        <ActivityIndicator color={colors.brandText} size="large" />
         <Text style={[styles.stateText, { color: colors.textSecondary }]}>Buscando sonidos para ti…</Text>
       </View>
     );
@@ -173,7 +178,7 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
           No pudimos cargar tu deck. Revisa tu conexión e intenta de nuevo.
         </Text>
         <Text
-          style={[styles.retry, { color: colors.brand }]}
+          style={[styles.retry, { color: colors.brandText }]}
           onPress={() => {
             resetIndex();
             refetch();
@@ -194,7 +199,7 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
             Vuelve más tarde o busca "dame más como esta" desde tu Biblioteca.
           </Text>
           <Text
-            style={[styles.retry, { color: colors.brand }]}
+            style={[styles.retry, { color: colors.brandText }]}
             onPress={() => {
               // Bug real de debugging: sin esto, refetch() volvía a traer un pool y
               // `remaining` seguía vacío (currentIndex se quedaba apuntando más allá del
@@ -250,6 +255,7 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
                       track={track}
                       colors={colors}
                       accentColor={accentColor}
+                      sessionVibe={vibe}
                       isActive={isActive}
                       onSwiped={(direction) => handleSwiped(track, direction)}
                     />

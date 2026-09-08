@@ -10,6 +10,7 @@ import {
 import { useNativeAd } from '../../hooks/useNativeAd';
 import { trackAdOpened } from '../../lib/ads';
 import { ThemeColors } from '../../theme/colors';
+import { radii } from '../../theme/radii';
 import { fonts } from '../../theme/typography';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     flex: 1,
-    borderRadius: 10,
+    borderRadius: radii.card,
     borderWidth: 2,
     overflow: 'hidden',
   },

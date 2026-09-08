@@ -61,7 +61,7 @@ export default function SwipeScreen() {
   if (userId && onboardingQuery.isLoading) {
     return (
       <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={colors.brand} size="large" />
+        <ActivityIndicator color={colors.brandText} size="large" />
       </View>
     );
   }
