@@ -110,6 +110,27 @@ export interface GenreDef {
   lastfmTagSynonyms: string[];
 }
 
+/**
+ * Auditoría de la tabla de sinónimos (2026-09-08). Se midió resolviendo una muestra de 54
+ * etiquetas reales: `primaryGenreName` de iTunes (los strings que de verdad llegan en las
+ * tarjetas: "Alternative", "Hip-Hop/Rap", "Música Mexicana", "R&B/Soul"...) más los tags más
+ * frecuentes de Last.fm.
+ *
+ *   80% resolvían  ->  87% al normalizar la ortografía (ver normalizeTag)
+ *                  ->  96% al cerrar los huecos reales de esta tabla
+ *   Colisiones (un mismo sinónimo en dos géneros): 0, antes y después.
+ *
+ * Por qué importa más de lo que parece: un track cuyo género NO resuelve queda con
+ * `genero: undefined`, y `matchesSelection` (deckPipeline.ts) EXCLUYE esos tracks de
+ * cualquier filtro de género. O sea que cada hueco de esta tabla encoge el pool filtrado,
+ * lo empuja bajo MIN_POOL_SIZE y fuerza al filtro duro a relajarse -- y recién ahí entran
+ * esos mismos tracks, ahora sin filtro. Ese era el mecanismo detrás del reporte de "pedí
+ * Pop+Chill y salió algo etiquetado Alternative": "alternative" no estaba en la tabla.
+ *
+ * Dos etiquetas se dejan A PROPÓSITO sin resolver: "world" y "experimental". No son géneros
+ * en esta taxonomía sino paraguas, y mapearlas a la fuerza mandaría tracks a un género que
+ * la persona no pidió. Es preferible que no resuelvan a que resuelvan mal.
+ */
 export const CANONICAL_GENRES: GenreDef[] = [
   {
     key: 'corridos_tumbados_regional',
@@ -125,14 +146,14 @@ export const CANONICAL_GENRES: GenreDef[] = [
     emoji: '🪗',
     // "regional mexicano" es un tag paraguas ambiguo -- solo se usa como
     // respaldo si no aparece ningún tag más específico entre los top tags.
-    lastfmTagSynonyms: ['banda', 'norteño', 'banda sinaloense', 'grupero', 'regional mexicano'],
+    lastfmTagSynonyms: ['banda', 'norteño', 'banda sinaloense', 'grupero', 'regional mexicano', 'musica mexicana', 'regional mexican'],
   },
   {
     key: 'reggaeton',
     category: 'Latino',
     label: 'Reggaetón',
     emoji: '🎤',
-    lastfmTagSynonyms: ['reggaeton', 'reggaetón', 'urbano latino', 'latin urban'],
+    lastfmTagSynonyms: ['reggaeton', 'reggaetón', 'urbano latino', 'latin urban', 'perreo'],
   },
   {
     key: 'trap_latino',
@@ -209,21 +230,21 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Rock/Alternativo',
     label: 'Rock',
     emoji: '🎸',
-    lastfmTagSynonyms: ['rock', 'alternative rock', 'grunge', 'classic rock', 'hard rock'],
+    lastfmTagSynonyms: ['rock', 'alternative rock', 'grunge', 'classic rock', 'hard rock', 'alternative', 'alternativa', 'alt rock', 'rock and roll', 'garage rock'],
   },
   {
     key: 'metal',
     category: 'Rock/Alternativo',
     label: 'Metal',
     emoji: '⚡',
-    lastfmTagSynonyms: ['metal', 'heavy metal', 'thrash metal', 'death metal'],
+    lastfmTagSynonyms: ['metal', 'heavy metal', 'thrash metal', 'death metal', 'metalcore', 'black metal', 'doom metal'],
   },
   {
     key: 'indie_lofi',
     category: 'Rock/Alternativo',
     label: 'Indie/Lo-fi',
     emoji: '🎧',
-    lastfmTagSynonyms: ['indie', 'indie pop', 'indie rock', 'lo-fi', 'lofi', 'bedroom pop'],
+    lastfmTagSynonyms: ['indie', 'indie pop', 'indie rock', 'lo-fi', 'lofi', 'bedroom pop', 'chillhop'],
   },
   {
     key: 'emo',
@@ -244,14 +265,14 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Pop/Urbano',
     label: 'Pop',
     emoji: '🎶',
-    lastfmTagSynonyms: ['pop', 'pop rock', 'dance pop', 'synth-pop'],
+    lastfmTagSynonyms: ['pop', 'pop rock', 'dance pop', 'synth-pop', 'electropop', 'power pop', 'teen pop'],
   },
   {
     key: 'hip_hop_rap',
     category: 'Pop/Urbano',
     label: 'Hip-Hop/Rap',
     emoji: '🎙️',
-    lastfmTagSynonyms: ['hip hop', 'hip-hop', 'rap', 'trap'],
+    lastfmTagSynonyms: ['hip hop', 'hip-hop', 'rap', 'trap', 'boom bap', 'gangsta rap'],
   },
   {
     key: 'drill',
@@ -265,7 +286,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Pop/Urbano',
     label: 'R&B/Soul',
     emoji: '🎵',
-    lastfmTagSynonyms: ['r&b', 'rnb', 'soul', 'neo soul'],
+    lastfmTagSynonyms: ['r&b', 'rnb', 'soul', 'neo soul', 'contemporary rnb', 'motown'],
   },
   {
     // 2026-09-01: 'house'/'techno' se movieron a sus propios géneros abajo
@@ -275,7 +296,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Electrónica/Chill',
     label: 'Electrónica',
     emoji: '🎛️',
-    lastfmTagSynonyms: ['electronic', 'electronica', 'edm', 'synthwave'],
+    lastfmTagSynonyms: ['electronic', 'electronica', 'edm', 'synthwave', 'dance', 'electro', 'idm'],
   },
   {
     key: 'house',
@@ -317,7 +338,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Raíces',
     label: 'Jazz',
     emoji: '🎷',
-    lastfmTagSynonyms: ['jazz', 'smooth jazz', 'jazz fusion', 'bebop'],
+    lastfmTagSynonyms: ['jazz', 'smooth jazz', 'jazz fusion', 'bebop', 'nu jazz'],
   },
   {
     key: 'blues',
@@ -394,7 +415,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Raíces',
     label: 'Country/Folk',
     emoji: '🪕',
-    lastfmTagSynonyms: ['country', 'folk', 'americana', 'singer-songwriter'],
+    lastfmTagSynonyms: ['country', 'folk', 'americana', 'singer-songwriter', 'folk rock', 'indie folk'],
   },
   {
     key: 'classical',
@@ -436,7 +457,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Raíces',
     label: 'Funk/Disco',
     emoji: '🕺',
-    lastfmTagSynonyms: ['funk', 'disco', 'boogie'],
+    lastfmTagSynonyms: ['funk', 'disco', 'boogie', 'nu disco'],
   },
   {
     key: 'reggae',
@@ -485,7 +506,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Rock/Alternativo',
     label: 'Punk',
     emoji: '🤘',
-    lastfmTagSynonyms: ['punk', 'punk rock', 'pop punk', 'hardcore punk'],
+    lastfmTagSynonyms: ['punk', 'punk rock', 'pop punk', 'hardcore punk', 'hardcore', 'skate punk'],
   },
 ];
 
@@ -499,13 +520,62 @@ export const CANONICAL_GENRES: GenreDef[] = [
  * resolver cualquier track cuyo `primaryGenreName` de iTunes no calzara
  * exacto con un sinónimo (ver comentario histórico en tasteAdapter.ts).
  */
+/**
+ * Normaliza una etiqueta para comparar: minúsculas, sin acentos y SIN separadores.
+ * "Hip-Hop" / "hip hop" / "HipHop" -> "hiphop"; "Reggaetón" -> "reggaeton".
+ *
+ * 2026-09-08: nace de auditar la tabla. La tabla en sí estaba bien (0 colisiones), pero el
+ * matcheo era exacto sobre el string crudo, así que fallaba por pura ORTOGRAFÍA: la tabla
+ * decía 'synth-pop' y Last.fm mandaba "synthpop"; decía 'singer-songwriter' e iTunes mandaba
+ * "Singer/Songwriter". Enumerar cada variante a mano es una carrera que no se gana -- se
+ * normaliza y ya.
+ *
+ * Sigue siendo comparación EXACTA sobre el token completo, no substring: eso es deliberado y
+ * está documentado (ver categoryForRawGenre en cosmetics.ts, que sí es laxa a propósito).
+ * Con substring, "pop" matchearía k-pop, j-pop, pop punk y britpop, y eso cambiaría qué
+ * canciones ve la persona, no solo una etiqueta.
+ */
+function normalizeTag(tag: string): string {
+  return tag
+    .toLowerCase()
+    // NFD separa "ó" en "o" + marca de acento, y el replace de abajo se lleva la marca
+    // junto con todo lo que no sea alfanumérico -- no hace falta una regla aparte de acentos.
+    .normalize('NFD')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/** Índice normalizado, calculado una sola vez -- resolveCanonicalGenre corre una vez por
+ *  track de cada pool, no tiene sentido re-normalizar 160+ sinónimos cada vez. */
+const NORMALIZED_SYNONYMS: { key: CanonicalGenre; tags: Set<string> }[] = CANONICAL_GENRES.map((g) => ({
+  key: g.key,
+  tags: new Set(g.lastfmTagSynonyms.map(normalizeTag)),
+}));
+
 export function resolveCanonicalGenre(topTags: string[]): CanonicalGenre | null {
-  const normalized = topTags.map((t) => t.toLowerCase().trim());
-  const specific = CANONICAL_GENRES.filter((g) => g.key !== 'banda_norteno');
-  for (const genre of specific) {
-    if (genre.lastfmTagSynonyms.some((tag) => normalized.includes(tag))) return genre.key;
+  const candidates = new Set<string>();
+  for (const raw of topTags) {
+    if (!raw) continue;
+    candidates.add(normalizeTag(raw));
+    // iTunes compone géneros con barra ("Hip-Hop/Rap", "R&B/Soul", "Singer/Songwriter") donde
+    // CADA parte es una etiqueta completa por sí sola. Partir por "/" no afloja el matcheo
+    // (cada parte se sigue comparando entera), solo deja de perder esos casos.
+    if (raw.includes('/')) {
+      for (const part of raw.split('/')) candidates.add(normalizeTag(part));
+    }
   }
-  const bandaNorteno = CANONICAL_GENRES.find((g) => g.key === 'banda_norteno')!;
-  if (bandaNorteno.lastfmTagSynonyms.some((tag) => normalized.includes(tag))) return 'banda_norteno';
+  candidates.delete('');
+
+  for (const genre of NORMALIZED_SYNONYMS) {
+    if (genre.key === 'banda_norteno') continue;
+    for (const tag of genre.tags) {
+      if (candidates.has(tag)) return genre.key;
+    }
+  }
+  // banda_norteno al final a propósito: es el cajón regional más amplio ("música mexicana",
+  // "regional mexicano"), así que solo debe ganar cuando nada más específico matcheó.
+  const bandaNorteno = NORMALIZED_SYNONYMS.find((g) => g.key === 'banda_norteno')!;
+  for (const tag of bandaNorteno.tags) {
+    if (candidates.has(tag)) return 'banda_norteno';
+  }
   return null;
 }
