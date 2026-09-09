@@ -16,7 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { ThemeColors } from '../../theme/colors';
 import { useThemeStore } from '../../theme/useThemeStore';
-import { DiagonalEnergyBackground } from '../backgrounds/DiagonalEnergyBackground';
+import { HalftoneWaveBackground } from '../backgrounds/HalftoneWaveBackground';
 import { fonts } from '../../theme/typography';
 import { FLOATING_TAB_BAR_CLEARANCE } from '../../theme/layout';
 import { CANONICAL_GENRES, CanonicalGenre, GENRE_CATEGORY_ORDER } from '../../lib/genres';
@@ -228,7 +228,7 @@ export function OnboardingFlow({
           paso 'swipes' retorna antes (arriba) y se queda con el fondo plano, porque ahí la
           pantalla ya la ocupa el deck. */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <DiagonalEnergyBackground width={screenWidth} height={screenHeight} mode={mode} />
+        <HalftoneWaveBackground width={screenWidth} height={screenHeight} mode={mode} />
       </View>
 
       {/* Altura fija siempre reservada (en vez de no renderizar la fila en 'genres') para que

@@ -88,7 +88,7 @@ function buildNoise(width: number, height: number): NoiseChip[] {
 export function StaticClearingBackground({ width, height, mode, baseColor }: StaticClearingBackgroundProps) {
   const reducedMotion = useReducedMotion();
   const base = baseColor ?? colorsForMode(mode).background;
-  // Mismo criterio que DiagonalEnergyBackground: el neón sobre casi-negro ya contrasta de
+  // Mismo criterio que HalftoneWaveBackground: el neón sobre casi-negro ya contrasta de
   // más, así que la rampa arranca más baja en oscuro. Se bajó menos que los otros dos
   // patrones a propósito: acá el patrón ES el mensaje, no decoración de fondo.
   const topOpacity = mode === 'dark' ? 0.38 : 0.5;
