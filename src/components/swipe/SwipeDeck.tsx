@@ -198,9 +198,13 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
   } else if (isError) {
     content = (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>Sin conexión</Text>
+        {/* El título decía "Sin conexión", pero este estado también se alcanza con conexión
+            perfecta: cuando iTunes nos throttlea (ver fetchCandidatePool en useDeck.ts) no
+            hay candidatos que resolver. Mandar a "revisa tu conexión" en ese caso es mandar a
+            arreglar algo que no está roto. */}
+        <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>No pudimos cargar tu deck</Text>
         <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-          No pudimos cargar tu deck. Revisa tu conexión e intenta de nuevo.
+          Puede ser tu conexión, o que el catálogo esté saturado ahora mismo. Intenta de nuevo en un momento.
         </Text>
         <Text
           style={[styles.retry, { color: colors.brandText }]}

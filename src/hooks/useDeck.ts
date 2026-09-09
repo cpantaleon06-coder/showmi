@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { findItunesTrack } from '../api/itunes';
+import { findItunesCandidates } from '../api/itunes';
 import { getSimilarTracks, getTagTopTracks, getTrackTopTags } from '../api/lastfm';
 import { normalizeForMatch } from '../api/normalize';
 import { curatedAnchorsByGenre, curatedSimilarSeeds } from '../api/curatedSeeds';
@@ -11,6 +11,7 @@ import { DeckAnchor, SimilarTrackSeed, Track } from '../api/types';
 import { CANONICAL_GENRES, CanonicalGenre } from '../lib/genres';
 import { VibeKey } from '../lib/vibes';
 import { FilterLevel, HardFilterSelection, buildDeck as runDeckPipeline } from '../lib/deckPipeline';
+import { mapWithConcurrency } from '../lib/concurrency';
 import { sessionTreeToMultipliers } from '../lib/sessionTree';
 import {
   BetaParams,
@@ -101,20 +102,62 @@ async function fetchRawSuggestions(anchor: DeckAnchor, genre?: CanonicalGenre | 
   return deduped;
 }
 
-async function fetchCandidatePool(anchor: DeckAnchor, genre?: CanonicalGenre | null): Promise<Track[]> {
-  const raw = await fetchRawSuggestions(anchor, genre);
+/**
+ * Cuántas sugerencias crudas se buscan en iTunes, y cuántos tracks se cosechan de cada
+ * respuesta.
+ *
+ * El pool crudo puede traer ~200 sugerencias (hasta 60 similares + 70 por tag) y antes se
+ * hacía UNA búsqueda por cada una, quedándose solo con el primer resultado. Medido en vivo:
+ * ~110-150 peticiones por deck, de las cuales 17-22% volvían 403 -- la Search API de iTunes
+ * limita a ~20 req/min por IP y no hay concurrencia que arregle un límite por MINUTO (110
+ * peticiones en 7 segundos son ~940/min).
+ *
+ * Así que se invierte la relación: menos búsquedas, más candidatos por búsqueda. 40 x 3 da
+ * hasta 120 candidatos crudos con un tercio de las peticiones de antes, y sigue muy por
+ * encima de MIN_POOL_SIZE (50) después de deduplicar. Se cortan las PRIMERAS 40 porque el
+ * orden ya trae las similares al ancla adelante (lo personalizado) y las de tag atrás
+ * (relleno de volumen).
+ */
+const RAW_POOL_SEARCH_LIMIT = 40;
+const CANDIDATES_PER_SEARCH = 3;
 
-  const settled = await Promise.allSettled(raw.map((s) => findItunesTrack(s.artist, s.title)));
+/** Búsquedas en vuelo a la vez. No arregla el límite por minuto (ver arriba) pero evita la
+ *  ráfaga instantánea, que es lo que más agresivamente throttlea Apple. */
+const ITUNES_SEARCH_CONCURRENCY = 4;
+
+async function fetchCandidatePool(anchor: DeckAnchor, genre?: CanonicalGenre | null): Promise<Track[]> {
+  const rawAll = await fetchRawSuggestions(anchor, genre);
+  const raw = rawAll.slice(0, RAW_POOL_SEARCH_LIMIT);
+
+  const settled = await mapWithConcurrency(raw, ITUNES_SEARCH_CONCURRENCY, (s) =>
+    findItunesCandidates(s.artist, s.title, CANDIDATES_PER_SEARCH),
+  );
 
   const seen = new Set<string>();
   const deck: Track[] = [];
+  let failed = 0;
   for (const result of settled) {
-    if (result.status !== 'fulfilled' || !result.value) continue;
-    const track = result.value;
-    if (seen.has(track.id)) continue;
-    seen.add(track.id);
-    deck.push(track);
+    if (result.status !== 'fulfilled') {
+      failed++;
+      continue;
+    }
+    for (const track of result.value) {
+      if (seen.has(track.id)) continue;
+      seen.add(track.id);
+      deck.push(track);
+    }
   }
+
+  // Distinguir "no hubo resultados" de "la API nos rechazó". Sin esto, un rate limit de iTunes
+  // devolvía un pool vacío que la UI presentaba como "Se acabaron las tarjetas" -- un mensaje
+  // FALSO: no se acabaron, no se pudieron pedir. Se comprobó en vivo agotando la cuota: el deck
+  // quedaba en 0 tracks y la app invitaba a "Buscar más", que volvía a fallar igual.
+  // Lanzando acá, useQuery entra en isError y SwipeDeck muestra el estado de error real, con su
+  // botón de reintentar, que es lo honesto y lo accionable.
+  if (deck.length === 0 && failed > 0) {
+    throw new Error(`No se pudo resolver ningún candidato: ${failed}/${raw.length} búsquedas fallaron`);
+  }
+
   return deck;
 }
 
