@@ -130,10 +130,81 @@ function resolveGenero(tags: string[], itunesGenre: string | null): string | nul
   return null;
 }
 
+// ---------- vibra provisional (2026-09-12) ----------
+//
+// PISO, NO VERDAD. La vibra de una canción es subjetiva y la fuente de autoridad sigue siendo
+// el voto de la comunidad (`track_canonical_vibe`), que pisa esto cuando existe. Esto solo
+// existe porque sin él la dimensión entera estaba muerta: medido el 2026-09-12, ninguna canción
+// llegaba nunca a los votos necesarios, así que el filtro por vibra no matcheaba nada, el motor
+// nunca aprendía vibra, y la app se disculpaba ("había pocas canciones de esa vibra") en cada
+// sesión. Un piso imperfecto que la gente puede corregir es mejor que un vacío perfecto.
+//
+// Se resuelve por tags reales de Last.fm primero (la gente etiqueta ánimo: "party", "sad",
+// "chill"), y solo si eso no da nada se cae al género -- que es una señal mucho más débil
+// (no todo el reggaetón es de fiesta) y por eso va última, nunca al revés.
+const VIBE_TAG_SYNONYMS: Record<string, string[]> = {
+  fiesta: ["party", "fiesta", "dance party", "club", "perreo", "rumba"],
+  hype: ["hype", "energetic", "banger", "turn up", "adrenaline"],
+  motivacional: ["motivational", "workout", "gym", "training", "inspirational"],
+  empoderamiento: ["empowerment", "empowering", "confidence", "badass"],
+  alegre: ["happy", "feel good", "upbeat", "cheerful", "sunny"],
+  viaje: ["road trip", "driving", "travel", "summer drive"],
+  romantico: ["romantic", "love", "love song", "romantica", "amor"],
+  enamorado: ["in love", "crush", "sweet", "wedding"],
+  sensual: ["sensual", "sexy", "seductive", "slow jam", "bedroom"],
+  heartbreak: ["heartbreak", "breakup", "heartbroken", "desamor", "despecho"],
+  chill: ["chill", "chillout", "lo-fi", "lofi", "laid back", "mellow"],
+  relajacion: ["relax", "relaxing", "calm", "ambient", "sleep", "meditation"],
+  introspectivo: ["introspective", "reflective", "deep", "contemplative"],
+  enfoque: ["focus", "study", "concentration", "instrumental study"],
+  rabia: ["angry", "aggressive", "rage", "hardcore", "brutal"],
+  desahogo: ["catharsis", "cathartic", "venting", "screamo"],
+  melancolico: ["melancholy", "melancholic", "sad", "triste", "somber"],
+  nostalgico: ["nostalgia", "nostalgic", "throwback", "oldies", "memories"],
+};
+
+/** Último recurso: el género da un ánimo por defecto. Deliberadamente parcial -- solo los
+ *  géneros donde el sesgo de ánimo es fuerte y poco discutible. Un género que no está acá
+ *  simplemente no recibe vibra provisional, que es preferible a inventarle una. */
+const GENRE_DEFAULT_VIBE: Record<string, string> = {
+  reggaeton: "fiesta",
+  banda_norteno: "fiesta",
+  cumbia: "fiesta",
+  merengue: "fiesta",
+  salsa: "fiesta",
+  bachata: "romantico",
+  boleros: "romantico",
+  ranchera_mariachi: "desahogo",
+  corridos_tumbados_regional: "hype",
+  trap_latino: "hype",
+  drill: "rabia",
+  metal: "rabia",
+  punk: "rabia",
+  emo: "melancolico",
+  shoegaze_dreampop: "introspectivo",
+  indie_lofi: "chill",
+  house: "fiesta",
+  techno: "hype",
+  trance: "viaje",
+  drum_and_bass: "hype",
+  dubstep_bass: "hype",
+  jazz: "relajacion",
+  blues: "melancolico",
+  clasica: "enfoque",
+};
+
+function resolveVibra(tags: string[], genero: string | null): string | null {
+  const normalized = tags.filter((t): t is string => !!t).map((t) => t.toLowerCase().trim());
+  for (const [key, synonyms] of Object.entries(VIBE_TAG_SYNONYMS)) {
+    if (synonyms.some((tag) => normalized.includes(tag))) return key;
+  }
+  return genero ? (GENRE_DEFAULT_VIBE[genero] ?? null) : null;
+}
+
 // ---------- fuentes externas ----------
 
 async function getTrackTopTags(artist: string, title: string, apiKey: string): Promise<string[]> {
-  const url = `${LASTFM_BASE}?method=track.gettoptags&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(
+  const url = `${LASTFM_BASE}?method=track.gettoptags&autocorrect=1&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(
     title
   )}&api_key=${apiKey}&format=json`;
   const res = await fetch(url);
@@ -220,6 +291,7 @@ serve(async (req) => {
 
     const tags = await getTrackTopTags(itunes.artist, itunes.title, lastfmKey);
 
+    const genero = resolveGenero(tags, itunes.genre);
     const { error: upsertError } = await supabase.from('track_catalog').upsert({
       track_id: trackId,
       title: itunes.title,
@@ -227,7 +299,9 @@ serve(async (req) => {
       release_date: itunes.releaseDate,
       idioma: resolveIdioma(itunes.title, itunes.artist),
       epoca: resolveEpoca(itunes.releaseDate),
-      genero: resolveGenero(tags, itunes.genre),
+      genero,
+      // Piso provisional: el voto de la comunidad lo pisa cuando existe (ver resolveVibra).
+      vibra: resolveVibra(tags, genero),
       classified_at: new Date().toISOString(),
     });
 

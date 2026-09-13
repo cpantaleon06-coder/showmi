@@ -9,6 +9,7 @@ import { getVibeColor } from '../../theme/vibeColors';
 import { radii } from '../../theme/radii';
 import { fonts } from '../../theme/typography';
 import { useDeck } from '../../hooks/useDeck';
+import { registerVibeVoteRemote } from '../../api/tasteEngineClient';
 import { FilterLevel } from '../../lib/deckPipeline';
 import { SwipeDirection, useSwipeStore } from '../../state/swipeStore';
 import { useLibraryStore } from '../../state/libraryStore';
@@ -22,6 +23,7 @@ import { ActionButtons } from './ActionButtons';
 import { StarRatingPicker } from './StarRatingPicker';
 import { SponsoredCard } from '../ads/SponsoredCard';
 import { StaticClearingBackground } from '../backgrounds/StaticClearingBackground';
+import { TestPatternBackground } from '../backgrounds/TestPatternBackground';
 
 const VISIBLE_STACK_SIZE = 3;
 
@@ -115,6 +117,14 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
     if (!anchor) setResolvedAnchor(resolvedAnchor);
   }, [anchor, resolvedAnchor, setResolvedAnchor]);
 
+  // Agotar el cupo diario DESCARTA la calificación pendiente, no solo la esconde. Ocultarla
+  // sin limpiarla dejaba el estado colgado: al día siguiente (o al comprar Showmi More) el
+  // sheet reaparecería de golpe preguntando por una canción de la sesión anterior, sin
+  // contexto. Si el paywall interrumpió el flujo, el flujo se terminó.
+  useEffect(() => {
+    if (!canSwipe) setPendingRating(null);
+  }, [canSwipe]);
+
   const handleSwiped = useCallback(
     (track: Track, direction: SwipeDirection) => {
       advance(track, direction);
@@ -137,9 +147,24 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
   const handleRate = useCallback(
     (rating: StarRating) => {
       if (pendingRating) rateTrack(pendingRating, rating);
-      setPendingRating(null);
+      // NO se limpia `pendingRating` acá: el sheet pasa al paso de vibra y necesita seguir
+      // sabiendo de qué canción habla. Lo limpia onDismiss (o el voto de vibra).
     },
     [pendingRating, rateTrack]
+  );
+
+  /**
+   * Voto de vibra desde el deck (2026-09-12). Antes esto solo existía en el Feed, y la
+   * simulación de tráfico demostró que por esa vía ninguna canción alcanzaba nunca el umbral
+   * de votos: la dimensión de vibra quedaba muerta. No bloquea ni espera a la red -- el sheet
+   * se cierra de inmediato, igual que la calificación.
+   */
+  const handleVoteVibe = useCallback(
+    (vibe: VibeKey) => {
+      if (pendingRating) registerVibeVoteRemote(pendingRating.id, vibe).catch(() => {});
+      setPendingRating(null);
+    },
+    [pendingRating]
   );
 
   /** Botones de acción: pasan por la MISMA animación de lanzamiento que el gesto de
@@ -156,6 +181,46 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
       }
     },
     [handleSwiped]
+  );
+
+  /**
+   * Estado "no se pudo traer el deck", con su reintento. Extraído a una constante porque lo
+   * usan DOS ramas distintas: el `isError` explícito de React Query y -- desde 2026-09-09 --
+   * el caso de quedarse sin tarjetas SIN haber tenido ninguna nunca (ver abajo).
+   */
+  const unavailableState = (
+    <View style={[styles.center, { backgroundColor: '#000000' }]}>
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <TestPatternBackground width={screenWidth} height={screenHeight} />
+      </View>
+      {/* Caja negra sobre las barras. Los colores del tema NO se usan acá: el texto va sobre
+          la carta de ajuste, que es la misma en claro y en oscuro, así que colors.textPrimary
+          (casi negro en tema claro) desaparecería. Blanco sobre negro es lo único que funciona
+          en los dos temas. */}
+      <View style={styles.errorPanel}>
+        {/* El título decía "Sin conexión", pero este estado también se alcanza con conexión
+            perfecta: cuando iTunes nos throttlea (ver fetchCandidatePool en useDeck.ts) no
+            hay candidatos que resolver. Mandar a "revisa tu conexión" en ese caso es mandar a
+            arreglar algo que no está roto. */}
+        <Text style={[styles.stateTitle, { color: '#FFFFFF' }]}>No pudimos cargar tu deck</Text>
+        <Text style={[styles.stateText, { color: '#B8B8B8' }]}>
+          Puede ser tu conexión, o que el catálogo esté saturado ahora mismo. Intenta de nuevo en un momento.
+        </Text>
+      </View>
+      {/* Caja aparte para el reintento: pegado al texto dentro del mismo bloque negro se leía
+          como una línea más del párrafo. Separado, se lee como lo único que hay que tocar. */}
+      <View style={styles.errorPanelAction}>
+        <Text
+          style={[styles.retry, { color: colors.brandText }]}
+          onPress={() => {
+            resetIndex();
+            refetch();
+          }}
+        >
+          Reintentar
+        </Text>
+      </View>
+    </View>
   );
 
   let content: ReactNode;
@@ -196,31 +261,24 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
       </View>
     );
   } else if (isError) {
-    content = (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        {/* El título decía "Sin conexión", pero este estado también se alcanza con conexión
-            perfecta: cuando iTunes nos throttlea (ver fetchCandidatePool en useDeck.ts) no
-            hay candidatos que resolver. Mandar a "revisa tu conexión" en ese caso es mandar a
-            arreglar algo que no está roto. */}
-        <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>No pudimos cargar tu deck</Text>
-        <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-          Puede ser tu conexión, o que el catálogo esté saturado ahora mismo. Intenta de nuevo en un momento.
-        </Text>
-        <Text
-          style={[styles.retry, { color: colors.brandText }]}
-          onPress={() => {
-            resetIndex();
-            refetch();
-          }}
-        >
-          Reintentar
-        </Text>
-      </View>
-    );
+    content = unavailableState;
   } else {
     const remaining = (deck ?? []).slice(currentIndex, currentIndex + VISIBLE_STACK_SIZE);
 
-    if (remaining.length === 0) {
+    if (remaining.length === 0 && (deck?.length ?? 0) === 0) {
+      // "Se acabaron" solo es verdad si ALGUNA VEZ hubo tarjetas. Sin una sola en el deck, lo
+      // que pasó es que nunca llegaron -- y decir que se acabaron es mentir, con un botón
+      // ("Buscar más") que no puede arreglar nada porque no hay nada que agotar.
+      //
+      // Bug real encontrado en el repaso del 2026-09-09: `isError` de React Query NO cubre
+      // todos esos casos. Hay estados donde la query no tiene datos y además `isLoading` e
+      // `isError` son ambos false (una fetch pausada por networkMode, una query que todavía
+      // no arranca), y esta rama los tragaba a todos como "se acabaron". Medido en vivo con
+      // la Edge Function sin desplegar: la pantalla se quedaba clavada en ese mensaje falso y
+      // "Buscar más" no la sacaba nunca. Mirar el deck en sí, y no solo las banderas de la
+      // query, es lo único que distingue los dos casos de verdad.
+      content = unavailableState;
+    } else if (remaining.length === 0) {
       content = (
         <View style={[styles.center, { backgroundColor: colors.background }]}>
           <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>Se acabaron las tarjetas</Text>
@@ -321,11 +379,18 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
         </View>
       )}
       {content}
-      {pendingRating && (
+      {/* `canSwipe` en la condición, no solo `pendingRating`: este sheet es HERMANO de
+          `content`, así que se dibujaba encima de CUALQUIER rama -- incluido el paywall. Bug
+          real encontrado en la simulación del 2026-09-12: si el swipe que abre la calificación
+          es justo el que agota el cupo diario, la pantalla decía "Se acabaron tus swipes de
+          hoy" y "¿Cómo te fue con esta canción?" a la vez. Preguntar por una canción mientras
+          se anuncia que ya no hay swipes es contradictorio; el paywall manda. */}
+      {pendingRating && canSwipe && (
         <StarRatingPicker
           colors={colors}
           track={pendingRating}
           onRate={handleRate}
+          onVoteVibe={handleVoteVibe}
           onDismiss={() => setPendingRating(null)}
         />
       )}
@@ -391,5 +456,29 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 15,
     fontFamily: fonts.bodyBold,
+  },
+  /**
+   * Caja negra del mensaje sobre las barras de color (ver TestPatternBackground). Negro
+   * opaco, no semitransparente: con las barras traslucidas por debajo el texto pierde el
+   * contraste que la caja existe para dar.
+   *
+   * Radio 14 = el mismo de la tarjeta de swipe (ver radii.ts), no un valor nuevo -- el sistema
+   * de diseño evita el border-radius suelto por elemento.
+   */
+  errorPanel: {
+    backgroundColor: '#000000',
+    borderRadius: radii.card,
+    paddingVertical: 20,
+    paddingHorizontal: 22,
+    gap: 8,
+    alignItems: 'center',
+    maxWidth: 360,
+  },
+  errorPanelAction: {
+    backgroundColor: '#000000',
+    borderRadius: radii.pill,
+    paddingVertical: 6,
+    paddingHorizontal: 20,
+    marginTop: 4,
   },
 });
