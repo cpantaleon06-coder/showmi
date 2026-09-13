@@ -719,3 +719,266 @@ language sql stable security definer set search_path = public as $$
   order by p.created_at desc
   limit p_limit;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Caché compartido de búsquedas de iTunes (2026-09-09)
+-- ---------------------------------------------------------------------------
+-- Arregla de raíz los 403 que el commit del 2026-09-08 diagnosticó pero no pudo
+-- resolver desde el cliente. El problema nunca fue de concurrencia ni de reintentos:
+-- la Search API de iTunes limita a ~20 req/min por IP, y armar un deck disparaba ~40
+-- búsquedas DESDE CADA CLIENTE, sin compartir nada. Cada usuario -- y cada "cargar
+-- más" del mismo usuario -- volvía a pagar la misma cuota por las mismas canciones,
+-- porque los pools crudos salen de los mismos tags de Last.fm y se solapan muchísimo.
+--
+-- Esta tabla es la memoria que faltaba. La escribe SOLO la Edge Function
+-- `itunes-search` con el service role; el cliente nunca la toca directo (no hay policy
+-- de select para anon a propósito -- la única puerta es la función, que es la que
+-- sabe pedir lo que falta sin reventar la cuota).
+--
+-- `results` es un ARRAY de tracks ya normalizados al shape que consume el cliente, y
+-- un array VACÍO es un resultado legítimo y cacheable: "esta búsqueda no tiene match
+-- con clip de 30s". Repetir una búsqueda que ya se sabe vacía gasta exactamente la
+-- misma cuota que una que sí sirve, así que el caché negativo vale tanto como el
+-- positivo. Lo que NO se cachea nunca es un 403: eso no es un resultado, es la
+-- ausencia de uno.
+create table itunes_search_cache (
+  -- normalizeForMatch(artista)::normalizeForMatch(título)::limit -- misma normalización
+  -- que src/api/normalize.ts (acentos, feat., puntuación) para que "Bad Bunny" y
+  -- "bad bunny" no ocupen dos filas ni gasten dos búsquedas.
+  query_key text primary key,
+  results jsonb not null,
+  fetched_at timestamptz not null default now()
+);
+
+-- Para el barrido por antigüedad (ver TTL en la Edge Function): las URLs de artwork y de
+-- preview de iTunes sí caducan, así que una fila vieja se re-resuelve en vez de servir un
+-- clip muerto.
+create index itunes_search_cache_fetched_at_idx on itunes_search_cache (fetched_at);
+
+alter table itunes_search_cache enable row level security;
+-- Sin policies a propósito: el service role las salta, y no hay nadie más que deba entrar.
+
+-- ---------------------------------------------------------------------------
+-- Vibra: arranque heurístico + umbral más bajo (2026-09-12)
+-- ---------------------------------------------------------------------------
+-- Por qué: la simulación de tráfico del 2026-09-12 demostró que la dimensión de vibra estaba
+-- MUERTA en la práctica, no por un bug sino por un huevo-y-gallina de diseño. `track_canonical_vibe`
+-- exigía 3 votos por canción, votar solo se podía desde el Feed (sobre canciones ya posteadas),
+-- y el resultado medido fue: `vibra:fiesta` en el perfil local quedó EXACTAMENTE en el valor
+-- sembrado por el onboarding (alpha 2.25 / beta 0.75) después de ~50 swipes -- ni un solo swipe
+-- la tocó. En cadena: el filtro duro por vibra no matcheaba nada y se relajaba siempre (la app
+-- mostraba "había pocas canciones de esa vibra" en la PRIMERA pantalla de cada sesión), el
+-- SESSION_VIBE_BOOST multiplicaba una clave sin evidencia, y el halo por vibra nunca se activaba.
+--
+-- Se ataca por los dos lados: un piso heurístico para que ninguna canción se quede sin vibra, y
+-- un umbral alcanzable para que la comunidad pueda corregir ese piso de verdad.
+
+-- Piso provisional escrito por classify-tracks (ver esa función). NO reemplaza a
+-- track_canonical_vibe: el voto de la comunidad la sigue pisando cuando existe, porque la vibra
+-- es subjetiva y un heurístico sobre tags de Last.fm no tiene más autoridad que la gente que ya
+-- escuchó la canción. Es un piso, no una verdad.
+alter table track_catalog add column vibra text check (vibra is null or vibra in
+  ('fiesta','romantico','nostalgico','hype','chill','heartbreak','introspectivo','desahogo',
+   'motivacional','melancolico','enamorado','sensual','empoderamiento','rabia','alegre',
+   'relajacion','viaje','enfoque'));
+
+-- Cambia el shape de retorno, así que hay que dropear (Postgres no permite CREATE OR REPLACE
+-- sobre una función que devuelve tabla si cambian las columnas) -- mismo caso que get_feed_posts.
+drop function if exists get_track_catalog(text[]);
+
+create or replace function get_track_catalog(p_track_ids text[])
+returns table(track_id text, idioma text, epoca text, genero text, vibra text)
+language sql stable security definer set search_path = public as $$
+  select track_id, idioma, epoca, genero, vibra from track_catalog where track_id = any(p_track_ids);
+$$;
+
+-- Umbral 3 -> 2. Con 12-20 testers, 3 votos sobre la MISMA canción no ocurre nunca; con el piso
+-- heurístico encima, el umbral ya no decide "hay vibra o no" sino "cuándo la comunidad pisa al
+-- heurístico", que es una pregunta distinta y admite un número más bajo.
+--
+-- No baja a 1 a propósito: con 1, el primer voto de cualquiera se vuelve canon para todos los
+-- demás. 2 es el mínimo que puede llamarse consenso. Queda el caso de 2 votos empatados 1-1,
+-- donde `rnk = 1` desempata de forma arbitraria -- aceptado a sabiendas: el heurístico que
+-- reemplaza tampoco era mejor que una opinión suelta.
+--
+-- Una vista materializada no admite CREATE OR REPLACE cuando cambia su definición: hay que
+-- dropear y recrear, con su índice único (el `refresh concurrently` del cron lo exige).
+drop materialized view if exists track_canonical_vibe;
+
+create materialized view track_canonical_vibe as
+select track_id, vibe, votes, total_votes from (
+  select track_id, vibe, count(*) as votes,
+    sum(count(*)) over (partition by track_id) as total_votes,
+    row_number() over (partition by track_id order by count(*) desc) as rnk
+  from track_vibe_votes group by track_id, vibe
+) ranked
+where rnk = 1 and total_votes >= 2;
+
+create unique index on track_canonical_vibe (track_id);
+
+-- ---------------------------------------------------------------------------
+-- Cierre de RLS en las 12 tablas que quedaron abiertas (2026-09-13)
+-- ---------------------------------------------------------------------------
+-- HALLAZGO: una auditoría de la base real encontró 12 tablas del esquema `public` sin RLS.
+-- En Supabase eso NO es "sin configurar": es acceso total de lectura y escritura para
+-- cualquiera que tenga la anon key -- y la anon key es pública por diseño, va dentro del
+-- bundle de la app (EXPO_PUBLIC_SUPABASE_ANON_KEY). Es exactamente lo que el propio linter de
+-- Supabase marca como `rls_disabled_in_public`.
+--
+-- Hoy el daño es limitado porque casi todas están vacías (el cliente todavía usa stores
+-- locales de zustand y nunca las escribe), con una excepción real: `weekly_community_picks`
+-- tiene 10 filas y cualquiera podía reescribir el feed curado. Pero el agujero importa sobre
+-- todo hacia adelante: `taste_profile` y `collections` están documentadas como el destino de
+-- sincronización del perfil y la biblioteca, así que el día que el cliente empiece a escribir
+-- ahí, el perfil de gustos y la biblioteca de CADA usuario nacerían world-readable y
+-- world-writable.
+--
+-- Criterio de cada política, según lo que el cliente realmente hace (verificado con grep):
+--   - `weekly_community_picks` es la ÚNICA que el cliente lee directo (postsClient.ts:116),
+--     así que conserva SELECT público. Escribirla sigue siendo cosa del cron/service role.
+--   - Las de datos por usuario se cierran a su dueño vía auth.uid().
+--   - Las sociales (likes/comentarios) llevan SELECT público -- si no, no se pueden mostrar
+--     los conteos ni los comentarios de nadie más -- y escritura solo propia.
+--   - `view_refresh_log` es bitácora interna: RLS sin ninguna política, o sea solo el service
+--     role. Mismo patrón que `itunes_search_cache`.
+
+-- ---------- Datos por usuario: solo su dueño ----------
+
+alter table taste_profile enable row level security;
+create policy "propio perfil de gustos" on taste_profile for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+alter table collections enable row level security;
+create policy "propias colecciones" on collections for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- collection_items no tiene user_id: la pertenencia se resuelve por su colección.
+alter table collection_items enable row level security;
+create policy "items de mis colecciones" on collection_items for all
+  using (exists (select 1 from collections c where c.id = collection_items.collection_id and c.user_id = auth.uid()))
+  with check (exists (select 1 from collections c where c.id = collection_items.collection_id and c.user_id = auth.uid()));
+
+alter table genre_progress enable row level security;
+create policy "propio progreso por genero" on genre_progress for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+alter table user_cosmetics enable row level security;
+create policy "propios cosmeticos" on user_cosmetics for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+alter table mascots enable row level security;
+create policy "propia mascota" on mascots for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+alter table mood_prompts enable row level security;
+create policy "propios prompts de animo" on mood_prompts for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ---------- Social: se leen públicas, se escriben solo propias ----------
+
+alter table post_likes enable row level security;
+create policy "likes visibles" on post_likes for select using (true);
+create policy "dar propio like" on post_likes for insert with check (auth.uid() = user_id);
+create policy "quitar propio like" on post_likes for delete using (auth.uid() = user_id);
+
+alter table post_comments enable row level security;
+create policy "comentarios visibles" on post_comments for select using (true);
+create policy "escribir propio comentario" on post_comments for insert with check (auth.uid() = user_id);
+create policy "editar propio comentario" on post_comments for update
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "borrar propio comentario" on post_comments for delete using (auth.uid() = user_id);
+
+-- ---------- Catálogos públicos de solo lectura ----------
+-- SELECT para todos, ninguna política de escritura: las llena el service role.
+
+alter table cosmetics enable row level security;
+create policy "catalogo de cosmeticos visible" on cosmetics for select using (true);
+
+alter table weekly_community_picks enable row level security;
+create policy "picks de la semana visibles" on weekly_community_picks for select using (true);
+
+-- ---------- Interno: nadie del lado cliente ----------
+
+alter table view_refresh_log enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- Endurecimiento tras el linter de seguridad de Supabase (2026-09-13)
+-- ---------------------------------------------------------------------------
+-- Segunda tanda, después de cerrar RLS en las 12 tablas abiertas. Estos hallazgos salieron del
+-- advisor oficial (`/advisors/security`) y se verificaron uno por uno contra la base real.
+
+-- ---------- 1. Fuga de datos por usuario en una vista materializada ----------
+-- `liked_artists` expone (user_id, artist_key) y era SELECTable por `anon`. Comprobado con la
+-- anon key pública que va en el bundle: devolvía filas reales de usuarios reales, o sea que
+-- cualquiera podía volcar qué artistas le gustan a cada persona.
+--
+-- Las vistas materializadas NO admiten RLS, así que la única defensa es quitarles el permiso
+-- de lectura directa. El cliente no las pierde: las consume a través de funciones
+-- SECURITY DEFINER (get_global_stats, get_artist_neighbors, get_track_vibes), que corren como
+-- el dueño y por lo tanto siguen viéndolas.
+--
+-- Se revocan las seis, no solo la que filtra: ninguna está pensada para consumo directo desde
+-- el cliente, y dejar abiertas las otras cinco solo deja superficie sin motivo.
+revoke select on
+  liked_artists,
+  artist_user_counts,
+  artist_pair_cooccurrence,
+  artist_top_neighbors,
+  global_key_stats,
+  track_canonical_vibe
+from anon, authenticated;
+
+-- ---------- 2. get_artist_neighbors: search_path mutable ----------
+-- Era `language sql stable` a secas: sin SECURITY DEFINER y sin search_path fijo. Dos
+-- problemas en uno. El search_path mutable es lo que marcó el linter (un search_path
+-- manipulado puede redirigir a qué tabla resuelve el nombre). Y al correr como INVOCADOR,
+-- dejaría de funcionar en cuanto se revoque `artist_top_neighbors` arriba.
+--
+-- Pasa a SECURITY DEFINER con search_path fijo, igual que el resto de los getters del motor
+-- (get_global_stats, get_track_vibes). No expone nada nuevo: devuelve vecindad entre artistas,
+-- que no es dato de ningún usuario.
+create or replace function get_artist_neighbors(p_artist_key text, p_limit int default 5)
+returns table(neighbor_id text, similarity real)
+language sql stable security definer set search_path = public as $$
+  select neighbor_id, similarity from artist_top_neighbors
+  where artist_id = p_artist_key order by rank limit p_limit;
+$$;
+
+-- ---------- 3. get_top_sets: leer los gustos de CUALQUIER usuario ----------
+-- La función recibía `p_user_id` y filtraba por él sin comprobar nada, siendo SECURITY DEFINER
+-- y ejecutable por `anon`. O sea: pasando otro uuid se leían los géneros y artistas favoritos
+-- de esa persona. El cliente siempre mandaba el suyo (tasteEngineClient.ts:171), pero eso es
+-- una convención del cliente, no una defensa -- el endpoint REST está abierto a cualquiera.
+--
+-- Ahora filtra por `auth.uid()` y el parámetro queda IGNORADO. Se conserva en la firma a
+-- propósito: cambiarla rompería la llamada del cliente ya desplegado, y un parámetro que se
+-- ignora es más seguro que uno que se obedece. Cuando se pueda tocar el cliente, quitarlo.
+create or replace function get_top_sets(p_user_id uuid, p_prefix text, p_limit int default 5)
+returns table(dim_key text, liked_count bigint)
+language sql stable security definer set search_path = public as $$
+  select sd.dim_key, count(*) as liked_count
+  from swipes s
+  join swipe_dimensions sd on sd.swipe_id = s.id
+  where s.user_id = auth.uid() and s.liked = true and sd.dim_key like p_prefix || ':%'
+  group by sd.dim_key
+  order by liked_count desc
+  limit p_limit;
+$$;
+
+-- ---------- 4. Funciones internas expuestas como endpoints REST ----------
+-- PostgREST publica TODA función de `public` como /rest/v1/rpc/<nombre>. Estas tres no son
+-- para el cliente y no tienen por qué ser invocables por él:
+--   - handle_new_auth_user: función de TRIGGER. Los triggers corren por cuenta de la tabla,
+--     así que revocar el EXECUTE directo no los afecta.
+--   - refresh_weekly_community_picks: la dispara pg_cron (como postgres). Abierta, cualquiera
+--     podía forzar el recálculo del feed curado cuando quisiera.
+--   - get_unclassified_track_ids: la llama classify-tracks con el service_role, que ignora
+--     estos grants.
+-- De PUBLIC, no de anon/authenticated: Postgres le da EXECUTE a PUBLIC por defecto al crear
+-- una función, y anon/authenticated lo HEREDAN. Revocar solo de ellos no hace nada -- se probó
+-- primero así y las funciones seguían respondiendo 200 por el REST. `service_role` conserva su
+-- grant explícito (`service_role=X/postgres`), así que classify-tracks sigue pudiendo llamar a
+-- get_unclassified_track_ids.
+revoke execute on function handle_new_auth_user() from public;
+revoke execute on function refresh_weekly_community_picks() from public;
+revoke execute on function get_unclassified_track_ids(int) from public;
