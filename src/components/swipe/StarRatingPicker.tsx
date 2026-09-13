@@ -151,9 +151,21 @@ const styles = StyleSheet.create({
   starButton: {
     padding: 4,
   },
-  /** Margen negativo para que la fila de chips pueda sangrar hasta el borde del sheet y se
-   *  vea que hay más contenido hacia la derecha, en vez de cortarse dentro del padding. */
+  /**
+   * `alignSelf: 'stretch'` NO es opcional: el sheet tiene `alignItems: 'center'`, y sin esto
+   * el ScrollView se centra por su ANCHO DE CONTENIDO (18 chips = ~1776px) en vez de por el
+   * del sheet. Medido en vivo antes del arreglo: el sheet ocupaba x 26-349 y los chips salían
+   * en x negativo (-672, -578, -488...), o sea que la fila arrancaba fuera de la pantalla por
+   * la izquierda y no habia forma de llegar al principio de la lista.
+   *
+   * Costó verlo porque `scrollLeft` valia 0 y eso parecia sano -- era 0 porque el contenedor
+   * no estaba scrolleado, estaba mal colocado.
+   *
+   * El margen negativo se queda: hace que la fila sangre hasta el borde del sheet y se vea que
+   * hay más contenido a la derecha, en vez de cortarse dentro del padding.
+   */
   vibeScroll: {
+    alignSelf: 'stretch',
     marginHorizontal: -28,
     maxHeight: 44,
   },
