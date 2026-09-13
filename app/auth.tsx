@@ -42,6 +42,16 @@ type Mode = 'upgrade' | 'signin';
  *    provider Apple habilitado en Supabase (Services ID, Team ID, Key ID, private key).
  *    Además solo puede aparecer en iOS -- por eso el chequeo de isAvailableAsync abajo.
  */
+/**
+ * Largo mínimo de una contraseña NUEVA. Subido de 6 a 8 el 2026-09-13.
+ *
+ * TIENE QUE COINCIDIR con `password_min_length` en la config de Auth del proyecto de Supabase:
+ * el servidor es quien manda, y si el cliente deja pasar una más corta, la persona recibe el
+ * error críptico de GoTrue en vez de este mensaje. Cambiar uno sin el otro es peor que no
+ * cambiar ninguno.
+ */
+const MIN_PASSWORD_LENGTH = 8;
+
 export default function AuthScreen() {
   const colors = useThemeStore((s) => s.colors);
   const themeMode = useThemeStore((s) => s.mode);
@@ -61,8 +71,21 @@ export default function AuthScreen() {
   }, []);
 
   const submit = async () => {
-    if (!email.trim() || password.length < 6) {
-      setError('Ingresa un email válido y una contraseña de al menos 6 caracteres.');
+    if (!email.trim()) {
+      setError('Ingresa un email válido.');
+      return;
+    }
+    // El mínimo se exige solo al CREAR la contraseña, no al escribir una que ya existe.
+    // Subirlo de 6 a 8 en ambos modos (2026-09-13) habría bloqueado desde el propio cliente a
+    // cualquiera que ya tenga una de 6 o 7 caracteres: vería "al menos 8" y no podría entrar a
+    // su cuenta válida, sin forma de arreglarlo desde la app. Quién puede entrar lo decide el
+    // servidor contra el hash existente; el mínimo es una regla para contraseñas NUEVAS.
+    if (mode === 'upgrade' && password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Elige una contraseña de al menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+      return;
+    }
+    if (!password) {
+      setError('Ingresa tu contraseña.');
       return;
     }
     setSubmitting(true);
@@ -216,10 +239,13 @@ export default function AuthScreen() {
             keyboardType="email-address"
             style={[styles.input, { color: colors.textPrimary, borderColor: colors.textPrimary }]}
           />
+          {/* El mínimo se anuncia en el campo solo al CREAR la cuenta -- en "iniciar sesión"
+              sería ruido (no aplica) y peor: le sugeriría a quien ya tiene una de 6 que la
+              suya está mal. */}
           <TextInput
             value={password}
             onChangeText={setPassword}
-            placeholder="Contraseña"
+            placeholder={mode === 'upgrade' ? `Contraseña (mín. ${MIN_PASSWORD_LENGTH})` : 'Contraseña'}
             placeholderTextColor={colors.textSecondary}
             secureTextEntry
             style={[styles.input, { color: colors.textPrimary, borderColor: colors.textPrimary }]}
