@@ -70,6 +70,10 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
     const signal = directionToSignal(direction);
     if (!signal) return; // 'up': el signal llega después, desde la calificación de estrellas
 
+    // `track` viene del deck, así que trae adjuntos la vibra y el género canónico que
+    // rankPool ya resolvió (ver Track en types.ts) y trackToCandidate los toma de ahí. Es lo
+    // que hace que el swipe se registre sobre las MISMAS categorías con las que se mostró la
+    // carta -- antes esta llamada perdía la vibra por completo y re-resolvía el género peor.
     const candidate = trackToCandidate(track);
     const { liked, intensity } = signal;
 

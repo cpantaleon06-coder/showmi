@@ -1,3 +1,4 @@
+import { CanonicalGenre } from '../lib/genres';
 import { VibeKey } from '../lib/vibes';
 
 export interface Track {
@@ -22,6 +23,19 @@ export interface Track {
    * SwipeCard, ver theme/glow.ts.
    */
   vibe?: VibeKey | null;
+  /**
+   * Género CANÓNICO ya resuelto, adjuntado por useDeck.rankPool -- que lo calcula con los
+   * tags reales de Last.fm + el catálogo server-side, cosa que quien recibe un Track suelto
+   * no puede reproducir.
+   *
+   * Existe por el mismo motivo que `vibe` de arriba, y por un bug concreto (2026-09-09): al
+   * rankear, el género canónico se resolvía con tags + catálogo; al registrar el swipe se
+   * volvía a resolver con solo el string de iTunes. El MISMO track terminaba con un género
+   * distinto según si lo estabas viendo o calificándolo, así que el motor aprendía sobre una
+   * categoría y el filtro decidía sobre otra. Adjuntarlo acá deja una sola resolución por
+   * track y hace imposible que las dos rutas se separen otra vez.
+   */
+  genero?: CanonicalGenre | null;
 }
 
 export interface SimilarTrackSeed {

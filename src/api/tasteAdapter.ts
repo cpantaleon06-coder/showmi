@@ -25,17 +25,20 @@ import { DeckAnchor, Track } from './types';
  *    exista ese selector, y ya alimentan el árbol de sesión (sessionTree.ts) vía
  *    `buildSessionSelection` si en el futuro se agregan ahí.
  *
- * `vibe` no viene del Track en sí (a diferencia de genre) -- es la vibra canónica votada por
- * la comunidad para ESTE track, resuelta aparte vía fetchTrackVibes y pasada explícitamente
- * por quien llama (ver useDeck.ts). Se mantiene como parámetro separado en vez de meterla en
- * Track porque no es un dato de la canción, es un agregado calculado sobre votos. `vibras`
- * (plural, para el filtro duro) se arma como `[vibe]` cuando hay una -- track_canonical_vibe
- * solo guarda la vibra de mayoría hoy (`rnk = 1` en schema.sql), no las 2-3 simultáneas que en
- * teoría admite la taxonomía; un arreglo de un solo elemento es el caso degenerado correcto.
+ * `vibe` no viene del Track en sí (a diferencia de genre) -- es un agregado calculado sobre
+ * votos de la comunidad, resuelto aparte vía fetchTrackVibes y pasado explícitamente por quien
+ * llama (ver useDeck.ts). Desde 2026-09-12 hay ADEMÁS un piso heurístico server-side
+ * (`catalogEntry.vibra`, ver classify-tracks) para las canciones que todavía nadie votó -- ver
+ * el orden de precedencia en el cuerpo. `vibras` (plural, para el filtro duro) se arma como
+ * `[vibe]` cuando hay una -- track_canonical_vibe solo guarda la vibra de mayoría (`rnk = 1`),
+ * no las 2-3 simultáneas que en teoría admite la taxonomía; un arreglo de un solo elemento es
+ * el caso degenerado correcto.
  *
- * `genero` (para el filtro duro) es DISTINTO de `genre` (el string crudo de iTunes que ya usa
- * el motor de scoring, sin tocar): se resuelve a la taxonomía canónica (22 géneros) vía
- * `resolveCanonicalGenre`, reusando exactamente la función que ya existía para esto.
+ * `genero` es la taxonomía canónica (22 géneros) resuelta vía `resolveCanonicalGenre`, y
+ * `genre` es el string crudo de iTunes. Desde 2026-09-09 el motor de scoring aprende sobre
+ * `genero`, igual que el filtro duro: antes usaba `genre` crudo y eso lo dejaba aprendiendo
+ * en un espacio de claves que ninguna otra parte del sistema leía (ver Candidate.genero en
+ * tasteEngine.ts). `genre` se conserva como dato de la canción, ya no como dimensión.
  *
  * 2026-08-31: `resolveCanonicalGenre` ahora recibe el string de iTunes MÁS los tags reales de
  * Last.fm (`extraTags`, ver `getTrackTopTags` en lastfm.ts) en vez de un array de un solo
@@ -52,14 +55,33 @@ export function trackToCandidate(
   catalogEntry?: CatalogEntry,
 ): FilterableCandidate {
   const genreTags = [track.genre, ...extraTags].filter((t): t is string => !!t);
+
+  // Precedencia de la vibra, de más a menos autoridad:
+  //   1. `vibe` explícito = voto de la COMUNIDAD (fetchTrackVibes). La única fuente real.
+  //   2. `track.vibe` = lo que rankPool ya resolvió y adjuntó a este Track.
+  //   3. `catalogEntry.vibra` = piso HEURÍSTICO de classify-tracks (2026-09-12).
+  //
+  // El heurístico va último a propósito: existe para que la dimensión no esté muerta mientras
+  // nadie ha votado, no para competirle a quien sí escuchó la canción.
+  //
+  // Que el paso 2 exista es lo que arregló el bug de 2026-09-09: swipeStore/postStore llaman a
+  // esta función SIN vibra ni tags, así que el candidato de un swipe salía sin `vibe` (la
+  // dimensión `vibra:` no se registraba nunca, aunque `track.vibe` viniera poblado) y con un
+  // `genero` resuelto peor que el que se usó para mostrar esa misma carta.
+  const resolvedVibe = vibe ?? track.vibe ?? catalogEntry?.vibra ?? undefined;
+  const resolvedGenero =
+    catalogEntry?.genero ??
+    track.genero ??
+    (genreTags.length > 0 ? (resolveCanonicalGenre(genreTags) ?? undefined) : undefined);
+
   return {
     trackId: track.id,
     artistIds: [normalizeForMatch(track.artist)],
     releaseDate: track.releaseDate ?? '',
     genre: track.genre ?? undefined,
-    vibe,
-    genero: catalogEntry?.genero ?? (genreTags.length > 0 ? (resolveCanonicalGenre(genreTags) ?? undefined) : undefined),
-    vibras: vibe ? [vibe] : undefined,
+    vibe: resolvedVibe,
+    genero: resolvedGenero,
+    vibras: resolvedVibe ? [resolvedVibe] : undefined,
     idioma: catalogEntry?.idioma ?? resolveIdioma(track.title, track.artist) ?? undefined,
     epoca: catalogEntry?.epoca ?? resolveEpoca(track.releaseDate) ?? undefined,
   };

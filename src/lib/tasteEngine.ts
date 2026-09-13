@@ -40,8 +40,26 @@ export type Candidate = {
   releaseDate: string;
   /** 0-100. Opcional: fuentes que no son la Track API de Spotify (ej. iTunes/Last.fm) no la exponen */
   popularity?: number;
-  /** Opcional: requiere llamada a GET /artists/{id}, puede no venir */
+  /**
+   * String CRUDO de género de la fuente (ej. `primaryGenreName` de iTunes:
+   * "Música latina", "Hip-Hop/Rap"). Se conserva como dato de la canción pero
+   * YA NO es lo que alimenta la dimensión de género del motor -- ver `genero`
+   * abajo y la nota en `dimensionKeys`.
+   */
   genre?: string;
+  /**
+   * Género CANÓNICO (una de las 22 claves de la taxonomía, ver genres.ts en
+   * Showmi). Ésta es la dimensión que el motor aprende.
+   *
+   * Bug real que motivó separarlas (2026-09-09): la dimensión se construía con
+   * `genre` crudo, mientras que el onboarding sembraba `genero:<canónico>`, el
+   * filtro duro filtraba por `<canónico>` y `sessionTreeToMultipliers` boosteaba
+   * `genero:<canónico>`. Los dos espacios de claves NUNCA se cruzaban: los
+   * géneros elegidos en el onboarding quedaban congelados (ningún swipe los
+   * tocaba jamás) y lo aprendido se fragmentaba entre variantes crudas
+   * ("Latin" / "Música latina" / "Latin Urban") que deberían ser una sola clave.
+   */
+  genero?: string;
   /**
    * Opcional: vibra canónica de la canción (voto mayoritario de la comunidad,
    * ver track_canonical_vibe en supabase/schema.sql). Ausente hasta que la
@@ -233,8 +251,12 @@ export function dimensionKeys(track: Candidate): DimensionWeight[] {
   if (track.popularity !== undefined) {
     dims.push({ key: bucketPopularity(track.popularity), weight: DEFAULT_WEIGHTS.popularity });
   }
-  if (track.genre) {
-    dims.push({ key: `genero:${track.genre}`, weight: DEFAULT_WEIGHTS.genre });
+  // Género CANÓNICO, nunca el string crudo de la fuente (ver Candidate.genero). Si el track
+  // no se pudo resolver a la taxonomía, la dimensión simplemente se salta -- mismo criterio
+  // que popularity. Caer al string crudo como respaldo sería peor que no aprender nada:
+  // reintroduciría exactamente las claves fragmentadas que nada más en el sistema lee.
+  if (track.genero) {
+    dims.push({ key: `genero:${track.genero}`, weight: DEFAULT_WEIGHTS.genre });
   }
   if (track.vibe) {
     dims.push({ key: `vibra:${track.vibe}`, weight: DEFAULT_WEIGHTS.vibe });
