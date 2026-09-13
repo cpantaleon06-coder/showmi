@@ -78,14 +78,31 @@ export type FilterLevel = keyof HardFilterSelection;
 export const RELAXATION_ORDER: readonly FilterLevel[] = ["epoca", "vibras", "genero", "idioma"];
 
 /**
- * Mínimo de canciones que dispara la relajación automática. Subido de 12 a
- * 50 (2026-08-31) -- requisito explícito del producto: una sesión de swipe
- * necesita AL MENOS 50 canciones, con 80-85 como media esperada (ver
- * fetchRawSuggestions en useDeck.ts, que ahora combina similitud + volumen
- * por tag para poder sostener esto). 12 alcanzaba para no quedarse sin
- * cartas pronto, pero no para lo que el producto pide hoy.
+ * Mínimo de canciones que dispara la relajación automática del filtro duro.
+ *
+ * Historia: 12 originalmente; subido a 50 el 2026-08-31 por requisito explícito del producto
+ * ("una sesión de swipe necesita AL MENOS 50 canciones"); bajado a 25 el 2026-09-12.
+ *
+ * POR QUÉ BAJA, y por qué eso NO contradice aquel requisito: esta constante no es el largo de
+ * una sesión, es el umbral bajo el cual el filtro que la persona ELIGIÓ se abandona. Las 50+
+ * canciones de una sesión las sostienen el tamaño del pool crudo y la recarga en segundo plano
+ * (LOAD_MORE_WHEN_REMAINING en useDeck.ts), no este número. Confundir las dos cosas es lo que
+ * hizo que 50 quedara acá.
+ *
+ * El costo medido (2026-09-12, simulación de tráfico): el pool real ronda 85-90 candidatos tras
+ * deduplicar, así que exigir 50 obligaba a que una vibra cubriera >=56% del pool para
+ * sobrevivir. Con 18 vibras eso no pasa nunca: TODA sesión con vibra elegida relajaba en la
+ * primera pantalla y la app se disculpaba ("había pocas canciones de esa vibra") por respetar
+ * lo que le habían pedido. El filtro de vibra era decorativo.
+ *
+ * 25 pide ~28% del pool, que sí es alcanzable. El intercambio es deliberado: 25 canciones que
+ * de verdad calzan con lo que pediste valen más que 85 que no, y de todos modos la recarga en
+ * segundo plano se dispara con 20 restantes, así que la pila nunca se vacía a la vista.
+ *
+ * (La copia del paquete standalone sigue en 12 y tiene un test que lo fija; las dos llevan
+ * divergiendo desde el 2026-08-31 -- ver el encabezado de este archivo.)
  */
-export const MIN_POOL_SIZE = 50;
+export const MIN_POOL_SIZE = 25;
 
 function matchesSelection(track: FilterableFields, selection: HardFilterSelection): boolean {
   if (selection.idioma !== undefined && track.idioma !== selection.idioma) return false;

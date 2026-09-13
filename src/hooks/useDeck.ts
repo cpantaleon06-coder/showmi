@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { findItunesCandidates } from '../api/itunes';
-import { getSimilarTracks, getTagTopTracks, getTrackTopTags } from '../api/lastfm';
+import { findItunesCandidatesBatch } from '../api/itunes';
+import { getSimilarTracks, getTagTopTracks, getTrackTopTagsBatch } from '../api/lastfm';
 import { normalizeForMatch } from '../api/normalize';
 import { curatedAnchorsByGenre, curatedSimilarSeeds } from '../api/curatedSeeds';
 import { trackToCandidate } from '../api/tasteAdapter';
@@ -10,8 +10,12 @@ import { fetchArtistNeighborsBatch, fetchGlobalStats, fetchTrackCatalog, fetchTr
 import { DeckAnchor, SimilarTrackSeed, Track } from '../api/types';
 import { CANONICAL_GENRES, CanonicalGenre } from '../lib/genres';
 import { VibeKey } from '../lib/vibes';
-import { FilterLevel, HardFilterSelection, buildDeck as runDeckPipeline } from '../lib/deckPipeline';
-import { mapWithConcurrency } from '../lib/concurrency';
+import {
+  FilterLevel,
+  FilterableCandidate,
+  HardFilterSelection,
+  buildDeck as runDeckPipeline,
+} from '../lib/deckPipeline';
 import { sessionTreeToMultipliers } from '../lib/sessionTree';
 import {
   BetaParams,
@@ -19,6 +23,7 @@ import {
   computeSeedPrior,
   dimensionKeys,
   pickNeighborStats,
+  rankCandidatesWithExploration,
 } from '../lib/tasteEngine';
 import { useSessionTreeStore } from '../state/sessionTreeStore';
 import { useTasteStateStore } from '../state/tasteStateStore';
@@ -103,45 +108,49 @@ async function fetchRawSuggestions(anchor: DeckAnchor, genre?: CanonicalGenre | 
 }
 
 /**
- * Cuántas sugerencias crudas se buscan en iTunes, y cuántos tracks se cosechan de cada
- * respuesta.
+ * Cuántas sugerencias crudas se mandan a resolver, y cuántos tracks se cosechan de cada una.
  *
- * El pool crudo puede traer ~200 sugerencias (hasta 60 similares + 70 por tag) y antes se
- * hacía UNA búsqueda por cada una, quedándose solo con el primer resultado. Medido en vivo:
- * ~110-150 peticiones por deck, de las cuales 17-22% volvían 403 -- la Search API de iTunes
- * limita a ~20 req/min por IP y no hay concurrencia que arregle un límite por MINUTO (110
- * peticiones en 7 segundos son ~940/min).
+ * El pool crudo puede traer ~200 sugerencias (hasta 60 similares + 70 por tag). El corte se
+ * queda con las PRIMERAS porque el orden ya trae las similares al ancla adelante (lo
+ * personalizado) y las de tag atrás (relleno de volumen), así que si algo se sacrifica río
+ * abajo, se sacrifica el relleno.
  *
- * Así que se invierte la relación: menos búsquedas, más candidatos por búsqueda. 40 x 3 da
- * hasta 120 candidatos crudos con un tercio de las peticiones de antes, y sigue muy por
- * encima de MIN_POOL_SIZE (50) después de deduplicar. Se cortan las PRIMERAS 40 porque el
- * orden ya trae las similares al ancla adelante (lo personalizado) y las de tag atrás
- * (relleno de volumen).
+ * 40 x 3 da hasta 120 candidatos crudos -- medido, el pool real ronda 85-90 tras deduplicar,
+ * holgado sobre MIN_POOL_SIZE (25 desde 2026-09-12, ver deckPipeline.ts).
+ * Con el caché compartido (ver abajo) el techo ya no lo pone la cuota de iTunes sino el costo
+ * de lo que viene DESPUÉS: rankPool pide los tags de Last.fm de cada track del pool con una
+ * llamada por track (ver fetchTopTagsByTrackId), así que agrandar el pool acá multiplica ESE
+ * tráfico. Subirlo tiene sentido recién cuando esa parte también vaya en batch.
  */
 const RAW_POOL_SEARCH_LIMIT = 40;
 const CANDIDATES_PER_SEARCH = 3;
-
-/** Búsquedas en vuelo a la vez. No arregla el límite por minuto (ver arriba) pero evita la
- *  ráfaga instantánea, que es lo que más agresivamente throttlea Apple. */
-const ITUNES_SEARCH_CONCURRENCY = 4;
 
 async function fetchCandidatePool(anchor: DeckAnchor, genre?: CanonicalGenre | null): Promise<Track[]> {
   const rawAll = await fetchRawSuggestions(anchor, genre);
   const raw = rawAll.slice(0, RAW_POOL_SEARCH_LIMIT);
 
-  const settled = await mapWithConcurrency(raw, ITUNES_SEARCH_CONCURRENCY, (s) =>
-    findItunesCandidates(s.artist, s.title, CANDIDATES_PER_SEARCH),
+  // Una sola petición para las 40 búsquedas, contra un caché compartido en Postgres (ver
+  // itunes-search/index.ts). Antes eran 40 peticiones directas a iTunes DESDE CADA CLIENTE
+  // contra un límite de ~20 req/min por IP -- el 2026-09-08 quedó medido que ninguna variante
+  // de cliente (menos peticiones, menos ráfaga, reintentos) cierra esa brecha, porque el
+  // problema no era el ritmo sino que nadie compartía nada con nadie.
+  const { byQuery, stats } = await findItunesCandidatesBatch(
+    raw.map((s) => ({ artist: s.artist, title: s.title })),
+    CANDIDATES_PER_SEARCH,
   );
 
   const seen = new Set<string>();
   const deck: Track[] = [];
-  let failed = 0;
-  for (const result of settled) {
-    if (result.status !== 'fulfilled') {
-      failed++;
+  let unresolved = 0;
+  for (const tracks of byQuery) {
+    // `undefined` (no se pudo preguntar) y `[]` (se preguntó y no hay clip) son cosas
+    // distintas y acá siguen siéndolo -- es justo la distinción que faltaba cuando el pool
+    // vacío se presentaba como "se acabaron las tarjetas".
+    if (tracks === undefined) {
+      unresolved++;
       continue;
     }
-    for (const track of result.value) {
+    for (const track of tracks) {
       if (seen.has(track.id)) continue;
       seen.add(track.id);
       deck.push(track);
@@ -154,25 +163,35 @@ async function fetchCandidatePool(anchor: DeckAnchor, genre?: CanonicalGenre | n
   // quedaba en 0 tracks y la app invitaba a "Buscar más", que volvía a fallar igual.
   // Lanzando acá, useQuery entra en isError y SwipeDeck muestra el estado de error real, con su
   // botón de reintentar, que es lo honesto y lo accionable.
-  if (deck.length === 0 && failed > 0) {
-    throw new Error(`No se pudo resolver ningún candidato: ${failed}/${raw.length} búsquedas fallaron`);
+  if (deck.length === 0 && unresolved > 0) {
+    throw new Error(
+      `No se pudo resolver ningún candidato: ${unresolved}/${raw.length} búsquedas quedaron sin respuesta` +
+        (stats.throttled > 0 ? ` (${stats.throttled} rechazadas por cuota de iTunes)` : ''),
+    );
   }
 
   return deck;
 }
 
 /**
- * Tags reales de Last.fm por track (track.getTopTags), en batch best-effort -- alimenta
- * `resolveCanonicalGenre` con más que el único string de género de iTunes (ver tasteAdapter.ts).
- * `getTrackTopTags` ya nunca tira (try/catch interno), así que esto siempre resuelve, en el
- * peor caso con `[]` por track.
+ * Tags reales de Last.fm por track (track.getTopTags) -- alimenta `resolveCanonicalGenre` con
+ * más que el único string de género de iTunes (ver tasteAdapter.ts), y es la fuente primaria
+ * del heurístico de vibra.
+ *
+ * 2026-09-13: pasa a UNA sola petición en batch. Antes hacía `Promise.allSettled` sobre una
+ * llamada POR TRACK, y medido contra el backend real eso eran 55 peticiones por deck -- el
+ * mayor consumidor de red de la app, con la latencia degradándose de 475 ms a 1019 ms según se
+ * encolaban. Las peticiones a Last.fm siguen siendo una por track, pero ahora salen del
+ * datacenter de la Edge Function en vez del teléfono.
+ *
+ * `getTrackTopTagsBatch` nunca tira y devuelve un array alineado por índice, así que esto
+ * siempre resuelve -- en el peor caso con `[]` por track, igual que antes.
  */
 async function fetchTopTagsByTrackId(pool: Track[]): Promise<Record<string, string[]>> {
-  const settled = await Promise.allSettled(pool.map((track) => getTrackTopTags(track.artist, track.title)));
+  const tagsByIndex = await getTrackTopTagsBatch(pool.map((track) => ({ artist: track.artist, title: track.title })));
   const result: Record<string, string[]> = {};
   pool.forEach((track, i) => {
-    const r = settled[i];
-    result[track.id] = r.status === 'fulfilled' ? r.value : [];
+    result[track.id] = tagsByIndex[i] ?? [];
   });
   return result;
 }
@@ -219,10 +238,10 @@ async function seedMissingPriors(candidates: Candidate[]): Promise<void> {
  * Thompson Sampling + sessionMultipliers, sin tocar rankCandidatesWithExploration.
  *
  * `sessionMultipliers` mezcla dos fuentes: `sessionTreeToMultipliers` sobre el acumulador de
- * la sesión ACTUAL (sessionTreeStore -- hoy vacío en la práctica, nada lo puebla todavía
- * porque swipeStore.ts/postStore.ts no llaman `recordSwipe`, ver nota en sessionTreeStore.ts)
- * y el boost explícito de la vibra elegida en el selector de sesión, que pisa esa clave si
- * ambas la tocan.
+ * la sesión ACTUAL (sessionTreeStore, que swipeStore.ts y postStore.ts sí pueblan vía
+ * `recordSwipe` desde 2026-08-31 -- la nota que decía lo contrario acá quedó vieja) y el
+ * boost explícito de la vibra elegida en el selector de sesión, que pisa esa clave si ambas
+ * la tocan.
  *
  * Separado de `buildDeck`/`buildMoreTracks` para que las dos compartan exactamente el mismo
  * ranking -- "cargar más" (ver loadMore más abajo) no es un pipeline distinto, es el mismo
@@ -238,10 +257,18 @@ async function seedMissingPriors(candidates: Candidate[]): Promise<void> {
 export interface DeckResult {
   tracks: Track[];
   relaxedLevels: FilterLevel[];
+  /**
+   * Los candidatos ya construidos que sobrevivieron al filtro duro, en el mismo orden que
+   * `tracks`. Se conservan para poder RE-RANKEAR la cola sin volver a pedir nada a la red
+   * (ver rerankTail más abajo): armar un candidato cuesta tres consultas en batch -- vibras,
+   * tags de Last.fm y catálogo -- y ninguna de las tres cambia por swipear. Lo que cambia es
+   * el UserState contra el que se puntúan, y eso es puramente local.
+   */
+  candidates: FilterableCandidate[];
 }
 
 async function rankPool(pool: Track[], vibe?: VibeKey | null, genre?: CanonicalGenre | null): Promise<DeckResult> {
-  if (pool.length === 0) return { tracks: pool, relaxedLevels: [] };
+  if (pool.length === 0) return { tracks: pool, relaxedLevels: [], candidates: [] };
 
   // Vibra canónica por track (voto mayoritario, puede no existir todavía para canciones con
   // pocos votos), tags reales de Last.fm por track (para resolver `genero` con más que el
@@ -280,18 +307,36 @@ async function rankPool(pool: Track[], vibe?: VibeKey | null, genre?: CanonicalG
   const { deck, relaxedLevels } = runDeckPipeline(candidates, selection, rankedState, sessionMultipliers);
 
   const tracksById = new Map(pool.map((track) => [track.id, track]));
-  const tracks = deck
-    .map((candidate): Track | undefined => {
-      const track = tracksById.get(candidate.trackId);
-      if (!track) return undefined;
-      // La vibra canónica ya se consultó arriba para rankear; antes se descartaba acá al
-      // devolver Track[]. Se adjunta para que la tarjeta pueda reaccionar a ella (halo por
-      // género+vibra, ver theme/glow.ts) sin volver a pedirla.
-      return { ...track, vibe: (vibesByTrackId[track.id] as VibeKey | undefined) ?? null };
-    })
-    .filter((track): track is Track => track !== undefined);
+  // Se arman en paralelo, no con dos `.map().filter()` independientes: `candidates` tiene que
+  // quedar alineado índice a índice con `tracks` para que el re-rankeo de la cola pueda cortar
+  // los dos por el mismo punto. Un candidato cuyo track ya no está en el pool se descarta de
+  // ambas listas a la vez.
+  const tracks: Track[] = [];
+  const alignedCandidates: FilterableCandidate[] = [];
+  for (const candidate of deck) {
+    const track = tracksById.get(candidate.trackId);
+    if (!track) continue;
+    // La vibra canónica y el género canónico ya se resolvieron arriba para rankear; antes se
+    // descartaban acá al devolver Track[]. Se adjuntan para que la tarjeta pueda reaccionar a
+    // ellos (halo por género+vibra, ver theme/glow.ts) y -- más importante -- para que el
+    // swipe sobre esta carta registre EXACTAMENTE las mismas categorías que se usaron para
+    // mostrarla, en vez de re-resolverlas peor (ver trackToCandidate).
+    // Los dos salen del CANDIDATO, no de las fuentes crudas. `genero` ya era así; `vibe` no, y
+    // era un hueco real medido el 2026-09-12: acá se adjuntaba solo `vibesByTrackId` (el voto
+    // de la comunidad), así que con el arranque heurístico recién puesto el filtro duro SÍ veía
+    // la vibra provisional (va por `candidate.vibras`) pero el swipe NO la registraba -- el
+    // Track llegaba a swipeStore con `vibe: null` y la dimensión `vibra:` seguía sin aprenderse.
+    // Medido: las claves de vibra existían pero todas en el prior neutro 1/1, sin un solo swipe
+    // encima. `candidate.vibe` ya trae la precedencia completa (comunidad > heurístico).
+    tracks.push({
+      ...track,
+      vibe: (candidate.vibe as VibeKey | undefined) ?? null,
+      genero: (candidate.genero as CanonicalGenre | undefined) ?? null,
+    });
+    alignedCandidates.push(candidate);
+  }
 
-  return { tracks, relaxedLevels };
+  return { tracks, relaxedLevels, candidates: alignedCandidates };
 }
 
 async function buildDeck(anchor: DeckAnchor, vibe?: VibeKey | null, genre?: CanonicalGenre | null): Promise<DeckResult> {
@@ -325,6 +370,29 @@ async function buildMoreTracks(
  */
 const LOAD_MORE_WHEN_REMAINING = 20;
 
+/**
+ * Cada cuántos swipes se vuelve a rankear la cola del deck.
+ *
+ * Hasta 2026-09-09 el deck se rankeaba UNA sola vez, al traerlo (`staleTime` de 30 min), así
+ * que las ~120 cartas ya cargadas conservaban su orden pasara lo que pasara: lo aprendido
+ * solo se notaba en el siguiente `loadMore` (a partir de la carta ~100) o en la sesión
+ * siguiente. Desde el lado de quien swipea eso se lee como que la app no aprende nada.
+ *
+ * 5 es el compromiso: suficientes señales para que el re-rankeo signifique algo (un solo
+ * swipe apenas mueve una Beta, ver DECAY en tasteEngine.ts) y suficientemente seguido para
+ * notarse dentro de una sesión.
+ */
+const RERANK_EVERY_SWIPES = 5;
+
+/**
+ * Cuántas cartas por delante de la actual quedan CONGELADAS al re-rankear.
+ *
+ * Sin esto, la carta que estás por ver podría cambiar entre que la ves asomar y la swipeas.
+ * El colchón hace que el re-rankeo solo toque lo que todavía no es visible ni inminente: la
+ * pila se reordena por detrás, nunca bajo el dedo.
+ */
+const RERANK_LOOKAHEAD = 5;
+
 export function useDeck(anchor: DeckAnchor | null, vibe?: VibeKey | null, genre?: CanonicalGenre | null, currentIndex = 0) {
   // Picked once per null-anchor mount so the query key stays stable across
   // re-renders instead of re-rolling (and re-fetching) a new anchor every time.
@@ -354,9 +422,72 @@ export function useDeck(anchor: DeckAnchor | null, vibe?: VibeKey | null, genre?
       queryClient.setQueryData<DeckResult>(queryKey, (old) => ({
         tracks: [...(old?.tracks ?? []), ...more.tracks],
         relaxedLevels: more.relaxedLevels,
+        // Se concatenan igual que `tracks` para no romper la alineación índice a índice de
+        // la que depende el re-rankeo de la cola.
+        candidates: [...(old?.candidates ?? []), ...more.candidates],
       }));
     },
   });
+
+  // Re-rankeo de la cola mientras se swipea -- ver RERANK_EVERY_SWIPES / RERANK_LOOKAHEAD.
+  const lastRerankedAtRef = useRef(0);
+  useEffect(() => {
+    const deck = query.data;
+    if (!deck) return;
+    // currentIndex hacia atrás = el deck se reinició (reanchor / clearAnchor / resetIndex,
+    // ver swipeStore.ts). Sin esto el ref se quedaría en un índice del deck anterior y
+    // bloquearía el primer re-rankeo del nuevo hasta rebasarlo.
+    if (currentIndex < lastRerankedAtRef.current) lastRerankedAtRef.current = 0;
+    if (currentIndex < RERANK_EVERY_SWIPES) return;
+    if (currentIndex - lastRerankedAtRef.current < RERANK_EVERY_SWIPES) return;
+
+    const frozenUntil = currentIndex + RERANK_LOOKAHEAD;
+    // Con menos de dos cartas más allá del colchón no hay nada que reordenar; salir ANTES de
+    // marcar el ref para que el re-rankeo vuelva a intentarse cuando `loadMore` traiga cola
+    // nueva, en vez de quedar bloqueado por un intento que no hizo nada.
+    if (deck.tracks.length - frozenUntil < 2) return;
+    lastRerankedAtRef.current = currentIndex;
+
+    queryClient.setQueryData<DeckResult>(queryKey, (old) => {
+      if (!old || old.tracks.length - frozenUntil < 2) return old;
+
+      const tailCandidates = old.candidates.slice(frozenUntil);
+      const tailTracksById = new Map(old.tracks.slice(frozenUntil).map((track) => [track.id, track]));
+
+      // Mismo ranking suave que usó rankPool, con el estado de AHORA: lo aprendido en los
+      // últimos swipes ya está en tasteStateStore (registerLocalSwipe es síncrono) y en el
+      // acumulador del árbol de sesión. El filtro duro NO se vuelve a correr -- la membresía
+      // del pool ya se decidió y capa 2 nunca agrega candidatos que capa 1 excluyó
+      // (ver deckPipeline.ts).
+      const reranked = rankCandidatesWithExploration(
+        tailCandidates,
+        useTasteStateStore.getState().state,
+        undefined,
+        {
+          ...sessionTreeToMultipliers(useSessionTreeStore.getState().accumulator),
+          ...(vibe ? { [`vibra:${vibe}`]: SESSION_VIBE_BOOST } : {}),
+        },
+      ) as FilterableCandidate[];
+
+      const newTailTracks: Track[] = [];
+      const newTailCandidates: FilterableCandidate[] = [];
+      for (const candidate of reranked) {
+        const track = tailTracksById.get(candidate.trackId);
+        if (!track) continue;
+        newTailTracks.push(track);
+        newTailCandidates.push(candidate);
+      }
+
+      return {
+        ...old,
+        tracks: [...old.tracks.slice(0, frozenUntil), ...newTailTracks],
+        candidates: [...old.candidates.slice(0, frozenUntil), ...newTailCandidates],
+      };
+    });
+    // queryKey se arma nuevo en cada render (es un array literal); depender de él dispararía
+    // este efecto en todos. Las partes que de verdad lo identifican son las de abajo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, query.data, queryClient, vibe, resolvedAnchor.artist, resolvedAnchor.title, genre]);
 
   // Dispara loadMore una sola vez por "racha baja" -- sin este ref, el efecto se re-dispararía
   // en cada swipe mientras currentIndex siga dentro del colchón (incluso ya con una carga en
