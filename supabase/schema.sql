@@ -982,3 +982,27 @@ $$;
 revoke execute on function handle_new_auth_user() from public;
 revoke execute on function refresh_weekly_community_picks() from public;
 revoke execute on function get_unclassified_track_ids(int) from public;
+
+-- ---------------------------------------------------------------------------
+-- pg_net se queda en `public`, y es a proposito (2026-09-13)
+-- ---------------------------------------------------------------------------
+-- El advisor de seguridad de Supabase marca `extension_in_public` para pg_net y la
+-- recomendacion generica es moverla. NO SE PUEDE, y ademas no hace falta. Comprobado contra
+-- el proyecto real, en este orden:
+--
+--   1. `alter extension pg_net set schema extensions` ->
+--      ERROR 0A000: extension "pg_net" does not support SET SCHEMA
+--      La extension declara `extrelocatable = false` (verificado en pg_extension), asi que
+--      Postgres se niega. No es una cuestion de permisos ni de orden.
+--
+--   2. Cero objetos de pg_net viven en `public`: los 15 reales (tablas de cola, secuencias y
+--      las funciones http_*) estan en su propio esquema `net`. El lint marca el NAMESPACE DE
+--      REGISTRO de la extension, no una superficie expuesta.
+--
+--   3. PostgREST publica solo `public,graphql_public`. `net` no esta, y /rest/v1/rpc/http_post
+--      responde 404 con la anon key. No hay forma de invocarla desde fuera.
+--
+-- La unica via para "moverla" seria DROP + CREATE en otro esquema, que se llevaria el esquema
+-- `net` con sus colas y rompería los dos cron jobs que usan net.http_post
+-- (classify-tracks-daily y seed-official-feed-weekly). Cambio con riesgo real a cambio de
+-- cero ganancia de seguridad: no se hace.
