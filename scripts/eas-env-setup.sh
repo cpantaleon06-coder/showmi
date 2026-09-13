@@ -93,6 +93,11 @@ if [ "$DRY_RUN" -eq 0 ]; then
   echo "=== comprobacion (nombres, no valores) ==="
   for env in "${ENVIRONMENTS[@]}"; do
     echo "-- ${env} --"
-    npx eas-cli env:list --environment "$env" --non-interactive 2>&1 | grep -E "EXPO_PUBLIC_" || echo "  (ninguna)"
+    # OJO: env:list NO acepta --non-interactive (a diferencia de env:create). Pasarselo hacia
+    # fallar el comando entero, y el `|| echo` lo disfrazaba de "(ninguna)" -- o sea que la
+    # comprobacion reportaba cero variables justo despues de crearlas bien. Se detecto porque
+    # los ocho `ok` no cuadraban con el listado vacio.
+    # Se corta el valor con cut: basta el nombre para confirmar que existe.
+    npx eas-cli env:list --environment "$env" 2>&1 | grep -oE "^EXPO_PUBLIC_[A-Z_]+" | sed 's/^/  /' || echo "  (ninguna)"
   done
 fi
