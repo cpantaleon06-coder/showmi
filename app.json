@@ -35,14 +35,7 @@
           "iosAppId": "ca-app-pub-3940256099942544~1458002511"
         }
       ],
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "kotlinVersion": "2.3.0"
-          }
-        }
-      ]
+      "./plugins/withAdsSdkPin"
     ],
     "experiments": {
       "typedRoutes": true
