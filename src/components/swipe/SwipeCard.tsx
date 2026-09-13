@@ -250,7 +250,7 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
       )}
 
       {isActive && finished && (
-        <View style={styles.replayHint} pointerEvents="none">
+        <View style={[styles.replayHint, { pointerEvents: 'none' }]}>
           <Text style={styles.replayHintText}>Toca la tarjeta para escuchar de nuevo</Text>
         </View>
       )}

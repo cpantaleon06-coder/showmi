@@ -68,7 +68,7 @@ export default function SwipeScreen() {
     // distintas.
     return (
       <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
           <StaticClearingBackground width={screenWidth} height={screenHeight} mode={mode} />
         </View>
       </View>

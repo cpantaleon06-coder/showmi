@@ -251,7 +251,7 @@ export default function FeedScreen() {
           para quitarlo medio segundo después sería un parpadeo, no una transición. */}
       <View style={styles.listArea}>
         {feedItems.length === 0 && !postsQuery.isLoading && (
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
             <DotGridBackground width={screenWidth} height={screenHeight} mode={mode} />
           </View>
         )}

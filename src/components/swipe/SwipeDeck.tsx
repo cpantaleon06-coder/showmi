@@ -190,7 +190,7 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
    */
   const unavailableState = (
     <View style={[styles.center, { backgroundColor: '#000000' }]}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
         <TestPatternBackground width={screenWidth} height={screenHeight} />
       </View>
       {/* Caja negra sobre las barras. Los colores del tema NO se usan acá: el texto va sobre
@@ -251,7 +251,7 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
     // se lee como lo que el eslogan dice.
     content = (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
           <StaticClearingBackground width={screenWidth} height={screenHeight} mode={mode} />
         </View>
         {/* Sin ActivityIndicator a propósito: un spinner circular encima de la estática la

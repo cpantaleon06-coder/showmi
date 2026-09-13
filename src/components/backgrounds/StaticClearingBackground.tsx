@@ -130,7 +130,7 @@ export function StaticClearingBackground({ width, height, mode, baseColor }: Sta
         ))}
       </Svg>
 
-      <Animated.View style={[StyleSheet.absoluteFill, noiseStyle]} pointerEvents="none">
+      <Animated.View style={[[StyleSheet.absoluteFill, noiseStyle], { pointerEvents: 'none' }]}>
         <Svg width={width} height={height}>
           {noise.map((chip, i) => (
             <Rect key={i} x={chip.x} y={chip.y} width={chip.w} height={2} fill="#FFFFFF" opacity={chip.o} />
@@ -138,7 +138,7 @@ export function StaticClearingBackground({ width, height, mode, baseColor }: Sta
         </Svg>
       </Animated.View>
 
-      <Animated.View style={[styles.band, { width }, bandStyle]} pointerEvents="none">
+      <Animated.View style={[[styles.band, { width }, bandStyle], { pointerEvents: 'none' }]}>
         <Svg width={width} height={BAND_HEIGHT}>
           <Rect x={0} y={0} width={width} height={BAND_HEIGHT} fill="#FFFFFF" opacity={0.05} />
           <Rect x={0} y={BAND_HEIGHT - 2} width={width} height={2} fill="#FFFFFF" opacity={0.18} />

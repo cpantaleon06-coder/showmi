@@ -222,12 +222,12 @@ export function OnboardingFlow({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Fondo de patrón detrás del contenido real, nunca reemplazándolo. pointerEvents="none"
+      {/* Fondo de patrón detrás del contenido real, nunca reemplazándolo. style={{ pointerEvents: 'none' }}
           es obligatorio acá: sin eso el SVG a pantalla completa se traga los toques que deben
           llegar a los chips y al input de búsqueda. Solo cubre los 4 pasos de formulario -- el
           paso 'swipes' retorna antes (arriba) y se queda con el fondo plano, porque ahí la
           pantalla ya la ocupa el deck. */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
         <HalftoneWaveBackground width={screenWidth} height={screenHeight} mode={mode} />
       </View>
 
@@ -235,7 +235,7 @@ export function OnboardingFlow({
           el contenido no salte de posición al cambiar de paso -- el botón en sí solo se ve
           (opacity) y responde a toques (pointerEvents) desde 'artists' en adelante; en
           'genres' no hay paso previo al que volver. */}
-      <View style={styles.stepHeader} pointerEvents="box-none">
+      <View style={[styles.stepHeader, { pointerEvents: 'box-none' }]}>
         <Pressable
           onPress={goBack}
           hitSlop={10}

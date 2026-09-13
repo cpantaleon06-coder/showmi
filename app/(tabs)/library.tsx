@@ -214,7 +214,7 @@ export default function LibraryScreen() {
           completa, no al alto real de esta área. */}
       <View style={styles.listArea}>
         {tracks.length === 0 && (
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
             <DotGridBackground width={screenWidth} height={screenHeight} mode={mode} />
           </View>
         )}

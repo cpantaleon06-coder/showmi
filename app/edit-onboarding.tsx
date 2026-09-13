@@ -67,7 +67,7 @@ export default function EditOnboardingScreen() {
             goBackOrHome(router);
           }}
         />
-        <SafeAreaView style={styles.cancelWrap} edges={['top']} pointerEvents="box-none">
+        <SafeAreaView style={[styles.cancelWrap, { pointerEvents: 'box-none' }]} edges={['top']}>
           <Pressable onPress={() => goBackOrHome(router)} hitSlop={10} style={styles.cancelButton}>
             <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancelar</Text>
           </Pressable>

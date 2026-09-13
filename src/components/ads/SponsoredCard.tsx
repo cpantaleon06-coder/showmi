@@ -57,8 +57,7 @@ export function SponsoredCard({ colors, placement, onContinue }: SponsoredCardPr
           )}
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.85)']}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
           />
 
           <View style={[styles.sponsoredBadge, { backgroundColor: colors.surface, borderColor: colors.border }]}>
