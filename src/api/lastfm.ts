@@ -119,6 +119,42 @@ export async function getTagTopTracks(tag: string, limit = 60): Promise<SimilarT
  * quien llama simplemente se queda con la resolución de un solo tag de
  * siempre, no un estado roto.
  */
+/**
+ * Tags de VARIOS tracks en una sola petición (modo batch de `lastfm-track-tags`, 2026-09-13).
+ *
+ * Reemplaza el patrón de una llamada por track, que era el mayor consumidor de red de la app:
+ * medido contra el backend real, armar un deck disparaba 55 peticiones a esta función y la
+ * latencia se degradaba de 475 ms a 1019 ms conforme se encolaban.
+ *
+ * El resultado viene ALINEADO POR ÍNDICE con `queries` -- sin claves calculadas que haya que
+ * mantener sincronizadas entre cliente y función. Nunca tira: sin Supabase configurado, o si
+ * la llamada falla, devuelve un array de arrays vacíos del mismo largo, que es exactamente lo
+ * que el modo individual devolvía por track.
+ */
+export async function getTrackTopTagsBatch(queries: { artist: string; title: string }[]): Promise<string[][]> {
+  const vacio = queries.map(() => [] as string[]);
+  if (queries.length === 0 || !edgeFunctionConfigured()) return vacio;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/lastfm-track-tags`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ queries }),
+    });
+    if (!res.ok) return vacio;
+    const json = (await res.json()) as { results?: string[][] };
+    const results = json.results ?? [];
+    // Se normaliza el largo por si la función recortó el lote (tiene un tope propio): quien
+    // llama indexa por posición y un array más corto le daría `undefined` en vez de `[]`.
+    return vacio.map((_, i) => results[i] ?? []);
+  } catch {
+    return vacio;
+  }
+}
+
 export async function getTrackTopTags(artist: string, title: string): Promise<string[]> {
   if (!edgeFunctionConfigured()) return [];
 

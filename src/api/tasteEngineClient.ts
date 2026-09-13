@@ -54,16 +54,35 @@ export async function fetchArtistNeighbors(artistKey: string): Promise<Neighbor[
 }
 
 /**
- * Trae vecinos para varios artistas en paralelo (get_artist_neighbors solo acepta uno a la
- * vez) y arma el mapa CoOccurrence con la forma que espera `pickNeighborStats`.
+ * Vecinos de VARIOS artistas en una sola consulta, con la forma que espera `pickNeighborStats`.
+ *
+ * 2026-09-13: esta función prometía batch en el nombre desde siempre, pero por dentro hacía
+ * `artistIds.map(await fetchArtistNeighbors(...))` -- una petición por artista. Medido contra
+ * el backend real: armar UN deck disparaba 41 llamadas a `get_artist_neighbors`, y como
+ * `artist_top_neighbors` todavía está vacía (la co-ocurrencia necesita usuarios con gustos
+ * solapados y su cron diario), eran 41 viajes de red para cero datos.
+ *
+ * Ahora es un batch de verdad contra `get_artist_neighbors_batch` (ver el bundle SQL del
+ * 2026-09-13). El singular `fetchArtistNeighbors` se conserva para resolver un artista suelto.
  */
 export async function fetchArtistNeighborsBatch(artistIds: string[]): Promise<CoOccurrence> {
-  const entries = await Promise.all(
-    artistIds.map(async (artistId) => [artistId, await fetchArtistNeighbors(`artista:${artistId}`)] as const),
-  );
+  if (artistIds.length === 0) return {};
+
+  const { data, error } = await supabase.rpc('get_artist_neighbors_batch', {
+    p_artist_keys: artistIds.map((artistId) => `artista:${artistId}`),
+  });
+  if (error) {
+    console.warn('[tasteEngineClient] fetchArtistNeighborsBatch falló:', error.message);
+    return {};
+  }
+
+  // El RPC devuelve filas planas (artist_id, neighbor_id, similarity) ya ordenadas por rank;
+  // acá se agrupan por artista conservando ese orden. Se quita el prefijo `artista:` porque
+  // CoOccurrence se indexa por el id pelado (ver pickNeighborStats en tasteEngine.ts).
   const co: CoOccurrence = {};
-  for (const [artistId, neighbors] of entries) {
-    if (neighbors.length > 0) co[artistId] = neighbors;
+  for (const row of (data ?? []) as { artist_id: string; neighbor_id: string; similarity: number }[]) {
+    const artistId = row.artist_id.startsWith('artista:') ? row.artist_id.slice('artista:'.length) : row.artist_id;
+    (co[artistId] ??= []).push({ artistId: row.neighbor_id, similarity: row.similarity });
   }
   return co;
 }
@@ -91,6 +110,12 @@ export interface CatalogEntry {
   idioma: string | null;
   epoca: string | null;
   genero: string | null;
+  /**
+   * Vibra PROVISIONAL resuelta por heurístico server-side (ver classify-tracks). Es un piso,
+   * no la verdad: `fetchTrackVibes` (voto de la comunidad) la pisa cuando existe -- ver el
+   * orden de precedencia en trackToCandidate.
+   */
+  vibra: string | null;
 }
 
 /**
@@ -107,8 +132,10 @@ export async function fetchTrackCatalog(trackIds: string[]): Promise<Record<stri
     return {};
   }
   const catalog: Record<string, CatalogEntry> = {};
-  for (const row of (data ?? []) as { track_id: string; idioma: string | null; epoca: string | null; genero: string | null }[]) {
-    catalog[row.track_id] = { idioma: row.idioma, epoca: row.epoca, genero: row.genero };
+  for (const row of (data ?? []) as {
+    track_id: string; idioma: string | null; epoca: string | null; genero: string | null; vibra: string | null;
+  }[]) {
+    catalog[row.track_id] = { idioma: row.idioma, epoca: row.epoca, genero: row.genero, vibra: row.vibra ?? null };
   }
   return catalog;
 }
