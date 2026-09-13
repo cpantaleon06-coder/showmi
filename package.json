@@ -43,12 +43,14 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "eas-cli": "^23.2.0",
+    "patch-package": "^8.0.1",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "postinstall": "patch-package"
   },
   "private": true
 }
