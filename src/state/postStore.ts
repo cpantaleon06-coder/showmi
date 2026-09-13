@@ -11,6 +11,7 @@ import { useCamerinoStore } from './camerinoStore';
 import { buildSessionSelection, useSessionTreeStore } from './sessionTreeStore';
 import { useSwipeStore } from './swipeStore';
 import { useTasteStateStore } from './tasteStateStore';
+import { syncAcrossTabs } from './crossTabSync';
 
 export type StarRating = 1 | 2 | 3 | 4 | 5;
 
@@ -82,3 +83,7 @@ export const usePostStore = create<PostState>()(
     }
   )
 );
+
+// Rehidrata cuando otra instancia de la app escribe esta clave -- ver crossTabSync.ts
+// para el bug de pisado que esto arregla (medido 2026-09-12).
+syncAcrossTabs(usePostStore, 'showmi-posts');

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { syncAcrossTabs } from './crossTabSync';
 
 /**
  * Fricción tipo Tinder Free: un límite diario de swipes gratis, Premium = ilimitado. Es la
@@ -56,3 +57,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     { name: 'subscription-storage', storage: createJSONStorage(() => AsyncStorage) },
   ),
 );
+
+// Rehidrata cuando otra instancia de la app escribe esta clave -- ver crossTabSync.ts
+// para el bug de pisado que esto arregla (medido 2026-09-12).
+syncAcrossTabs(useSubscriptionStore, 'subscription-storage');

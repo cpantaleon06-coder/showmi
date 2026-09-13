@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { colorsForMode, ThemeColors, ThemeMode } from './colors';
+import { syncAcrossTabs } from '../state/crossTabSync';
 
 interface ThemeState {
   mode: ThemeMode;
@@ -32,3 +33,7 @@ export const useThemeStore = create<ThemeState>()(
     }
   )
 );
+
+// Rehidrata cuando otra instancia de la app escribe esta clave -- ver crossTabSync.ts
+// para el bug de pisado que esto arregla (medido 2026-09-12).
+syncAcrossTabs(useThemeStore, 'showmi-theme');

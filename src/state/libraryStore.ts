@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { Track } from '../api/types';
+import { syncAcrossTabs } from './crossTabSync';
 
 export type CollectionType = 'para_escuchar' | 'escuchadas' | 'personalizada';
 
@@ -60,3 +61,7 @@ export const useLibraryStore = create<LibraryState>()(
     }
   )
 );
+
+// Rehidrata cuando otra instancia de la app escribe esta clave -- ver crossTabSync.ts
+// para el bug de pisado que esto arregla (medido 2026-09-12).
+syncAcrossTabs(useLibraryStore, 'showmi-library');

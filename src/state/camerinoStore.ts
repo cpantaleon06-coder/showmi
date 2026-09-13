@@ -10,6 +10,7 @@ import {
   cosmeticById,
   levelForRatings,
 } from '../lib/cosmetics';
+import { syncAcrossTabs } from './crossTabSync';
 
 type Equipped = Partial<Record<CosmeticSlot, string>>;
 
@@ -86,3 +87,7 @@ export function visibleEquipped(equipped: Equipped, isPremium: boolean): Equippe
 }
 
 export { COSMETICS };
+
+// Rehidrata cuando otra instancia de la app escribe esta clave -- ver crossTabSync.ts
+// para el bug de pisado que esto arregla (medido 2026-09-12).
+syncAcrossTabs(useCamerinoStore, 'showmi-camerino');
