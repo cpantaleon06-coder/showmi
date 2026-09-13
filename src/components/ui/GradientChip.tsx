@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { ThemeColors } from '../../theme/colors';
+import { readableOn } from '../../theme/contrast';
 import { fonts } from '../../theme/typography';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
@@ -16,6 +17,17 @@ interface GradientChipProps {
    *  vibra reaccione con SU propio color en vez del rojo de marca genérico (ver
    *  SessionFilterSheet.tsx/OnboardingFlow.tsx). */
   fillColor?: string;
+  /**
+   * Color del CONTORNO cuando el chip NO está seleccionado. Por defecto `colors.textPrimary`
+   * (el contorno de tinta de siempre).
+   *
+   * Nace con el rediseño maximalista de Biblioteca (2026-09-12): ahí cada colección tiene su
+   * propio color y un chip apagado con borde de tinta rompía la fila de pills de colores que
+   * pedía la referencia. Es opcional y con el default de antes a propósito -- los chips de
+   * género y vibra (SessionFilterSheet, onboarding) viven en pantallas donde el contorno de
+   * tinta es el que corresponde, y no debían cambiar de aspecto por este pedido.
+   */
+  outlineColor?: string;
 }
 
 /**
@@ -30,10 +42,11 @@ interface GradientChipProps {
  * `brand` calmándose y la mascota volviéndose más chibi. Ya no aplica la
  * nota vieja de este comentario que decía "angular a propósito, no pill".
  */
-export function GradientChip({ colors, label, selected, onPress, fillColor }: GradientChipProps) {
+export function GradientChip({ colors, label, selected, onPress, fillColor, outlineColor }: GradientChipProps) {
   const progress = useSharedValue(selected ? 1 : 0);
   const reducedMotion = useReducedMotion();
   const fill = fillColor ?? colors.brand;
+  const outline = outlineColor ?? colors.textPrimary;
 
   useEffect(() => {
     progress.value = reducedMotion
@@ -54,10 +67,13 @@ export function GradientChip({ colors, label, selected, onPress, fillColor }: Gr
           `surface`, justamente para que en las pantallas sin patrón el chip siga
           viéndose idéntico a antes -- es del mismo color que la página. */}
       <View
-        style={[styles.chip, { backgroundColor: colors.background, borderColor: selected ? fill : colors.textPrimary }]}
+        style={[styles.chip, { backgroundColor: colors.background, borderColor: selected ? fill : outline }]}
       >
         <Animated.View style={[StyleSheet.absoluteFill, fillStyle, { backgroundColor: fill }]} />
-        <Text style={[styles.label, { color: selected ? '#FFFFFF' : colors.textPrimary }]}>{label}</Text>
+        {/* El color del texto encendido se MIDE contra el relleno (ver theme/contrast.ts), no
+            es blanco fijo: desde que cada colección de Biblioteca trae su propio color del
+            wordmark, blanco sobre el amarillo `#F9EB06` daba 1.07:1 -- invisible. */}
+        <Text style={[styles.label, { color: selected ? readableOn(fill) : colors.textPrimary }]}>{label}</Text>
       </View>
     </Pressable>
   );

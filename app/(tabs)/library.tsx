@@ -1,13 +1,20 @@
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { PlusIcon } from 'phosphor-react-native';
 
 import { DotGridBackground } from '../../src/components/backgrounds/DotGridBackground';
 import { Track } from '../../src/api/types';
 import { useThemeStore } from '../../src/theme/useThemeStore';
 import { fonts } from '../../src/theme/typography';
+import { radii } from '../../src/theme/radii';
+import { getCollectionColor, getTileAccent } from '../../src/theme/collectionColors';
+import { readableOn } from '../../src/theme/contrast';
 import { useLibraryStore } from '../../src/state/libraryStore';
-import { TrackTile } from '../../src/components/library/TrackTile';
+import { TileVariant, TrackTile } from '../../src/components/library/TrackTile';
+import { EchoTitle } from '../../src/components/library/EchoTitle';
+import { EmptyCollection } from '../../src/components/library/EmptyCollection';
+import { TileReveal } from '../../src/components/library/TileReveal';
 import { GradientChip } from '../../src/components/ui/GradientChip';
 import { ProfileButton } from '../../src/components/ui/ProfileButton';
 import { FLOATING_TAB_BAR_CLEARANCE } from '../../src/theme/layout';
@@ -20,29 +27,62 @@ import { FLOATING_TAB_BAR_CLEARANCE } from '../../src/theme/layout';
  */
 const WIDE_TILE_EVERY = 5;
 
+interface TileCell {
+  track: Track;
+  variant: TileVariant;
+  /** Posición absoluta en la colección -- alimenta el retraso del escalonado y el color de
+   *  respaldo de la teja (ver getTileAccent). */
+  index: number;
+}
+
 /**
- * Agrupa las canciones en filas de la rejilla modular: la primera de cada bloque de cinco
- * ocupa una fila entera (módulo ancho) y las demás van de a dos.
+ * Agrupa las canciones en filas del mosaico: la primera de cada bloque de cinco ocupa una
+ * fila entera y las demás van de a dos.
+ *
+ * 2026-09-12: las parejas dejaron de ser simétricas. Antes los dos módulos de una fila medían
+ * exactamente lo mismo, y a partir de la tercera fila la pantalla volvía a leerse como una
+ * cuadrícula regular por más que el módulo ancho la abriera. Ahora cada pareja reparte 1.35
+ * contra 1 y ALTERNA de qué lado va la grande, así que la rejilla zigzaguea hacia abajo -- que
+ * es el ritmo de mosaico de las referencias, no el de una galería de fotos.
  *
  * Se arma por filas en vez de usar `numColumns` de FlatList porque numColumns exige que
- * TODAS las celdas midan lo mismo -- que es justo lo que una rejilla modular no hace. La
- * fila sigue siendo la unidad que virtualiza FlatList, así que no se pierde reciclado.
+ * TODAS las celdas midan lo mismo -- que es justo lo que un mosaico no hace. La fila sigue
+ * siendo la unidad que virtualiza FlatList, así que no se pierde reciclado.
  */
-function buildTileRows(tracks: Track[]): Track[][] {
-  const rows: Track[][] = [];
+function buildTileRows(tracks: Track[]): TileCell[][] {
+  const rows: TileCell[][] = [];
   let i = 0;
+  let pairIndex = 0;
+
   while (i < tracks.length) {
     if (i % WIDE_TILE_EVERY === 0) {
-      rows.push([tracks[i]]);
+      rows.push([{ track: tracks[i], variant: 'wide', index: i }]);
       i += 1;
-    } else {
-      // Puede quedar de a uno al final del bloque; en ese caso la pareja es de un solo
-      // elemento y `flex: 1` lo estira -- deliberado, para que la rejilla nunca deje un
-      // hueco fantasma esperando un track que no existe.
-      rows.push(tracks.slice(i, i + 2));
-      i += 2;
+      continue;
     }
+
+    const pair = tracks.slice(i, i + 2);
+    if (pair.length === 1) {
+      // Puede quedar de a uno al final del bloque. Se promueve a módulo ancho en vez de
+      // dejarlo estirado a media fila: una teja cuadrada ocupando el ancho completo se ve
+      // como un hueco esperando a la que falta.
+      rows.push([{ track: pair[0], variant: 'wide', index: i }]);
+      i += 1;
+      continue;
+    }
+
+    const tallFirst = pairIndex % 2 === 0;
+    rows.push(
+      pair.map((track, k) => ({
+        track,
+        variant: (k === 0) === tallFirst ? ('tall' as const) : ('small' as const),
+        index: i + k,
+      })),
+    );
+    pairIndex += 1;
+    i += 2;
   }
+
   return rows;
 }
 
@@ -60,7 +100,12 @@ export default function LibraryScreen() {
   const [isCreating, setIsCreating] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
 
-  const activeCollection = collections.find((c) => c.id === activeId) ?? collections[0];
+  const activeIndex = Math.max(
+    collections.findIndex((c) => c.id === activeId),
+    0,
+  );
+  const activeCollection = collections[activeIndex] ?? collections[0];
+  const activeColor = getCollectionColor(activeCollection.id, activeIndex);
   const tracks = items[activeCollection.id] ?? [];
   const tileRows = useMemo(() => buildTileRows(tracks), [tracks]);
 
@@ -73,11 +118,31 @@ export default function LibraryScreen() {
     setIsCreating(false);
   };
 
+  const countLabel = tracks.length === 1 ? '1 canción' : `${tracks.length} canciones`;
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.headerRow}>
-        <Text style={[styles.header, { color: colors.textPrimary }]}>Biblioteca</Text>
+        {/* El título vive en su propia fila debajo (es demasiado grande para compartirla con
+            el botón de perfil), así que acá solo queda el botón, alineado a la derecha. */}
+        <View style={styles.headerSpacer} />
         <ProfileButton colors={colors} />
+      </View>
+
+      <View style={styles.titleBlock}>
+        <EchoTitle text="Biblioteca" accent={activeColor} color={colors.textPrimary} size={42} />
+        <View style={styles.countRow}>
+          <Text style={[styles.count, { color: colors.textPrimary }]}>{countLabel}</Text>
+          {/* El nombre de la colección activa va en un PILL relleno, no como texto de color
+              suelto sobre la página. Dos razones, una de diseño y una medible: repite el
+              lenguaje de pills de la referencia, y evita el problema de contraste real de
+              pintar texto con un color del wordmark sobre el fondo -- el amarillo `#F9EB06`
+              sobre el ivory del tema claro es ilegible. Dentro de un pill, el color es fondo y
+              el texto se elige por contraste. */}
+          <View style={[styles.countPill, { backgroundColor: activeColor }]}>
+            <Text style={[styles.countPillText, { color: readableOn(activeColor) }]}>{activeCollection.name}</Text>
+          </View>
+        </View>
       </View>
 
       <View style={styles.tabsRow}>
@@ -87,13 +152,17 @@ export default function LibraryScreen() {
           keyExtractor={(c) => c.id}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.tabsContent}
-          renderItem={({ item }) => {
-            const active = item.id === activeCollection.id;
+          renderItem={({ item, index }) => {
+            const color = getCollectionColor(item.id, index);
             return (
               <GradientChip
                 colors={colors}
-                label={`${item.name} (${(items[item.id] ?? []).length})`}
-                selected={active}
+                label={`${item.name} · ${(items[item.id] ?? []).length}`}
+                selected={item.id === activeCollection.id}
+                // Encendido se rellena de su color; apagado lo lleva en el contorno. Es la
+                // fila de pills de colores de la referencia: todas se ven, una manda.
+                fillColor={color}
+                outlineColor={color}
                 onPress={() => setActiveId(item.id)}
               />
             );
@@ -102,9 +171,11 @@ export default function LibraryScreen() {
             isCreating ? (
               <View
                 style={[
-                  styles.tab,
                   styles.newTabInputWrap,
-                  { borderColor: inputFocused ? colors.brand : colors.border, borderWidth: inputFocused ? 2.5 : 2 },
+                  {
+                    borderColor: inputFocused ? colors.textPrimary : colors.border,
+                    backgroundColor: colors.background,
+                  },
                 ]}
               >
                 <TextInput
@@ -120,8 +191,17 @@ export default function LibraryScreen() {
                 />
               </View>
             ) : (
-              <Pressable onPress={() => setIsCreating(true)} style={[styles.tab, { borderColor: colors.border }]}>
-                <Text style={[styles.tabText, { color: colors.textSecondary }]}>+ Nueva</Text>
+              // Botón circular y no un pill de texto: en las referencias la fila de pills se
+              // interrumpe con círculos de acento, y eso es lo que evita que se lea como una
+              // barra de pestañas más. El color es el que le tocaría a la colección SIGUIENTE,
+              // así que el botón muestra de qué color va a salir lo que creas.
+              <Pressable
+                onPress={() => setIsCreating(true)}
+                style={[styles.newTabButton, { backgroundColor: getCollectionColor('', collections.length) }]}
+                accessibilityRole="button"
+                accessibilityLabel="Crear una colección nueva"
+              >
+                <PlusIcon weight="bold" size={18} color={readableOn(getCollectionColor('', collections.length))} />
               </Pressable>
             )
           }
@@ -140,32 +220,35 @@ export default function LibraryScreen() {
         )}
         <FlatList
           data={tileRows}
-          keyExtractor={(row) => row.map((t) => t.id).join('+')}
+          keyExtractor={(row) => row.map((cell) => cell.track.id).join('+')}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           renderItem={({ item: row }) => (
             <View style={styles.tileRow}>
-              {row.map((track) => (
-                <TrackTile
-                  key={track.id}
-                  track={track}
-                  colors={colors}
-                  variant={row.length === 1 ? 'wide' : 'small'}
-                  onRemove={() => removeFromCollection(activeCollection.id, track.id)}
-                />
+              {row.map((cell) => (
+                <TileReveal
+                  key={cell.track.id}
+                  index={cell.index}
+                  style={
+                    cell.variant === 'wide'
+                      ? styles.cellWide
+                      : // El peso va acá y no en la teja: este View es el hijo directo de la
+                        // fila, así que es el único que puede cambiar cómo se reparte el ancho.
+                        { flexGrow: cell.variant === 'tall' ? 1.35 : 1, flexBasis: 0 }
+                  }
+                >
+                  <TrackTile
+                    track={cell.track}
+                    colors={colors}
+                    variant={cell.variant}
+                    accent={getTileAccent(cell.track.genre, cell.index)}
+                    onRemove={() => removeFromCollection(activeCollection.id, cell.track.id)}
+                  />
+                </TileReveal>
               ))}
             </View>
           )}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                {activeCollection.type === 'para_escuchar'
-                  ? 'Guarda canciones deslizando a la derecha en Swipe.'
-                  : activeCollection.type === 'escuchadas'
-                    ? 'Las canciones que marques "ya la escuché" aparecen aquí.'
-                    : 'Todavía no has agregado canciones a esta colección.'}
-              </Text>
-            </View>
-          }
+          ListEmptyComponent={<EmptyCollection type={activeCollection.type} accent={activeColor} />}
         />
       </View>
     </SafeAreaView>
@@ -180,11 +263,15 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
   },
-  /** Fila de la rejilla modular: un módulo ancho solo, o dos chicos repartiendose el ancho
+  /** Fila del mosaico: un módulo ancho solo, o una pareja desigual repartiendose el ancho
    *  (ver buildTileRows). El gap horizontal vive aca y el vertical en listContent. */
   tileRow: {
     flexDirection: 'row',
     gap: 12,
+    alignItems: 'flex-start',
+  },
+  cellWide: {
+    width: '100%',
   },
   headerRow: {
     flexDirection: 'row',
@@ -193,51 +280,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
   },
-  header: {
-    fontSize: 22,
+  headerSpacer: {
+    flex: 1,
+  },
+  titleBlock: {
+    paddingHorizontal: 20,
+    // El eco del título se sale hacia abajo; sin este respiro choca con la fila de chips.
+    paddingBottom: 14,
+    gap: 12,
+  },
+  countRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  count: {
+    fontSize: 15,
     fontFamily: fonts.display,
   },
+  countPill: {
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  countPillText: {
+    fontSize: 13,
+    fontFamily: fonts.bodyExtraBold,
+  },
   tabsRow: {
-    paddingVertical: 12,
+    paddingBottom: 14,
   },
   tabsContent: {
     paddingHorizontal: 20,
-    gap: 8,
+    alignItems: 'center',
   },
-  tab: {
-    borderWidth: 2,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginRight: 8,
-  },
-  tabText: {
-    fontSize: 13,
-    fontFamily: fonts.bodySemiBold,
+  newTabButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   newTabInputWrap: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    borderWidth: 2,
+    borderRadius: radii.pill,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
   },
   newTabInput: {
     fontSize: 13,
-    minWidth: 100,
-    fontFamily: fonts.bodyRegular,
+    minWidth: 110,
+    fontFamily: fonts.bodyBold,
   },
   listContent: {
     paddingHorizontal: 20,
-    // Separación vertical entre filas de la rejilla (la horizontal vive en tileRow).
+    // Separación vertical entre filas del mosaico (la horizontal vive en tileRow).
     gap: 12,
     // Colchón para la isla flotante de pestañas -- ver theme/layout.ts.
     paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
-  },
-  empty: {
-    paddingTop: 40,
-    paddingHorizontal: 20,
-  },
-  emptyText: {
-    fontSize: 14,
-    textAlign: 'center',
-    fontFamily: fonts.bodyRegular,
   },
 });
