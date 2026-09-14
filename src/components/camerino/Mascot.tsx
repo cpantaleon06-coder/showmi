@@ -2,15 +2,18 @@ import type { ReactNode } from 'react';
 import Svg, { Circle, ClipPath, Defs, Ellipse, G, Path, Polygon, Rect } from 'react-native-svg';
 
 import { CosmeticSlot, cosmeticById } from '../../lib/cosmetics';
-import { ThemeColors } from '../../theme/colors';
 import { wordmark } from '../../theme/wordmark';
 
 /** Las tres criaturas. Cada una es una forma primitiva distinta -- esa restricción ES el
  *  sistema, no una limitación. */
 export type MascotShape = 'circulo' | 'triangulo' | 'cuadrado';
 
+/**
+ * Sin `colors`: desde que la tinta es fija y no hay contorno, la mascota NO depende del tema.
+ * Se quita el prop en vez de dejarlo sin usar -- un parámetro que se ignora hace creer a quien
+ * lo lee que la mascota reacciona al tema, y ya no lo hace.
+ */
 interface MascotProps {
-  colors: ThemeColors;
   /** slot -> id de cosmético, ya filtrado por lo que la persona puede usar (ver visibleEquipped). */
   equipped: Partial<Record<CosmeticSlot, string>>;
   size?: number;
@@ -76,13 +79,14 @@ const SHAPES: Record<MascotShape, { body: string; color: string; pupil: 'redonda
 
 /**
  * La mascota de Showmi, dibujada en SVG por código -- no hay assets de arte en el repo, y
- * dibujarla así le da tres cosas que un PNG no tendría: escala sin pixelarse a cualquier
- * tamaño (header chico de Perfil vs. retrato grande del Camerino), reacciona al tema
- * claro/oscuro, y los cosméticos se componen encima como capas reales en vez de necesitar
- * una imagen pre-renderizada por combinación.
+ * dibujarla así le da dos cosas que un PNG no tendría: escala sin pixelarse a cualquier
+ * tamaño (anillo chico de Perfil vs. retrato grande del Camerino), y los cosméticos se
+ * componen encima como capas reales en vez de necesitar una imagen pre-renderizada por
+ * cada combinación.
  *
- * El trazo grueso y los rellenos planos son deliberados: es la misma dirección constructivista
- * del resto de la app (ver colors.ts) -- líneas de cartel, no sombras suaves. Es además el
+ * SIN CONTORNO, solo rellenos planos (2026-09-14, pedido del usuario): es lo que hacen los
+ * diseños originales, y el contorno grueso que tenía antes era justo lo que la volvía
+ * siniestra en tema oscuro, porque se invertía a blanco. Es además el
  * ÚNICO elemento de firma visual del producto; el resto de la UI se mantiene quieta a
  * propósito, así que aquí es donde se permite tener personalidad.
  *
@@ -94,9 +98,17 @@ const SHAPES: Record<MascotShape, { body: string; color: string; pupil: 'redonda
  * los sombreros necesitaban ese espacio extra para no recortarse contra el borde superior.
  * El ancho (0-120) no cambió, así que ningún cosmético necesitó reajuste en X, solo en Y.
  */
-export function Mascot({ colors, equipped, size = 160, shape = 'circulo' }: MascotProps) {
-  const outline = colors.border;
-  const stroke = 4.5;
+export function Mascot({ equipped, size = 160, shape = 'circulo' }: MascotProps) {
+  // Tinta FIJA en los dos temas, no `colors.border`.
+  //
+  // Ese token se invierte (casi negro en claro, casi blanco en oscuro), y en modo oscuro
+  // dejaba a la criatura perfilada y con las pupilas EN BLANCO: ojos y boca se volvian huecos
+  // luminosos sobre el cuerpo de color. Parecia un fantasma, no una mascota.
+  //
+  // Las facciones de un personaje no son cromo de interfaz: los ojos de un dibujo son negros
+  // porque son ojos, no porque el fondo sea claro. Van siempre sobre el cuerpo saturado, que
+  // tampoco cambia con el tema, asi que no hay ningun problema de contraste que resolver.
+  const ink = '#141414';
   const def = SHAPES[shape];
   const body = def.color;
   // Muñones más oscuros que el cuerpo, como en las tres referencias. Derivado, no declarado.
@@ -119,16 +131,16 @@ export function Mascot({ colors, equipped, size = 160, shape = 'circulo' }: Masc
       {/* Muñones: DETRÁS del cuerpo, asomando por los lados. Van a alturas distintas a
           propósito (ver munones en SHAPES) -- la asimetría es el recurso que hace que la
           criatura se lea como dibujada a mano y no como una composición de figuras. */}
-      <Circle cx={17} cy={munIzq} r={13} fill={limb} stroke={outline} strokeWidth={stroke} />
-      <Circle cx={103} cy={munDer} r={13} fill={limb} stroke={outline} strokeWidth={stroke} />
+      <Circle cx={17} cy={munIzq} r={13} fill={limb} />
+      <Circle cx={103} cy={munDer} r={13} fill={limb} />
 
       {/* Tronco, asomando bajo la forma principal. Existe sobre todo como percha de los
           cosméticos de cuerpo y los estampados, que están anclados a y=78. */}
-      <Rect x={41} y={64} width={38} height={40} rx={15} fill={mix(body, '#FFFFFF', 0.16)} stroke={outline} strokeWidth={stroke} />
+      <Rect x={41} y={64} width={38} height={40} rx={15} fill={mix(body, '#FFFFFF', 0.16)} />
       {estampado && <G clipPath="url(#cuerpo)">{renderEstampado(estampado.id, estampado.color)}</G>}
 
       {/* La forma. Es la criatura entera: una primitiva y nada más. */}
-      <Path d={def.body} fill={body} stroke={outline} strokeWidth={stroke} strokeLinejoin="round" />
+      <Path d={def.body} fill={body} />
 
       {/* Ojos enormes, y DESIGUALES a propósito: el derecho es un pelo más chico y va 1px más
           abajo. Perfectamente simétricos se veían corporativos; así se ven hechos a mano.
@@ -139,25 +151,25 @@ export function Mascot({ colors, equipped, size = 160, shape = 'circulo' }: Masc
           recto y solo la parte de abajo es redonda. */}
       {def.parpados ? (
         <G>
-          <Path d="M35 36 A13 13 0 0 0 61 36 Z" fill="#FFFFFF" stroke={outline} strokeWidth={3} strokeLinejoin="round" />
-          <Path d="M60 37 A12.2 12.2 0 0 0 84.4 37 Z" fill="#FFFFFF" stroke={outline} strokeWidth={3} strokeLinejoin="round" />
+          <Path d="M35 36 A13 13 0 0 0 61 36 Z" fill="#FFFFFF" />
+          <Path d="M60 37 A12.2 12.2 0 0 0 84.4 37 Z" fill="#FFFFFF" />
         </G>
       ) : (
         <G>
-          <Circle cx={48} cy={40} r={13} fill="#FFFFFF" stroke={outline} strokeWidth={3} />
-          <Circle cx={72} cy={41} r={12.2} fill="#FFFFFF" stroke={outline} strokeWidth={3} />
+          <Circle cx={48} cy={40} r={13} fill="#FFFFFF" />
+          <Circle cx={72} cy={41} r={12.2} fill="#FFFFFF" />
         </G>
       )}
 
       {def.pupil === 'cuadrada' ? (
         <G>
-          <Rect x={44} y={36} width={10} height={10} rx={2} fill={outline} />
-          <Rect x={68} y={37} width={9.4} height={9.4} rx={2} fill={outline} />
+          <Rect x={44} y={36} width={10} height={10} rx={2} fill={ink} />
+          <Rect x={68} y={37} width={9.4} height={9.4} rx={2} fill={ink} />
         </G>
       ) : (
         <G>
-          <Circle cx={49} cy={def.parpados ? 43 : 41} r={5.6} fill={outline} />
-          <Circle cx={73} cy={def.parpados ? 44 : 42} r={5.2} fill={outline} />
+          <Circle cx={49} cy={def.parpados ? 43 : 41} r={5.6} fill={ink} />
+          <Circle cx={73} cy={def.parpados ? 44 : 42} r={5.2} fill={ink} />
         </G>
       )}
       {/* Brillo: siempre arriba a la izquierda en los dos ojos. Es lo que los hace parecer
@@ -169,10 +181,10 @@ export function Mascot({ colors, equipped, size = 160, shape = 'circulo' }: Masc
         </G>
       )}
 
-      <Path d={def.boca} stroke={outline} strokeWidth={stroke} fill="none" strokeLinecap="round" />
+      <Path d={def.boca} stroke={ink} strokeWidth={4} fill="none" strokeLinecap="round" />
 
-      {accesorio && renderAccesorio(accesorio.id, accesorio.color, outline)}
-      {sombrero && renderSombrero(sombrero.id, sombrero.color, outline)}
+      {accesorio && renderAccesorio(accesorio.id, accesorio.color, ink)}
+      {sombrero && renderSombrero(sombrero.id, sombrero.color, ink)}
     </Svg>
   );
 }

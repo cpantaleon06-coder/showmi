@@ -89,7 +89,7 @@ export function ProfileCrest({ colors, displayName }: ProfileCrestProps) {
       </View>
 
       <View style={[styles.mascotRing, { backgroundColor: colors.background, borderColor: colors.background }]}>
-        <Mascot colors={colors} equipped={visibleEquipped(equipped, isPremium)} size={84} />
+        <Mascot equipped={visibleEquipped(equipped, isPremium)} size={84} />
       </View>
 
       <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>

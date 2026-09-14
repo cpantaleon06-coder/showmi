@@ -114,7 +114,7 @@ export default function ClosetScreen() {
         <BackButton colors={colors} />
         <ScrollView contentContainerStyle={styles.content}>
           <View style={[styles.stage, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Mascot colors={colors} equipped={shown} size={180} />
+            <Mascot equipped={shown} size={180} />
           </View>
 
           <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Camerino</Text>
