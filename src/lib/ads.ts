@@ -1,129 +1,49 @@
-import { Platform } from 'react-native';
-import mobileAds, { NativeAd, NativeAdEventType, TestIds } from 'react-native-google-mobile-ads';
-import Purchases, { AdFormat, AdMediatorName, AdRevenuePrecision } from 'react-native-purchases';
+/**
+ * ANUNCIOS DESACTIVADOS EN ESTE BUILD (2026-09-13).
+ *
+ * `react-native-google-mobile-ads` NO se puede compilar hoy sobre Expo SDK 57. Es un bloqueo
+ * real del ecosistema, no algo que se arregle configurando:
+ *
+ *   1. La libreria (16.5.0, la unica que soporta React Native 0.86) exige APIs de
+ *      play-services-ads 25.x -- AgeRestrictedTreatment, getLargeAnchoredAdaptiveBannerAdSize.
+ *   2. play-services-ads 25.x viene compilado por Google con Kotlin 2.2/2.3.
+ *   3. Expo SDK 57 compila con Kotlin 2.1, que NO puede leer metadatos posteriores.
+ *
+ * Las dos condiciones no se pueden cumplir a la vez. Se intentaron, en builds reales, y
+ * fallaron los tres caminos: subir el proyecto a Kotlin 2.3 (empeoro, rompio tambien
+ * react-native-purchases-ui), fijar play-services-ads en 24.7.0 (adios errores de Kotlin,
+ * hola APIs inexistentes) y parchear la libreria (cada parche destapaba la siguiente API).
+ * Bajar la libreria tampoco: las versiones que fijan un SDK 24.x son de 2025, anteriores a
+ * RN 0.86 y a la arquitectura nueva.
+ *
+ * Este archivo es el no-op que ya existia como variante web, promovido a implementacion unica
+ * para que la app compile y se pueda verificar lo que de verdad bloquea la entrega: la compra
+ * de RevenueCat.
+ *
+ * COMO RESTAURARLO cuando Expo suba a Kotlin 2.2+ (o Google publique un play-services-ads
+ * compilado con 2.1): revertir el commit que introdujo este cambio. La implementacion real de
+ * AdMob esta intacta en el historial de git, no reescrita.
+ */
 
 /**
- * RevenueCat Ads, aclaración importante (2026-09-06): RevenueCat NO sirve anuncios -- solo
- * trackea ingresos de una red real vía `Purchases.adTracker` (beta pública, requiere
- * react-native-purchases >= 10.2.0, Showmi ya tiene 10.8.1). El anuncio en sí viene de Google
- * AdMob (`react-native-google-mobile-ads`), la única red que RevenueCat documenta a fondo.
- * Este archivo es la capa que junta las dos cosas: carga el anuncio real de AdMob y reporta
- * cada evento a RevenueCat para que aparezca en su dashboard de Ads junto a las suscripciones.
- *
- * Formato elegido: **Native Ads** -- a diferencia de banner/interstitial, un Native Ad no trae
- * su propio diseño, te da los datos crudos (headline, body, ícono, media, call-to-action) para
- * que TÚ los pintes con tus propios componentes. Es la única forma real de que un anuncio se
- * vea como "una tarjeta más" del deck o del Feed en vez de una caja ajena insertada encima.
- *
- * `TestIds.NATIVE` -- IDs de anuncio de prueba OFICIALES de Google (públicos, documentados,
- * funcionan sin cuenta de AdMob). El `androidAppId`/`iosAppId` en app.json también son los de
- * prueba de Google. **Antes de producción real hay que reemplazar ambos por los IDs reales de
- * una cuenta de AdMob propia** -- con IDs de prueba el anuncio que se ve es genérico
- * ("Test Ad"), nunca un anuncio real pagado.
+ * Sustituto del tipo `NativeAd` del SDK, declarado local para que nada importe el paquete
+ * nativo. Solo lleva lo que el codigo de Showmi usa de verdad (`destroy`, ver useNativeAd.ts):
+ * es un stub del CONTRATO consumido, no una copia del tipo real. Si al restaurar AdMob hace
+ * falta algo mas, el compilador lo dira.
  */
-const AD_UNIT_NATIVE = TestIds.NATIVE;
+export type NativeAd = { destroy: () => void };
 
-let initialized = false;
+export async function initializeAds(): Promise<void> {}
 
-/** Se llama una sola vez al arrancar la app (ver app/_layout.tsx) -- no-op si ya se llamó, o en
- *  web (el SDK de AdMob es nativo puro, sin build para web -- llamarlo ahí tira, no solo no
- *  hace nada). */
-export async function initializeAds(): Promise<void> {
-  if (initialized || !areAdsSupportedOnThisPlatform()) return;
-  initialized = true;
-  try {
-    await mobileAds().initialize();
-  } catch (e) {
-    console.warn('[ads] initializeAds falló (no bloqueante):', e);
-  }
+export async function loadNativeAd(_placement: string): Promise<NativeAd | null> {
+  return null;
 }
 
-/**
- * Carga un Native Ad y engancha el tracking de RevenueCat a sus eventos -- `loaded`/`failed`
- * se reportan de inmediato acá; `displayed` lo dispara quien llama cuando el ad de verdad
- * entra en pantalla (ver useNativeAd.ts), porque "cargado" y "visible" no son lo mismo (un ad
- * puede cargar de fondo antes de que el usuario llegue a esa tarjeta).
- *
- * `impressionId`: el SDK de AdMob para RN no expone un `impressionId` propio en `NativeAd` --
- * se usa `responseId` (identificador único por carga que sí expone la clase) como sustituto
- * razonable para el reporte a RevenueCat, que es analítica best-effort, no una fuente de
- * verdad financiera crítica.
- */
-export async function loadNativeAd(placement: string): Promise<NativeAd | null> {
-  try {
-    const ad = await NativeAd.createForAdRequest(AD_UNIT_NATIVE, { requestAgent: 'Showmi' });
-    trackAdEvent('trackAdLoaded', ad, placement);
+export function trackAdDisplayed(_ad: NativeAd, _placement: string): void {}
 
-    ad.addAdEventListener(NativeAdEventType.PAID, (payload) => {
-      Purchases.adTracker
-        .trackAdRevenue({
-          mediatorName: AdMediatorName.adMob,
-          adFormat: AdFormat.nativeAd,
-          adUnitId: ad.adUnitId,
-          impressionId: ad.responseId,
-          revenueMicros: Math.round(payload.value * 1_000_000),
-          currency: payload.currencyCode,
-          precision: mapPrecision(payload.precision),
-          placement,
-        })
-        .catch(() => {});
-    });
+export function trackAdOpened(_ad: NativeAd, _placement: string): void {}
 
-    return ad;
-  } catch (e) {
-    Purchases.adTracker
-      .trackAdFailedToLoad({
-        mediatorName: AdMediatorName.adMob,
-        adFormat: AdFormat.nativeAd,
-        adUnitId: AD_UNIT_NATIVE,
-        placement,
-      })
-      .catch(() => {});
-    console.warn('[ads] loadNativeAd falló (no bloqueante, se omite el slot):', e);
-    return null;
-  }
-}
-
-/** Se llama cuando la tarjeta patrocinada de verdad entra en pantalla (no al cargar). */
-export function trackAdDisplayed(ad: NativeAd, placement: string): void {
-  trackAdEvent('trackAdDisplayed', ad, placement);
-}
-
-/** Se llama cuando la persona toca el call-to-action del anuncio. */
-export function trackAdOpened(ad: NativeAd, placement: string): void {
-  trackAdEvent('trackAdOpened', ad, placement);
-}
-
-function trackAdEvent(method: 'trackAdLoaded' | 'trackAdDisplayed' | 'trackAdOpened', ad: NativeAd, placement: string): void {
-  Purchases.adTracker[method]({
-    mediatorName: AdMediatorName.adMob,
-    adFormat: AdFormat.nativeAd,
-    adUnitId: ad.adUnitId,
-    impressionId: ad.responseId,
-    placement,
-  }).catch(() => {});
-}
-
-/**
- * El payload nativo de AdMob manda `precision` como número (PrecisionType de Android/iOS:
- * 0=desconocido, 1=estimado, 2=definido por el publisher, 3=exacto), no como string -- mapeo
- * documentado por Google, no adivinado.
- */
-function mapPrecision(raw: number): string {
-  switch (raw) {
-    case 3:
-      return AdRevenuePrecision.exact;
-    case 2:
-      return AdRevenuePrecision.publisherDefined;
-    case 1:
-      return AdRevenuePrecision.estimated;
-    default:
-      return AdRevenuePrecision.unknown;
-  }
-}
-
-/** Web nunca muestra anuncios reales (el SDK de AdMob es nativo puro, sin build para web) --
- *  mismo criterio ya establecido para RevenueCat en revenuecat.ts. */
+/** Siempre false: quien llama ya salta el slot en vez de montarlo (ver SwipeDeck/feed). */
 export function areAdsSupportedOnThisPlatform(): boolean {
-  return Platform.OS === 'ios' || Platform.OS === 'android';
+  return false;
 }

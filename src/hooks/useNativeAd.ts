@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { NativeAd } from 'react-native-google-mobile-ads';
-
-import { areAdsSupportedOnThisPlatform, loadNativeAd, trackAdDisplayed } from '../lib/ads';
+import { NativeAd, areAdsSupportedOnThisPlatform, loadNativeAd, trackAdDisplayed } from '../lib/ads';
 
 interface UseNativeAdResult {
   ad: NativeAd | null;
