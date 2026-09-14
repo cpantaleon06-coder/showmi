@@ -12,7 +12,7 @@ import { getCollectionColor, getTileAccent } from '../../src/theme/collectionCol
 import { readableOn } from '../../src/theme/contrast';
 import { useLibraryStore } from '../../src/state/libraryStore';
 import { TileVariant, TrackTile } from '../../src/components/library/TrackTile';
-import { EchoTitle } from '../../src/components/library/EchoTitle';
+import { EchoTitle } from '../../src/components/ui/EchoTitle';
 import { EmptyCollection } from '../../src/components/library/EmptyCollection';
 import { TileReveal } from '../../src/components/library/TileReveal';
 import { GradientChip } from '../../src/components/ui/GradientChip';

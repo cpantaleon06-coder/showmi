@@ -1,13 +1,33 @@
-import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowsClockwiseIcon, CheckCircleIcon, CrownIcon, GearIcon, InfinityIcon, ProhibitIcon, TShirtIcon } from 'phosphor-react-native';
+import {
+  ArrowsClockwiseIcon,
+  CheckIcon,
+  CrownIcon,
+  GearIcon,
+  InfinityIcon,
+  ProhibitIcon,
+  TShirtIcon,
+} from 'phosphor-react-native';
 import type { PurchasesPackage } from 'react-native-purchases';
 
 import { useThemeStore } from '../src/theme/useThemeStore';
 import { fonts } from '../src/theme/typography';
+import { wordmark } from '../src/theme/wordmark';
 import { BackButton } from '../src/components/ui/BackButton';
+import { EchoTitle } from '../src/components/ui/EchoTitle';
+import { RetroSunburstBackground } from '../src/components/backgrounds/RetroSunburstBackground';
 import { useSubscriptionStore, DAILY_FREE_SWIPE_LIMIT } from '../src/state/subscriptionStore';
 import {
   fetchCurrentOffering,
@@ -20,14 +40,42 @@ import {
 } from '../src/lib/revenuecat';
 import { syncPremiumStatus } from '../src/api/subscriptionClient';
 import { PageTransition } from '../src/components/ui/PageTransition';
-import { ThemeColors } from '../src/theme/colors';
 import { radii } from '../src/theme/radii';
+
+/**
+ * Paywall de Showmi More.
+ *
+ * 2026-09-13, rediseño retrofuturista (referencia mandada por el usuario: paywall de PICNIC).
+ * Dos cambios de fondo respecto de la versión anterior, que era una lista de perks con un
+ * botón por plan:
+ *
+ *  1. SELECCIONAR Y UN SOLO CTA, en vez de un botón de compra por plan. Con un botón por plan,
+ *     cada uno compite con los otros dos y ninguno es "el" botón; además obliga a decidir y
+ *     comprar en el mismo gesto. Con selección previa, la decisión y la confirmación se
+ *     separan, que es como funciona cualquier paywall que convierte.
+ *  2. La pantalla SIEMPRE es oscura, en los dos temas. Es un modal a pantalla completa y una
+ *     pieza de conversión: se comporta como un cartel, no como una pantalla más de la app.
+ *     Mismo criterio ya tomado con las tejas negras de Biblioteca (ver collectionColors.ts).
+ *
+ * El dorado (`premiumAccent`) queda EXCLUSIVAMENTE para el botón de compra y la marca de
+ * selección. El fondo usa magenta y azul del wordmark justamente para no gastarlo: si los
+ * rayos también fueran dorados, el CTA dejaría de ser lo único dorado de la pantalla.
+ *
+ * Toda la lógica de compra (handlePurchase, restore, Customer Center) se conserva intacta:
+ * este commit es presentación y modelo de selección, no negocio.
+ */
+
+/** Oro de Showmi More. Fijo y no `colors.premiumAccent` porque esta pantalla ya no sigue el
+ *  tema -- el valor claro (#8A6B14) se calibró contra un fondo ivory que acá no existe. */
+const GOLD = '#C9A227';
+const INK_ON_GOLD = '#1A1405';
+const TEXT_DIM = '#B9B3C7';
 
 const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = [
   {
     icon: InfinityIcon,
     title: 'Swipes ilimitados',
-    description: `Sin el tope de ${DAILY_FREE_SWIPE_LIMIT} swipes diarios -- descubre a tu ritmo, todos los días.`,
+    description: `Sin el tope de ${DAILY_FREE_SWIPE_LIMIT} diarios -- descubre a tu ritmo.`,
   },
   {
     icon: CrownIcon,
@@ -36,60 +84,138 @@ const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = 
   },
   {
     icon: TShirtIcon,
-    title: 'Cosméticos exclusivos del Camerino',
-    description: 'Corona, lentes dorados y estampado de estrellas para tu mascota. Los ves antes de pagar -- nunca son aleatorios.',
+    title: 'Cosméticos del Camerino',
+    description: 'Corona, lentes dorados y estrellas. Los ves antes de pagar -- nunca son aleatorios.',
   },
   {
-    // 2026-09-06: antes deliberadamente NO se prometía esto (ver revenuecat.ts, "honestidad
-    // consciente" -- no existía ningún sistema de anuncios construido). Ahora sí existe
-    // (tarjetas patrocinadas en el deck y el Feed, ver lib/ads.ts) y Showmi More las oculta
-    // de verdad -- ya no es una promesa vacía.
     icon: ProhibitIcon,
     title: 'Sin anuncios',
     description: 'Ni en el deck ni en el Feed -- solo música y gente real.',
   },
 ];
 
-function PerkRow({ colors, icon: Icon, title, description }: { colors: ThemeColors; icon: typeof CrownIcon; title: string; description: string }) {
-  return (
-    <View style={styles.perkRow}>
-      <View style={[styles.perkIcon, { borderColor: colors.premiumAccent }]}>
-        <Icon weight="fill" size={20} color={colors.premiumAccent} />
-      </View>
-      <View style={styles.perkText}>
-        <Text style={[styles.perkTitle, { color: colors.textPrimary }]}>{title}</Text>
-        <Text style={[styles.perkDescription, { color: colors.textSecondary }]}>{description}</Text>
-      </View>
-    </View>
-  );
+/**
+ * Nombre legible de un paquete. RevenueCat entrega identificadores (`$rc_annual`) y, en la
+ * Test Store, títulos de producto poco presentables -- pero el fallback a `product.title` se
+ * mantiene por si la tienda real sí trae uno bueno.
+ */
+const PACKAGE_LABELS: Record<string, { title: string; caption: string }> = {
+  $rc_annual: { title: 'Anual', caption: 'El plan completo' },
+  $rc_monthly: { title: 'Mensual', caption: 'Tómate tu tiempo' },
+  $rc_weekly: { title: 'Semanal', caption: 'Pruébalo sin compromiso' },
+  $rc_lifetime: { title: 'De por vida', caption: 'Un solo pago, para siempre' },
+};
+
+function labelFor(pkg: PurchasesPackage): { title: string; caption: string } {
+  return PACKAGE_LABELS[pkg.identifier] ?? { title: pkg.product.title || pkg.identifier, caption: '' };
 }
 
-function PackageButton({ colors, pkg, onPress, busy }: { colors: ThemeColors; pkg: PurchasesPackage; onPress: () => void; busy: boolean }) {
+/**
+ * Ahorro del plan anual frente a pagar mensual doce veces. Se CALCULA con los precios reales
+ * de RevenueCat en vez de escribir un porcentaje a mano: un número inventado en el paywall es
+ * publicidad engañosa en cuanto alguien cambie un precio en el dashboard.
+ *
+ * Devuelve null si falta alguno de los dos planes o si el anual no sale más barato -- en ese
+ * caso simplemente no hay insignia, en vez de presumir un ahorro que no existe.
+ */
+function annualSavingsPercent(packages: PurchasesPackage[]): number | null {
+  const annual = packages.find((p) => p.identifier === '$rc_annual');
+  const monthly = packages.find((p) => p.identifier === '$rc_monthly');
+  if (!annual || !monthly) return null;
+  const yearOfMonthly = monthly.product.price * 12;
+  if (!yearOfMonthly || annual.product.price >= yearOfMonthly) return null;
+  return Math.round((1 - annual.product.price / yearOfMonthly) * 100);
+}
+
+/** Precio mensualizado del plan anual, para poder compararlo de un vistazo con el mensual. */
+function perMonthLabel(pkg: PurchasesPackage): string | null {
+  if (pkg.identifier !== '$rc_annual') return null;
+  const perMonth = pkg.product.price / 12;
+  if (!Number.isFinite(perMonth) || perMonth <= 0) return null;
+  // Se reusa el símbolo que ya trae priceString en vez de asumir moneda o formato.
+  const symbol = pkg.product.priceString.replace(/[\d.,\s]/g, '') || '';
+  return `${symbol}${perMonth.toFixed(2)}/mes`;
+}
+
+function PlanRow({
+  pkg,
+  selected,
+  onPress,
+  badge,
+  isLast,
+}: {
+  pkg: PurchasesPackage;
+  selected: boolean;
+  onPress: () => void;
+  badge: string | null;
+  isLast: boolean;
+}) {
+  const { title, caption } = labelFor(pkg);
+  const perMonth = perMonthLabel(pkg);
+
   return (
     <Pressable
       onPress={onPress}
-      disabled={busy}
-      style={[styles.packageButton, { borderColor: colors.premiumAccent, opacity: busy ? 0.6 : 1 }]}
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
+      accessibilityLabel={`${title}, ${pkg.product.priceString}`}
+      style={[styles.planRow, selected && styles.planRowSelected, !isLast && styles.planRowDivider]}
     >
-      <Text style={[styles.packageTitle, { color: colors.textPrimary }]}>{pkg.product.title || pkg.identifier}</Text>
-      <Text style={[styles.packagePrice, { color: colors.premiumAccent }]}>{pkg.product.priceString}</Text>
+      {/* Marca de selección: círculo relleno de oro con palomita, o aro apagado. El aro vacío
+          y el relleno miden IGUAL para que la fila no se mueva un pixel al cambiar de plan. */}
+      <View style={[styles.radio, selected ? { backgroundColor: GOLD, borderColor: GOLD } : { borderColor: '#6C6683' }]}>
+        {selected && <CheckIcon weight="bold" size={13} color={INK_ON_GOLD} />}
+      </View>
+
+      <View style={styles.planText}>
+        <Text style={[styles.planTitle, !selected && styles.planTitleDim]}>{title}</Text>
+        {!!caption && <Text style={styles.planCaption}>{caption}</Text>}
+      </View>
+
+      <View style={styles.planPrices}>
+        <Text style={[styles.planPrice, !selected && styles.planTitleDim]}>{pkg.product.priceString}</Text>
+        {!!perMonth && <Text style={styles.planPerMonth}>{perMonth}</Text>}
+      </View>
+
+      {!!badge && (
+        <View style={styles.planBadge}>
+          <Text style={styles.planBadgeText}>{badge}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
 
 export default function PremiumScreen() {
   const colors = useThemeStore((s) => s.colors);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const isPremium = useSubscriptionStore((s) => s.isPremium);
   const setPremium = useSubscriptionStore((s) => s.setPremium);
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [openingCenter, setOpeningCenter] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const offeringQuery = useQuery({
     queryKey: ['revenuecat-current-offering'],
     queryFn: fetchCurrentOffering,
     staleTime: 1000 * 60 * 10,
   });
+
+  const packages = useMemo(() => offeringQuery.data?.availablePackages ?? [], [offeringQuery.data]);
+
+  /** El anual arranca preseleccionado si existe -- es el que la insignia de ahorro destaca, y
+   *  un paywall sin nada seleccionado obliga a un toque de más antes de poder comprar. */
+  const selectedPackage = useMemo(() => {
+    if (packages.length === 0) return null;
+    return (
+      packages.find((p) => p.identifier === selectedId) ??
+      packages.find((p) => p.identifier === '$rc_annual') ??
+      packages[0]
+    );
+  }, [packages, selectedId]);
+
+  const savings = useMemo(() => annualSavingsPercent(packages), [packages]);
 
   const applyCustomerInfo = (info: Parameters<typeof isPremiumFromCustomerInfo>[0]) => {
     const premium = isPremiumFromCustomerInfo(info);
@@ -141,207 +267,330 @@ export default function PremiumScreen() {
     }
   };
 
-  const packages = offeringQuery.data?.availablePackages ?? [];
+  const busy = purchasingId !== null;
 
   return (
     <PageTransition>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-        <View style={[styles.header, { backgroundColor: colors.brand }]}>
-          <BackButton colors={colors} />
-          {/* Blanco fijo, no colors.premiumAccent -- este header siempre es colors.brand (rojo)
-              en los dos temas, igual que headerTitle de abajo. El dorado de premiumAccent se
-              calibró contra colors.surface (contraste 4.93:1 en claro / 7.33:1 en oscuro, ver
-              colors.ts) -- sobre rojo da apenas 1.15:1, prácticamente ilegible. */}
-          <CrownIcon weight="fill" size={40} color="#FFFFFF" />
-          <Text style={styles.headerTitle}>Showmi More</Text>
+      <View style={styles.container}>
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <RetroSunburstBackground width={screenWidth} height={screenHeight} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.content}>
-          {isPremium ? (
-            <>
-              <View style={[styles.activeBanner, { borderColor: colors.premiumAccent }]}>
-                <CheckCircleIcon weight="fill" size={22} color={colors.premiumAccent} />
-                <Text style={[styles.activeBannerText, { color: colors.textPrimary }]}>Ya tienes Showmi More -- gracias por tu apoyo.</Text>
-              </View>
-              {isRevenueCatConfigured() && (
-                <Pressable
-                  onPress={handleManageSubscription}
-                  disabled={openingCenter}
-                  style={[styles.manageRow, { borderColor: colors.border, opacity: openingCenter ? 0.6 : 1 }]}
-                  hitSlop={8}
-                >
-                  <GearIcon weight="bold" size={16} color={colors.textPrimary} />
-                  <Text style={[styles.manageRowText, { color: colors.textPrimary }]}>
-                    {openingCenter ? 'Abriendo…' : 'Gestionar suscripción'}
-                  </Text>
-                </Pressable>
-              )}
-            </>
-          ) : null}
+        <SafeAreaView style={styles.safe} edges={['top']}>
+          <BackButton colors={colors} />
 
-          <View style={styles.perks}>
-            {PERKS.map((perk) => (
-              <PerkRow key={perk.title} colors={colors} icon={perk.icon} title={perk.title} description={perk.description} />
-            ))}
-          </View>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <View style={styles.hero}>
+              {/* El eco es la firma tipográfica de Showmi (ver EchoTitle) -- la misma que abre
+                  Biblioteca. Se reusa en vez de inventar un tratamiento nuevo para el paywall:
+                  la pantalla que cobra debe verse de la misma app que la que no cobra. */}
+              <EchoTitle text="Showmi" accent={wordmark.w.fill} color="#FFFFFF" size={44} />
+              <Text style={styles.heroMore}>MORE</Text>
+            </View>
 
-          {!isPremium && (
-            <>
-              {!isRevenueCatConfigured() ? (
-                <Text style={[styles.note, { color: colors.textSecondary }]}>
-                  Los planes todavía se están configurando -- vuelve pronto.
-                </Text>
-              ) : offeringQuery.isLoading ? (
-                <ActivityIndicator color={colors.premiumAccent} size="small" style={styles.loading} />
-              ) : packages.length === 0 ? (
-                <Text style={[styles.note, { color: colors.textSecondary }]}>
-                  No hay planes disponibles todavía -- vuelve pronto.
-                </Text>
-              ) : (
-                <View style={styles.packages}>
-                  {packages.map((pkg) => (
-                    <PackageButton
-                      key={pkg.identifier}
-                      colors={colors}
-                      pkg={pkg}
-                      busy={purchasingId === pkg.identifier}
-                      onPress={() => handlePurchase(pkg)}
-                    />
-                  ))}
-                </View>
-              )}
-            </>
-          )}
-
-          <Pressable onPress={handleRestore} disabled={restoring} style={styles.restoreRow} hitSlop={8}>
-            <ArrowsClockwiseIcon weight="bold" size={16} color={colors.textSecondary} />
-            <Text style={[styles.restoreText, { color: colors.textSecondary }]}>
-              {restoring ? 'Restaurando…' : 'Restaurar compras'}
+            <Text style={styles.headline}>
+              Descubre sin freno{'\n'}
+              <Text style={{ color: wordmark.w.corner }}>y viste a tu mascota</Text>
             </Text>
-          </Pressable>
-        </ScrollView>
-      </SafeAreaView>
+
+            {isPremium ? (
+              <View style={styles.activeBanner}>
+                <CheckIcon weight="bold" size={18} color={GOLD} />
+                <Text style={styles.activeBannerText}>Ya tienes Showmi More -- gracias por tu apoyo.</Text>
+              </View>
+            ) : null}
+
+            {!isPremium && (
+              <>
+                {!isRevenueCatConfigured() ? (
+                  <Text style={styles.note}>Los planes todavía se están configurando -- vuelve pronto.</Text>
+                ) : offeringQuery.isLoading ? (
+                  <ActivityIndicator color={GOLD} size="small" style={styles.loading} />
+                ) : packages.length === 0 ? (
+                  <Text style={styles.note}>No hay planes disponibles todavía -- vuelve pronto.</Text>
+                ) : (
+                  <View style={styles.planCard}>
+                    {packages.map((pkg, i) => (
+                      <PlanRow
+                        key={pkg.identifier}
+                        pkg={pkg}
+                        selected={selectedPackage?.identifier === pkg.identifier}
+                        onPress={() => setSelectedId(pkg.identifier)}
+                        badge={pkg.identifier === '$rc_annual' && savings !== null ? `AHORRA ${savings}%` : null}
+                        isLast={i === packages.length - 1}
+                      />
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
+
+            <View style={styles.perks}>
+              {PERKS.map((perk) => (
+                <View key={perk.title} style={styles.perkRow}>
+                  <View style={styles.perkIcon}>
+                    <perk.icon weight="fill" size={17} color={GOLD} />
+                  </View>
+                  <View style={styles.perkText}>
+                    <Text style={styles.perkTitle}>{perk.title}</Text>
+                    <Text style={styles.perkDescription}>{perk.description}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {isPremium && isRevenueCatConfigured() && (
+              <Pressable
+                onPress={handleManageSubscription}
+                disabled={openingCenter}
+                style={[styles.ghostRow, { opacity: openingCenter ? 0.6 : 1 }]}
+                hitSlop={8}
+              >
+                <GearIcon weight="bold" size={16} color="#FFFFFF" />
+                <Text style={styles.ghostRowText}>{openingCenter ? 'Abriendo…' : 'Gestionar suscripción'}</Text>
+              </Pressable>
+            )}
+
+            <Pressable onPress={handleRestore} disabled={restoring} style={styles.restoreRow} hitSlop={8}>
+              <ArrowsClockwiseIcon weight="bold" size={15} color={TEXT_DIM} />
+              <Text style={styles.restoreText}>{restoring ? 'Restaurando…' : 'Restaurar compras'}</Text>
+            </Pressable>
+          </ScrollView>
+
+          {/* El CTA vive FUERA del ScrollView, anclado abajo: en un paywall el botón no debe
+              poder quedarse fuera de pantalla por scroll. */}
+          {!isPremium && selectedPackage && (
+            <SafeAreaView edges={['bottom']} style={styles.ctaDock}>
+              <Pressable
+                onPress={() => handlePurchase(selectedPackage)}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel={`Obtener Showmi More ${labelFor(selectedPackage).title} por ${selectedPackage.product.priceString}`}
+                style={[styles.cta, busy && styles.ctaBusy]}
+              >
+                {busy ? (
+                  <ActivityIndicator color={INK_ON_GOLD} size="small" />
+                ) : (
+                  <Text style={styles.ctaText}>Obtener Showmi More</Text>
+                )}
+              </Pressable>
+              {/* Letra chica que dice el precio REAL de lo seleccionado. Un CTA que no repite
+                  qué se está a punto de cobrar es justo lo que hace que la gente desconfíe. */}
+              <Text style={styles.ctaFinePrint}>
+                {labelFor(selectedPackage).title} · {selectedPackage.product.priceString}
+                {selectedPackage.identifier === '$rc_lifetime' ? ' · pago único' : ' · cancela cuando quieras'}
+              </Text>
+            </SafeAreaView>
+          )}
+        </SafeAreaView>
+      </View>
     </PageTransition>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingTop: 20,
-    paddingBottom: 24,
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontFamily: fonts.display,
-    color: '#FFFFFF',
-  },
+  container: { flex: 1, backgroundColor: '#0A0A12' },
+  safe: { flex: 1 },
   content: {
+    paddingHorizontal: 22,
+    paddingTop: 56,
+    paddingBottom: 24,
+  },
+  hero: {
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
-    gap: 20,
+    marginBottom: 18,
+  },
+  /** "MORE" en caja alta y muy espaciado: el contrapunto sereno al eco del wordmark de
+   *  arriba, y lo que convierte dos palabras sueltas en un bloque de marca. */
+  heroMore: {
+    marginTop: 10,
+    fontSize: 15,
+    letterSpacing: 9,
+    color: GOLD,
+    fontFamily: fonts.display,
+  },
+  headline: {
+    fontSize: 27,
+    lineHeight: 32,
+    textAlign: 'center',
+    color: '#FFFFFF',
+    fontFamily: fonts.display,
+    letterSpacing: -0.6,
+    marginBottom: 26,
+  },
+  /** Tarjeta única con las filas dentro, no una tarjeta por plan: así los tres precios se
+   *  comparan en una sola lectura vertical, que es lo que hace la referencia. */
+  planCard: {
+    backgroundColor: 'rgba(10, 6, 24, 0.72)',
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    overflow: 'visible',
+    marginBottom: 26,
+  },
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+  },
+  planRowSelected: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  planRowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.10)',
+  },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planText: { flex: 1 },
+  planTitle: {
+    fontSize: 17,
+    color: '#FFFFFF',
+    fontFamily: fonts.display,
+    letterSpacing: -0.3,
+  },
+  /** Los planes no elegidos se apagan, no se ocultan: siguen comparables pero dejan claro
+   *  cuál manda. */
+  planTitleDim: { color: '#9F99B0' },
+  planCaption: {
+    fontSize: 12,
+    color: TEXT_DIM,
+    fontFamily: fonts.bodyRegular,
+    marginTop: 1,
+  },
+  planPrices: { alignItems: 'flex-end' },
+  planPrice: {
+    fontSize: 17,
+    color: '#FFFFFF',
+    fontFamily: fonts.bodyExtraBold,
+  },
+  planPerMonth: {
+    fontSize: 11,
+    color: TEXT_DIM,
+    fontFamily: fonts.bodySemiBold,
+    marginTop: 1,
+  },
+  /** Montada sobre el borde superior de su fila, como en la referencia: pegada dentro se
+   *  leería como una etiqueta más del plan; encima del borde se lee como un sello. */
+  planBadge: {
+    position: 'absolute',
+    top: -9,
+    right: 14,
+    backgroundColor: wordmark.w.fill,
+    borderRadius: radii.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 2,
+  },
+  planBadgeText: {
+    fontSize: 10,
+    letterSpacing: 0.6,
+    color: '#FFFFFF',
+    fontFamily: fonts.bodyExtraBold,
+  },
+  perks: { gap: 13, marginBottom: 22 },
+  perkRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  perkIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1.5,
+    borderColor: 'rgba(201,162,39,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  perkText: { flex: 1 },
+  perkTitle: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontFamily: fonts.bodyBold,
+  },
+  perkDescription: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: TEXT_DIM,
+    fontFamily: fonts.bodyRegular,
+    marginTop: 1,
   },
   activeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    borderWidth: 2,
+    gap: 9,
+    borderWidth: 1.5,
+    borderColor: GOLD,
     borderRadius: radii.card,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    width: '100%',
+    padding: 13,
+    marginBottom: 22,
   },
   activeBannerText: {
     flex: 1,
     fontSize: 13,
+    color: '#FFFFFF',
     fontFamily: fonts.bodySemiBold,
   },
-  manageRow: {
+  ghostRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderWidth: 2,
-    borderRadius: 24,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    width: '100%',
-    marginTop: -8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    borderRadius: radii.pill,
+    paddingVertical: 11,
+    marginBottom: 14,
   },
-  manageRowText: {
-    fontSize: 13,
-    fontFamily: fonts.bodyBold,
-  },
-  perks: {
-    width: '100%',
-    gap: 18,
-  },
-  perkRow: {
-    flexDirection: 'row',
-    gap: 14,
-  },
-  perkIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  perkText: {
-    flex: 1,
-  },
-  perkTitle: {
-    fontSize: 15,
-    fontFamily: fonts.bodyBold,
-  },
-  perkDescription: {
-    fontSize: 13,
-    marginTop: 2,
-    fontFamily: fonts.bodyRegular,
-  },
-  note: {
-    fontSize: 13,
-    textAlign: 'center',
-    fontFamily: fonts.bodyRegular,
-  },
-  loading: {
-    marginTop: 8,
-  },
-  packages: {
-    width: '100%',
-    gap: 12,
-  },
-  packageButton: {
-    borderWidth: 2,
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    alignItems: 'center',
-    gap: 4,
-  },
-  packageTitle: {
-    fontSize: 15,
-    fontFamily: fonts.bodyBold,
-  },
-  packagePrice: {
-    fontSize: 18,
-    fontFamily: fonts.display,
-  },
+  ghostRowText: { fontSize: 14, color: '#FFFFFF', fontFamily: fonts.bodyBold },
   restoreRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 8,
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 8,
   },
-  restoreText: {
+  restoreText: { fontSize: 13, color: TEXT_DIM, fontFamily: fonts.bodySemiBold },
+  note: {
     fontSize: 13,
+    textAlign: 'center',
+    color: TEXT_DIM,
+    fontFamily: fonts.bodyRegular,
+    marginBottom: 22,
+  },
+  loading: { marginBottom: 22 },
+  ctaDock: {
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    paddingBottom: 6,
+    // Vela sobre el degradado para que el botón no flote sobre la rejilla del horizonte.
+    backgroundColor: 'rgba(10, 6, 24, 0.86)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.10)',
+  },
+  cta: {
+    backgroundColor: GOLD,
+    borderRadius: radii.pill,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaBusy: { opacity: 0.7 },
+  ctaText: {
+    fontSize: 16,
+    color: INK_ON_GOLD,
+    fontFamily: fonts.display,
+    letterSpacing: -0.2,
+  },
+  ctaFinePrint: {
+    marginTop: 8,
+    fontSize: 11.5,
+    textAlign: 'center',
+    color: TEXT_DIM,
     fontFamily: fonts.bodyRegular,
   },
 });
