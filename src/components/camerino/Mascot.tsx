@@ -3,13 +3,76 @@ import Svg, { Circle, ClipPath, Defs, Ellipse, G, Path, Polygon, Rect } from 're
 
 import { CosmeticSlot, cosmeticById } from '../../lib/cosmetics';
 import { ThemeColors } from '../../theme/colors';
+import { wordmark } from '../../theme/wordmark';
+
+/** Las tres criaturas. Cada una es una forma primitiva distinta -- esa restricción ES el
+ *  sistema, no una limitación. */
+export type MascotShape = 'circulo' | 'triangulo' | 'cuadrado';
 
 interface MascotProps {
   colors: ThemeColors;
   /** slot -> id de cosmético, ya filtrado por lo que la persona puede usar (ver visibleEquipped). */
   equipped: Partial<Record<CosmeticSlot, string>>;
   size?: number;
+  shape?: MascotShape;
 }
+
+/**
+ * Mezcla un hex hacia otro. Se usa para sacar el tono de los muñones del color del cuerpo en
+ * vez de declarar un segundo color por criatura: así el muñón nunca puede desentonar, y si
+ * algún día cambia la paleta no hay que acordarse de ajustar dos valores.
+ */
+function mix(hex: string, towards: string, amount: number): string {
+  const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [r1, g1, b1] = p(hex);
+  const [r2, g2, b2] = p(towards);
+  const c = (a: number, b: number) => Math.round(a + (b - a) * amount).toString(16).padStart(2, '0');
+  return `#${c(r1, r2)}${c(g1, g2)}${c(b1, b2)}`;
+}
+
+/**
+ * Geometría de cada criatura.
+ *
+ * TODAS comparten la altura de los ojos (cy=40) y el borde superior (y=4) a propósito, y no
+ * porque sea lo más bonito para cada forma: los once cosméticos del Camerino están anclados a
+ * esas dos referencias -- los sombreros al borde de arriba, los lentes y el visor a los ojos.
+ * Mover los ojos por criatura dejaría los lentes flotando en dos de las tres.
+ *
+ * Verificado con aritmética antes de dibujar nada: a la altura y=40 los ojos ocupan de x=39 a
+ * x=81, y el triángulo (el más estrecho ahí arriba) mide de 38 a 82. Entra por un pelo, y por
+ * eso su base es tan ancha -- no es una elección estética, es el mínimo que permite que los
+ * lentes le queden puestos.
+ */
+const SHAPES: Record<MascotShape, { body: string; color: string; pupil: 'redonda' | 'cuadrada'; parpados: boolean; boca: string; munones: [number, number] }> = {
+  // Cabezón dormido: párpados caídos y media sonrisa. El de la referencia naranja.
+  circulo: {
+    body: 'M60,4 C79.9,4 96,20.1 96,40 C96,59.9 79.9,76 60,76 C40.1,76 24,59.9 24,40 C24,20.1 40.1,4 60,4 Z',
+    color: wordmark.o.corner,
+    pupil: 'redonda',
+    parpados: true,
+    boca: 'M52 57 Q60 63 67 56',
+    munones: [48, 52],
+  },
+  // Punta arriba, base ancha. Ojos enormes y sonrisa mínima. El de la referencia verde.
+  triangulo: {
+    body: 'M60,4 L104,76 L16,76 Z',
+    color: wordmark.h.corner,
+    pupil: 'redonda',
+    parpados: false,
+    boca: 'M55 58 Q60 64 65 58',
+    munones: [66, 69],
+  },
+  // Bloque con pupilas CUADRADAS -- el detalle que separa al azul de los otros dos en la
+  // referencia, y lo que le da su cara de robot.
+  cuadrado: {
+    body: 'M38,4 L82,4 Q100,4 100,22 L100,58 Q100,76 82,76 L38,76 Q20,76 20,58 L20,22 Q20,4 38,4 Z',
+    color: wordmark.m.corner,
+    pupil: 'cuadrada',
+    parpados: false,
+    boca: 'M53 56 Q60 66 67 56',
+    munones: [45, 49],
+  },
+};
 
 /**
  * La mascota de Showmi, dibujada en SVG por código -- no hay assets de arte en el repo, y
@@ -31,49 +94,82 @@ interface MascotProps {
  * los sombreros necesitaban ese espacio extra para no recortarse contra el borde superior.
  * El ancho (0-120) no cambió, así que ningún cosmético necesitó reajuste en X, solo en Y.
  */
-export function Mascot({ colors, equipped, size = 160 }: MascotProps) {
-  // El contorno usa `border` (casi negro en claro, casi blanco en oscuro) para que la mascota
-  // se lea con la misma fuerza de línea en los dos temas.
+export function Mascot({ colors, equipped, size = 160, shape = 'circulo' }: MascotProps) {
   const outline = colors.border;
-  const body = colors.brand;
-  const stroke = 3.5;
+  const stroke = 4.5;
+  const def = SHAPES[shape];
+  const body = def.color;
+  // Muñones más oscuros que el cuerpo, como en las tres referencias. Derivado, no declarado.
+  const limb = mix(body, '#000000', 0.22);
 
   const sombrero = equipped.sombrero ? cosmeticById(equipped.sombrero) : undefined;
   const accesorio = equipped.accesorio ? cosmeticById(equipped.accesorio) : undefined;
   const estampado = equipped.estampado ? cosmeticById(equipped.estampado) : undefined;
 
+  const [munIzq, munDer] = def.munones;
+
   return (
     <Svg width={size} height={size} viewBox="0 -20 120 140">
       <Defs>
-        {/* El estampado se recorta al cuerpo para que nunca se salga del contorno. */}
         <ClipPath id="cuerpo">
           <Rect x={36} y={78} width={48} height={26} rx={13} />
         </ClipPath>
       </Defs>
 
-      {/* Cuerpo -- más corto y angosto que la cabeza a propósito, es lo que da la proporción
-          chibi (rx=13 sobre 26 de alto = casi una píldora completa, más redondo que antes). */}
-      <Rect x={36} y={78} width={48} height={26} rx={13} fill={body} stroke={outline} strokeWidth={stroke} />
+      {/* Muñones: DETRÁS del cuerpo, asomando por los lados. Van a alturas distintas a
+          propósito (ver munones en SHAPES) -- la asimetría es el recurso que hace que la
+          criatura se lea como dibujada a mano y no como una composición de figuras. */}
+      <Circle cx={17} cy={munIzq} r={13} fill={limb} stroke={outline} strokeWidth={stroke} />
+      <Circle cx={103} cy={munDer} r={13} fill={limb} stroke={outline} strokeWidth={stroke} />
+
+      {/* Tronco, asomando bajo la forma principal. Existe sobre todo como percha de los
+          cosméticos de cuerpo y los estampados, que están anclados a y=78. */}
+      <Rect x={41} y={64} width={38} height={40} rx={15} fill={mix(body, '#FFFFFF', 0.16)} stroke={outline} strokeWidth={stroke} />
       {estampado && <G clipPath="url(#cuerpo)">{renderEstampado(estampado.id, estampado.color)}</G>}
 
-      {/* Pies */}
-      <Ellipse cx={46} cy={106} rx={8} ry={5} fill={outline} />
-      <Ellipse cx={74} cy={106} rx={8} ry={5} fill={outline} />
+      {/* La forma. Es la criatura entera: una primitiva y nada más. */}
+      <Path d={def.body} fill={body} stroke={outline} strokeWidth={stroke} strokeLinejoin="round" />
 
-      {/* Cabeza -- más grande que el cuerpo (r=34 vs. cuerpo de 26 de alto), es la pieza
-          central de la proporción chibi. */}
-      <Circle cx={60} cy={38} r={34} fill={body} stroke={outline} strokeWidth={stroke} />
+      {/* Ojos enormes, y DESIGUALES a propósito: el derecho es un pelo más chico y va 1px más
+          abajo. Perfectamente simétricos se veían corporativos; así se ven hechos a mano.
+          
+          El de cara dormida NO lleva un párpado dibujado encima -- se probó y los dos párpados
+          juntos se leían como una monoceja que fusionaba los dos ojos en un bloque. En la
+          referencia el sueño está en la FORMA del ojo: el blanco tiene el borde de arriba
+          recto y solo la parte de abajo es redonda. */}
+      {def.parpados ? (
+        <G>
+          <Path d="M35 36 A13 13 0 0 0 61 36 Z" fill="#FFFFFF" stroke={outline} strokeWidth={3} strokeLinejoin="round" />
+          <Path d="M60 37 A12.2 12.2 0 0 0 84.4 37 Z" fill="#FFFFFF" stroke={outline} strokeWidth={3} strokeLinejoin="round" />
+        </G>
+      ) : (
+        <G>
+          <Circle cx={48} cy={40} r={13} fill="#FFFFFF" stroke={outline} strokeWidth={3} />
+          <Circle cx={72} cy={41} r={12.2} fill="#FFFFFF" stroke={outline} strokeWidth={3} />
+        </G>
+      )}
 
-      {/* Ojos: más grandes y más juntos que antes (r=8.5, antes 7) -- ojos grandes es el otro
-          medio de "chibi", no solo la cabeza. Blanco fijo + pupila del color de contorno --
-          no usan tokens de texto porque van sobre el color de marca, que no cambia entre temas. */}
-      <Circle cx={48} cy={37} r={8.5} fill="#FFFFFF" stroke={outline} strokeWidth={2} />
-      <Circle cx={72} cy={37} r={8.5} fill="#FFFFFF" stroke={outline} strokeWidth={2} />
-      <Circle cx={49.5} cy={38} r={3.8} fill={outline} />
-      <Circle cx={73.5} cy={38} r={3.8} fill={outline} />
+      {def.pupil === 'cuadrada' ? (
+        <G>
+          <Rect x={44} y={36} width={10} height={10} rx={2} fill={outline} />
+          <Rect x={68} y={37} width={9.4} height={9.4} rx={2} fill={outline} />
+        </G>
+      ) : (
+        <G>
+          <Circle cx={49} cy={def.parpados ? 43 : 41} r={5.6} fill={outline} />
+          <Circle cx={73} cy={def.parpados ? 44 : 42} r={5.2} fill={outline} />
+        </G>
+      )}
+      {/* Brillo: siempre arriba a la izquierda en los dos ojos. Es lo que los hace parecer
+          mojados en vez de dos agujeros. */}
+      {!def.parpados && (
+        <G>
+          <Circle cx={45.5} cy={37} r={2.1} fill="#FFFFFF" />
+          <Circle cx={69.8} cy={38} r={1.9} fill="#FFFFFF" />
+        </G>
+      )}
 
-      {/* Boca */}
-      <Path d="M53 51 Q60 57 67 51" stroke={outline} strokeWidth={stroke} fill="none" strokeLinecap="round" />
+      <Path d={def.boca} stroke={outline} strokeWidth={stroke} fill="none" strokeLinecap="round" />
 
       {accesorio && renderAccesorio(accesorio.id, accesorio.color, outline)}
       {sombrero && renderSombrero(sombrero.id, sombrero.color, outline)}
@@ -162,9 +258,9 @@ function renderAccesorio(id: string, color: string, outline: string): ReactNode 
         <G>
           {[0, 72, 144, 216, 288].map((deg) => {
             const rad = (deg * Math.PI) / 180;
-            return <Circle key={deg} cx={92 + Math.cos(rad) * 6} cy={30 + Math.sin(rad) * 6} r={4.5} fill={color} stroke={outline} strokeWidth={1.5} />;
+            return <Circle key={deg} cx={92 + Math.cos(rad) * 6} cy={33 + Math.sin(rad) * 6} r={4.5} fill={color} stroke={outline} strokeWidth={1.5} />;
           })}
-          <Circle cx={92} cy={30} r={3.5} fill="#FFFFFF" stroke={outline} strokeWidth={1.5} />
+          <Circle cx={92} cy={33} r={3.5} fill="#FFFFFF" stroke={outline} strokeWidth={1.5} />
         </G>
       );
     case 'pua': // anclado a cuerpo -- collar sobre el cuello nuevo (body top=78)
@@ -184,8 +280,8 @@ function renderAccesorio(id: string, color: string, outline: string): ReactNode 
     case 'visor': // anclado a cabeza -- banda sobre los ojos nuevos
       return (
         <G>
-          <Rect x={33} y={30} width={54} height={14} rx={5} fill={color} stroke={outline} strokeWidth={sw} />
-          <Path d="M38 37 L48 37 M54 37 L64 37 M70 37 L80 37" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round" />
+          <Rect x={31} y={32} width={58} height={16} rx={5} fill={color} stroke={outline} strokeWidth={sw} />
+          <Path d="M37 40 L47 40 M55 40 L65 40 M73 40 L83 40" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round" />
         </G>
       );
     case 'moño': // anclado a cuerpo
@@ -207,9 +303,9 @@ function renderAccesorio(id: string, color: string, outline: string): ReactNode 
     case 'lentes_dorados': // anclado a cabeza -- centrado exacto sobre los ojos nuevos
       return (
         <G>
-          <Circle cx={48} cy={37} r={10} fill={color} stroke={outline} strokeWidth={sw} opacity={0.9} />
-          <Circle cx={72} cy={37} r={10} fill={color} stroke={outline} strokeWidth={sw} opacity={0.9} />
-          <Path d="M58 37 L62 37 M38 35 L30 33 M82 35 L90 33" stroke={outline} strokeWidth={sw} />
+          <Circle cx={48} cy={40} r={13.5} fill={color} stroke={outline} strokeWidth={sw} opacity={0.9} />
+          <Circle cx={72} cy={41} r={12.7} fill={color} stroke={outline} strokeWidth={sw} opacity={0.9} />
+          <Path d="M60 40 L62 40 M34 37 L26 34 M86 38 L94 35" stroke={outline} strokeWidth={sw} />
         </G>
       );
     default:
