@@ -64,10 +64,10 @@ function resolveEpoca(releaseDate: string | null | undefined): string | null {
 
 const GENRE_SYNONYMS: Record<string, string[]> = {
   corridos_tumbados_regional: ["corridos tumbados", "corrido tumbado", "corrido bélico", "sad sierreño", "sierreño", "corridos"],
-  banda_norteno: ["banda", "norteño", "banda sinaloense", "grupero", "regional mexicano"],
-  reggaeton: ["reggaeton", "reggaetón", "urbano latino", "latin urban"],
+  banda_norteno: ["banda", "norteño", "banda sinaloense", "grupero", "regional mexicano", "musica mexicana", "regional mexican"],
+  reggaeton: ["reggaeton", "reggaetón", "urbano latino", "latin urban", "perreo"],
   trap_latino: ["trap latino", "latin trap", "trap en español"],
-  salsa: ["salsa", "salsa romantica", "salsa dura"],
+  salsa: ["salsa", "salsa romantica", "salsa dura", "musica tropical", "salsa y tropical", "tropical"],
   bachata: ["bachata", "bachata romantica"],
   cumbia: ["cumbia", "cumbia sonidera", "cumbia pop"],
   vallenato: ["vallenato", "vallenato romantico"],
@@ -76,22 +76,22 @@ const GENRE_SYNONYMS: Record<string, string[]> = {
   tejano: ["tejano", "tex-mex"],
   boleros: ["bolero", "boleros"],
   pop_latino: ["pop latino", "latin pop", "latino"],
-  rock: ["rock", "alternative rock", "grunge", "classic rock", "hard rock"],
-  metal: ["metal", "heavy metal", "thrash metal", "death metal"],
-  indie_lofi: ["indie", "indie pop", "indie rock", "lo-fi", "lofi", "bedroom pop"],
+  rock: ["rock", "alternative rock", "grunge", "classic rock", "hard rock", "alternative", "alternativa", "alt rock", "rock and roll", "garage rock"],
+  metal: ["metal", "heavy metal", "thrash metal", "death metal", "metalcore", "black metal", "doom metal"],
+  indie_lofi: ["indie", "indie pop", "indie rock", "lo-fi", "lofi", "bedroom pop", "chillhop"],
   emo: ["emo", "emo pop", "screamo"],
   shoegaze_dreampop: ["shoegaze", "dream pop", "dreampop"],
-  pop: ["pop", "pop rock", "dance pop", "synth-pop"],
-  hip_hop_rap: ["hip hop", "hip-hop", "rap", "trap"],
+  pop: ["pop", "pop rock", "dance pop", "synth-pop", "electropop", "power pop", "teen pop"],
+  hip_hop_rap: ["hip hop", "hip-hop", "rap", "trap", "boom bap", "gangsta rap", "alternative rap", "alternative hip hop"],
   drill: ["drill", "uk drill", "brooklyn drill"],
-  rnb_soul: ["r&b", "rnb", "soul", "neo soul"],
-  electronica: ["electronic", "electronica", "edm", "synthwave"],
+  rnb_soul: ["r&b", "rnb", "soul", "neo soul", "contemporary rnb", "motown"],
+  electronica: ["electronic", "electronica", "edm", "synthwave", "dance", "electro", "idm"],
   house: ["house", "deep house", "tech house"],
   techno: ["techno", "minimal techno", "acid techno"],
   trance: ["trance", "progressive trance", "psytrance"],
   dubstep_bass: ["dubstep", "bass music", "drumstep"],
   drum_and_bass: ["drum and bass", "dnb", "jungle"],
-  jazz: ["jazz", "smooth jazz", "jazz fusion", "bebop"],
+  jazz: ["jazz", "smooth jazz", "jazz fusion", "bebop", "nu jazz"],
   blues: ["blues", "delta blues", "electric blues"],
   k_pop: ["k-pop", "kpop", "korean pop"],
   j_pop: ["j-pop", "jpop", "japanese pop"],
@@ -102,31 +102,52 @@ const GENRE_SYNONYMS: Record<string, string[]> = {
   bossa_nova_mpb: ["bossa nova", "mpb", "musica popular brasileira"],
   soca_calypso: ["soca", "calypso"],
   nordic_pop: ["nordic pop", "scandipop", "swedish pop"],
-  country_folk: ["country", "folk", "americana", "singer-songwriter"],
+  country_folk: ["country", "folk", "americana", "singer-songwriter", "folk rock", "indie folk", "singer/songwriter", "singer songwriter"],
   classical: ["classical", "orchestral", "soundtrack"],
   opera: ["opera", "aria"],
   flamenco: ["flamenco", "flamenco pop"],
   bluegrass: ["bluegrass", "old-time"],
   ambient_new_age: ["ambient", "new age", "meditation"],
-  funk_disco: ["funk", "disco", "boogie"],
+  funk_disco: ["funk", "disco", "boogie", "nu disco"],
   reggae: ["reggae", "dancehall", "dub", "ska"],
   afrobeats: ["afrobeats", "afropop", "amapiano"],
   highlife: ["highlife", "west african highlife"],
   celtic_irish: ["celtic", "irish folk", "irish traditional"],
   fado: ["fado", "fado portugues"],
   gospel_cristiana: ["gospel", "christian", "musica cristiana"],
-  punk: ["punk", "punk rock", "pop punk", "hardcore punk"],
+  punk: ["punk", "punk rock", "pop punk", "hardcore punk", "hardcore", "skate punk"],
 };
 
-// banda_norteno se revisa último (mismo orden que resolveCanonicalGenre en
-// src/lib/genres.ts) -- "regional mexicano" es un tag paraguas ambiguo.
+// GENERADO por scripts/sync-classify-genres.ts desde src/lib/genres.ts -- no editar a mano.
+// normalizeTag y resolveGenero son copia literal de ese archivo: minúsculas, NFD para que los
+// acentos caigan con el resto de lo no alfanumérico, y comparación EXACTA sobre el token
+// completo (con substring, "pop" matchearía k-pop, j-pop y pop punk). Partir por "/" no
+// afloja nada -- iTunes compone "Hip-Hop/Rap" donde cada mitad es una etiqueta entera.
+function normalizeTag(tag: string): string {
+  return tag.toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '');
+}
+
+const NORMALIZED_SYNONYMS: { key: string; tags: Set<string> }[] = Object.entries(GENRE_SYNONYMS).map(
+  ([key, tags]) => ({ key, tags: new Set(tags.map(normalizeTag)) }),
+);
+
+// banda_norteno se revisa último (mismo orden que resolveCanonicalGenre en src/lib/genres.ts)
+// -- "regional mexicano" es el cajón paraguas y solo debe ganar si nada más específico matcheó.
 function resolveGenero(tags: string[], itunesGenre: string | null): string | null {
-  const normalized = [itunesGenre, ...tags].filter((t): t is string => !!t).map((t) => t.toLowerCase().trim());
-  for (const [key, synonyms] of Object.entries(GENRE_SYNONYMS)) {
-    if (key === 'banda_norteno') continue;
-    if (synonyms.some((tag) => normalized.includes(tag))) return key;
+  const candidates = new Set<string>();
+  for (const raw of [itunesGenre, ...tags]) {
+    if (!raw) continue;
+    candidates.add(normalizeTag(raw));
+    if (raw.includes('/')) for (const part of raw.split('/')) candidates.add(normalizeTag(part));
   }
-  if (GENRE_SYNONYMS.banda_norteno.some((tag) => normalized.includes(tag))) return 'banda_norteno';
+  candidates.delete('');
+
+  for (const genre of NORMALIZED_SYNONYMS) {
+    if (genre.key === 'banda_norteno') continue;
+    for (const tag of genre.tags) if (candidates.has(tag)) return genre.key;
+  }
+  const banda = NORMALIZED_SYNONYMS.find((g) => g.key === 'banda_norteno');
+  if (banda) for (const tag of banda.tags) if (candidates.has(tag)) return 'banda_norteno';
   return null;
 }
 
