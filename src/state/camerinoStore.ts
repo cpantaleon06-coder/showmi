@@ -10,6 +10,7 @@ import {
   cosmeticById,
   levelForRatings,
 } from '../lib/cosmetics';
+import type { MascotShape } from '../components/camerino/Mascot';
 import { syncAcrossTabs } from './crossTabSync';
 
 type Equipped = Partial<Record<CosmeticSlot, string>>;
@@ -18,6 +19,16 @@ interface CamerinoState {
   /** Calificaciones acumuladas por categoría de género -- la única fuente de progreso. */
   ratingsByCategory: Partial<Record<GenreCategory, number>>;
   equipped: Equipped;
+  /**
+   * Cuál de las tres criaturas es la tuya (ver MascotShape en Mascot.tsx).
+   *
+   * Es una elección puramente estética y por eso NO se desbloquea con nivel: las tres están
+   * disponibles desde el primer minuto. Los cosméticos son la recompensa por usar la app; la
+   * forma es identidad, y hacer que alguien se gane su propio avatar sería cobrarle el peaje
+   * antes de dejarle entrar.
+   */
+  shape: MascotShape;
+  setShape: (shape: MascotShape) => void;
   /**
    * Suma una calificación a la categoría del género crudo del track. Cualquier rating de 1 a 5
    * cuenta igual: la regla de producto es "reseñó la canción", no "le gustó" -- calificar bajo
@@ -36,6 +47,8 @@ export const useCamerinoStore = create<CamerinoState>()(
     (set, get) => ({
       ratingsByCategory: {},
       equipped: {},
+      shape: 'circulo',
+      setShape: (shape) => set({ shape }),
       recordRating: (rawGenre) => {
         const category = categoryForRawGenre(rawGenre);
         if (!category) return; // género que no mapea a ninguna categoría: no se inventa progreso

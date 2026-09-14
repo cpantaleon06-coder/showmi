@@ -42,6 +42,7 @@ export function ProfileCrest({ colors, displayName }: ProfileCrestProps) {
   const { width } = useWindowDimensions();
   const equipped = useCamerinoStore((s) => s.equipped);
   const ratingsByCategory = useCamerinoStore((s) => s.ratingsByCategory);
+  const shape = useCamerinoStore((s) => s.shape);
   const isPremium = useSubscriptionStore((s) => s.isPremium);
 
   // Categoría dominante = la más calificada. Con empate gana la primera, que es estable
@@ -89,7 +90,7 @@ export function ProfileCrest({ colors, displayName }: ProfileCrestProps) {
       </View>
 
       <View style={[styles.mascotRing, { backgroundColor: colors.background, borderColor: colors.background }]}>
-        <Mascot equipped={visibleEquipped(equipped, isPremium)} size={84} />
+        <Mascot equipped={visibleEquipped(equipped, isPremium)} size={84} shape={shape} />
       </View>
 
       <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>

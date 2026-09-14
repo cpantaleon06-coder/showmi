@@ -17,11 +17,20 @@ import {
   levelForRatings,
   progressToNextLevel,
 } from '../src/lib/cosmetics';
-import { Mascot } from '../src/components/camerino/Mascot';
+import { MascotShape, Mascot } from '../src/components/camerino/Mascot';
 import { BackButton } from '../src/components/ui/BackButton';
 import { PageTransition } from '../src/components/ui/PageTransition';
 import { ThemeColors } from '../src/theme/colors';
 import { radii } from '../src/theme/radii';
+
+/** Nombres de cara al usuario. Descriptivos y no inventados ("Bloopy", "Triangulin"): son
+ *  tres formas, y nombrarlas por lo que son evita que alguien tenga que tocarlas para
+ *  entender cuál es cuál. */
+const SHAPE_OPTIONS: { shape: MascotShape; label: string }[] = [
+  { shape: 'circulo', label: 'Redonda' },
+  { shape: 'triangulo', label: 'Triangular' },
+  { shape: 'cuadrado', label: 'Cuadrada' },
+];
 
 function ProgressRow({ colors, label, ratings }: { colors: ThemeColors; label: string; ratings: number }) {
   const level = levelForRatings(ratings);
@@ -41,6 +50,48 @@ function ProgressRow({ colors, label, ratings }: { colors: ThemeColors; label: s
         <View style={[styles.fill, { width: `${pct * 100}%`, backgroundColor: colors.brand }]} />
       </View>
     </View>
+  );
+}
+
+/**
+ * Una de las tres criaturas para elegir. La miniatura es la MASCOTA DE VERDAD, no un ícono ni
+ * una silueta: es lo único que deja ver de antemano cómo te va a quedar, y ya existe como
+ * componente, así que dibujar un sustituto sería más trabajo para decir menos.
+ *
+ * Se muestra SIN los cosméticos equipados a propósito -- acá se elige la forma, y una corona
+ * puesta en las tres miniaturas taparía justo lo que hay que comparar.
+ */
+function ShapeCard({
+  colors,
+  shape,
+  label,
+  selected,
+  onPress,
+}: {
+  colors: ThemeColors;
+  shape: MascotShape;
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
+      accessibilityLabel={`Criatura ${label}`}
+      style={[
+        styles.shapeCard,
+        {
+          backgroundColor: colors.surface,
+          borderColor: selected ? colors.brand : colors.border,
+          borderWidth: selected ? 3 : 1.5,
+        },
+      ]}
+    >
+      <Mascot equipped={{}} size={72} shape={shape} />
+      <Text style={[styles.shapeLabel, { color: selected ? colors.brandText : colors.textSecondary }]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -98,6 +149,8 @@ export default function ClosetScreen() {
   const equipped = useCamerinoStore((s) => s.equipped);
   const toggleEquip = useCamerinoStore((s) => s.toggleEquip);
   const isUnlocked = useCamerinoStore((s) => s.isUnlocked);
+  const shape = useCamerinoStore((s) => s.shape);
+  const setShape = useCamerinoStore((s) => s.setShape);
 
   const shown = visibleEquipped(equipped, isPremium);
   const totalRatings = Object.values(ratingsByCategory).reduce((a, b) => a + (b ?? 0), 0);
@@ -114,10 +167,26 @@ export default function ClosetScreen() {
         <BackButton colors={colors} />
         <ScrollView contentContainerStyle={styles.content}>
           <View style={[styles.stage, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Mascot equipped={shown} size={180} />
+            <Mascot equipped={shown} size={180} shape={shape} />
           </View>
 
           <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Camerino</Text>
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>TU CRIATURA</Text>
+            <View style={styles.shapeRow}>
+              {SHAPE_OPTIONS.map((opt) => (
+                <ShapeCard
+                  key={opt.shape}
+                  colors={colors}
+                  shape={opt.shape}
+                  label={opt.label}
+                  selected={shape === opt.shape}
+                  onPress={() => setShape(opt.shape)}
+                />
+              ))}
+            </View>
+          </View>
 
           {totalRatings === 0 && (
             <Text style={[styles.note, { color: colors.textSecondary }]}>
@@ -172,6 +241,15 @@ export default function ClosetScreen() {
 }
 
 const styles = StyleSheet.create({
+  shapeRow: { flexDirection: 'row', gap: 10 },
+  shapeCard: {
+    flex: 1,
+    borderRadius: radii.card,
+    paddingVertical: 12,
+    alignItems: 'center',
+    gap: 4,
+  },
+  shapeLabel: { fontSize: 12, fontFamily: fonts.bodyBold },
   container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingBottom: 40, gap: 20 },
   stage: {
