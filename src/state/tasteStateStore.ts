@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { normalizeForMatch } from '../api/normalize';
+import { splitArtists } from '../api/normalize';
 import { CANONICAL_GENRES } from '../lib/genres';
 import { BetaParams, Candidate, UserState, registerSwipe, seedFromOnboarding } from '../lib/tasteEngine';
 import { syncAcrossTabs } from '../state/crossTabSync';
@@ -14,9 +14,9 @@ interface TasteState {
   /** Aplica un swipe real de inmediato: decay + intensity sobre lo que ya haya (o sobre el prior de arranque si es la primera vez) */
   registerLocalSwipe: (candidate: Candidate, liked: boolean, intensity?: number) => void;
   /** Siembra el taste_profile PERMANENTE desde las respuestas del onboarding -- a diferencia
-   *  del selector de sesión (efímero, nunca toca este store), esto sí persiste. Normaliza
-   *  los nombres de artista igual que trackToCandidate, para que la misma clave se refuerce
-   *  después cuando el usuario swipee ese artista de verdad. */
+   *  del selector de sesión (efímero, nunca toca este store), esto sí persiste. Parte y
+   *  normaliza los nombres de artista igual que trackToCandidate, para que la misma clave se
+   *  refuerce después cuando el usuario swipee ese artista de verdad. */
   seedFromOnboardingAnswers: (
     referenceArtists: string[],
     favoriteGenres: string[],
@@ -54,7 +54,10 @@ export const useTasteStateStore = create<TasteState>()(
       seedFromOnboardingAnswers: (referenceArtists, favoriteGenres, preferredVibe) =>
         set((current) => {
           const next = { ...current.state };
-          seedFromOnboarding(referenceArtists.map(normalizeForMatch), favoriteGenres, next, preferredVibe);
+          // flatMap, no map: `splitArtists` puede devolver varios nombres, y la siembra tiene
+          // que caer en el MISMO espacio de claves que los swipes (ver trackToCandidate).
+          const artistIds = referenceArtists.flatMap(splitArtists);
+          seedFromOnboarding(artistIds, favoriteGenres, next, preferredVibe);
           return { state: next };
         }),
     }),

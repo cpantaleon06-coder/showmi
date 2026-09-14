@@ -3,7 +3,7 @@ import { resolveEpoca } from '../lib/epocas';
 import { resolveCanonicalGenre } from '../lib/genres';
 import { resolveIdioma } from '../lib/idiomas';
 import { CatalogEntry } from './tasteEngineClient';
-import { normalizeForMatch } from './normalize';
+import { splitArtists } from './normalize';
 import { DeckAnchor, Track } from './types';
 
 /**
@@ -12,10 +12,13 @@ import { DeckAnchor, Track } from './types';
  *  - popularity: iTunes/Last.fm no la exponen. Se omite a propósito (Candidate.popularity
  *    es opcional) en vez de sintetizar un proxy — dimensionKeys() ya sabe saltarse esa
  *    dimensión cuando no viene.
- *  - artistIds: Track solo trae `artist: string` (nombre, no id estable). Se normaliza con
- *    normalizeForMatch (la misma utilidad que ya usa el matching iTunes<->Last.fm) para que
- *    variaciones de capitalización/acentos no generen claves de dimensión distintas para el
- *    mismo artista real.
+ *  - artistIds: Track solo trae `artist: string` (nombre, no id estable). Se parte con
+ *    `splitArtists` (normalize.ts), que separa las colaboraciones ("Feid & Young Miko" ->
+ *    dos claves) y normaliza cada nombre para que variaciones de capitalización/acentos no
+ *    generen claves de dimensión distintas para el mismo artista real. Hasta 2026-09-14 esto
+ *    era `[normalizeForMatch(track.artist)]`, o sea SIEMPRE un artista: cada colaboración
+ *    inventaba un artista falso ("feid young miko") y las invitadas con "feat." se perdían
+ *    del todo -- ver el comentario de `splitArtists`.
  *  - idioma/epoca: resueltos localmente vía `resolveIdioma`/`resolveEpoca` (idiomas.ts,
  *    epocas.ts) -- heurístico de texto y bucketing de década respectivamente, ninguno pega a
  *    red. Sin selector de sesión propio todavía (sessionFilterStore.ts solo tiene genre/vibe,
@@ -76,7 +79,7 @@ export function trackToCandidate(
 
   return {
     trackId: track.id,
-    artistIds: [normalizeForMatch(track.artist)],
+    artistIds: splitArtists(track.artist),
     releaseDate: track.releaseDate ?? '',
     genre: track.genre ?? undefined,
     vibe: resolvedVibe,
