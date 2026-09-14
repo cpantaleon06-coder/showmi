@@ -167,7 +167,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Latino',
     label: 'Salsa',
     emoji: '💃',
-    lastfmTagSynonyms: ['salsa', 'salsa romantica', 'salsa dura'],
+    lastfmTagSynonyms: ['salsa', 'salsa romantica', 'salsa dura', 'musica tropical', 'salsa y tropical', 'tropical'],
   },
   {
     key: 'bachata',
@@ -272,7 +272,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Pop/Urbano',
     label: 'Hip-Hop/Rap',
     emoji: '🎙️',
-    lastfmTagSynonyms: ['hip hop', 'hip-hop', 'rap', 'trap', 'boom bap', 'gangsta rap'],
+    lastfmTagSynonyms: ['hip hop', 'hip-hop', 'rap', 'trap', 'boom bap', 'gangsta rap', 'alternative rap', 'alternative hip hop'],
   },
   {
     key: 'drill',
@@ -415,7 +415,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Raíces',
     label: 'Country/Folk',
     emoji: '🪕',
-    lastfmTagSynonyms: ['country', 'folk', 'americana', 'singer-songwriter', 'folk rock', 'indie folk'],
+    lastfmTagSynonyms: ['country', 'folk', 'americana', 'singer-songwriter', 'folk rock', 'indie folk', 'singer/songwriter', 'singer songwriter'],
   },
   {
     key: 'classical',
