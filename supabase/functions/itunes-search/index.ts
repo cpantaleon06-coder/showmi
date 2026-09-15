@@ -182,7 +182,16 @@ serve(async (req) => {
   }
 
   const limit = Math.min(Math.max(body.limit ?? 3, 1), 25);
-  const rawQueries = (body.queries ?? []).filter((q) => q && q.artist && q.title);
+  // Tope de la LISTA, no solo de las búsquedas frescas. MAX_FRESH_LOOKUPS ya acota lo que se
+  // le pide a iTunes, pero antes de llegar ahí esta función deduplica en un Set y consulta el
+  // caché con un `in (...)` de todas las claves: mandar 50 000 queries en un POST era memoria
+  // y presión sobre la base gratis, sin tocar la cuota de iTunes ni una vez.
+  //
+  // 200 es holgado contra el uso real: el deck pide ~40 por armado (ver rankPool en
+  // useDeck.ts). Lo que sobra se recorta en silencio en vez de rechazar la petición entera --
+  // un cliente legítimo nunca llega acá, y a uno abusivo no se le debe una explicación.
+  const MAX_QUERIES = 200;
+  const rawQueries = (body.queries ?? []).slice(0, MAX_QUERIES).filter((q) => q && q.artist && q.title);
   if (rawQueries.length === 0) {
     return new Response(JSON.stringify({ error: 'queries es requerido y no puede venir vacío' }), {
       status: 400,

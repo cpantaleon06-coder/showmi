@@ -264,10 +264,33 @@ const CORS_HEADERS = {
 
 const BATCH_SIZE = 50;
 
+/**
+ * Este job es SOLO para pg_cron. Ningún cliente tiene por qué invocarlo.
+ *
+ * El JWT que manda el cron es la anon key, que viaja dentro de la app, así que `verify_jwt`
+ * por sí solo no distingue al cron de nadie más. Este header compartido sí.
+ *
+ * Falla CERRADO solo cuando el secreto ESTÁ configurado. Es a propósito, para poder desplegar
+ * este código antes de tocar el cron sin dejar el job caído en el medio: mientras CRON_SECRET
+ * no exista, el comportamiento es idéntico al de antes.
+ */
+function cronSecretRechaza(req: Request): Response | null {
+  const expected = Deno.env.get('CRON_SECRET');
+  if (!expected) return null;
+  if (req.headers.get('x-cron-secret') === expected) return null;
+  return new Response(JSON.stringify({ error: 'No autorizado' }), {
+    status: 403,
+    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+  });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS });
   }
+
+  const rechazo = cronSecretRechaza(req);
+  if (rechazo) return rechazo;
 
   const lastfmKey = Deno.env.get('LASTFM_API_KEY');
   const supabaseUrl = Deno.env.get('SUPABASE_URL');

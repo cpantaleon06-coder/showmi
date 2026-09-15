@@ -41,3 +41,6 @@ yarn-error.*
 /ios
 /android
 supabase/.temp/
+
+# Notas y SQL que no deben vivir en un repo publico
+local/
