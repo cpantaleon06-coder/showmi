@@ -44,7 +44,3 @@ supabase/.temp/
 
 # Notas y SQL que no deben vivir en un repo publico
 local/
-
-# Config local del entorno de desarrollo, no del proyecto
-.claude/
-CLAUDE.md
