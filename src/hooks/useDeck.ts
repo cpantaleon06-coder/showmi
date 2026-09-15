@@ -117,10 +117,16 @@ async function fetchRawSuggestions(anchor: DeckAnchor, genre?: CanonicalGenre | 
  *
  * 40 x 3 da hasta 120 candidatos crudos -- medido, el pool real ronda 85-90 tras deduplicar,
  * holgado sobre MIN_POOL_SIZE (25 desde 2026-09-12, ver deckPipeline.ts).
- * Con el caché compartido (ver abajo) el techo ya no lo pone la cuota de iTunes sino el costo
- * de lo que viene DESPUÉS: rankPool pide los tags de Last.fm de cada track del pool con una
- * llamada por track (ver fetchTopTagsByTrackId), así que agrandar el pool acá multiplica ESE
- * tráfico. Subirlo tiene sentido recién cuando esa parte también vaya en batch.
+ * Con el caché compartido (ver abajo) el techo ya no lo pone la cuota de iTunes. Este
+ * comentario decía hasta 2026-09-15 que tampoco se podía subir porque rankPool pedía los tags
+ * de Last.fm "con una llamada por track": eso YA NO ES CIERTO -- fetchTopTagsByTrackId usa
+ * getTrackTopTagsBatch, que es UNA sola petición a lastfm-track-tags para todo el pool. Un
+ * comentario viejo que prohíbe algo que ya se puede hacer cuesta más que no tener comentario.
+ *
+ * El límite real que queda es el tope de 120 queries por lote de lastfm-track-tags: pasado
+ * eso, los tracks sobrantes se quedan sin tags (no revientan -- las dos puntas normalizan el
+ * largo -- pero se rankean peor). Con el pool real en 85-90 tras deduplicar hay margen, y
+ * subir de 40 acá exigiría subir también ese tope.
  */
 const RAW_POOL_SEARCH_LIMIT = 40;
 const CANDIDATES_PER_SEARCH = 3;
