@@ -19,6 +19,7 @@ import { fonts } from '../../src/theme/typography';
 import { useAuthStore } from '../../src/state/authStore';
 import { useSubscriptionStore } from '../../src/state/subscriptionStore';
 import { areAdsSupportedOnThisPlatform } from '../../src/lib/ads';
+import { CANONICAL_GENRES } from '../../src/lib/genres';
 import { VIBES } from '../../src/lib/vibes';
 import { resolveStoredTrackId } from '../../src/api/itunes';
 import { fetchTopSets, registerVibeVoteRemote } from '../../src/api/tasteEngineClient';
@@ -181,6 +182,21 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
   );
 }
 
+/**
+ * El canal viene de `posts.genre_tag`. Desde 2026-09-14 eso es la clave canónica
+ * ("reggaeton"), así que se muestra con su etiqueta y su emoji, igual que en el onboarding y
+ * en el Perfil.
+ *
+ * Los posts ANTERIORES a ese cambio guardaron el string crudo de iTunes ("Urbano latino",
+ * "Música tropical") y no se pueden reescribir desde el cliente -- RLS solo deja tocar los
+ * posts propios. Esos caen al `?? tag` y se siguen viendo tal cual: un canal de menos que se
+ * ve raro es mejor que uno que desaparece de la barra y deja sus posts inalcanzables.
+ */
+function channelLabel(tag: string): string {
+  const def = CANONICAL_GENRES.find((g) => g.key === tag);
+  return def ? `${def.emoji} ${def.label}` : tag;
+}
+
 export default function FeedScreen() {
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
@@ -242,7 +258,13 @@ export default function FeedScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.noGrow} contentContainerStyle={styles.channelRow}>
         <GradientChip colors={colors} label="Para ti" selected={channel === FOR_YOU} onPress={() => setChannel(FOR_YOU)} />
         {(channelsQuery.data ?? []).map((c) => (
-          <GradientChip key={c.genreTag} colors={colors} label={c.genreTag} selected={channel === c.genreTag} onPress={() => setChannel(c.genreTag)} />
+          <GradientChip
+            key={c.genreTag}
+            colors={colors}
+            label={channelLabel(c.genreTag)}
+            selected={channel === c.genreTag}
+            onPress={() => setChannel(c.genreTag)}
+          />
         ))}
       </ScrollView>
 

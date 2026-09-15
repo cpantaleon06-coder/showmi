@@ -69,7 +69,18 @@ export const usePostStore = create<PostState>()(
         }
 
         registerSwipeRemote(track.id, liked, intensity, dimensionKeys(candidate)).catch(() => {});
-        createRemotePost(track.id, rating, track.genre).catch(() => {});
+        // El género CANÓNICO, no `track.genre` crudo (bug encontrado 2026-09-14). Es el mismo
+        // choque de espacios de claves que ya se arregló en el motor de gustos, sobreviviendo
+        // en el Feed: `posts.genre_tag` guardaba el string de iTunes ("Latin", "Urbano
+        // latino", "Música tropical") mientras el canal "Para ti" filtra con las claves
+        // canónicas del taste_profile (`genero:reggaeton` -> "reggaeton"). Nunca cruzaban, así
+        // que "Para ti" NO devolvía nada jamás y caía siempre al feed global -- personalizado
+        // en apariencia, idéntico para todo el mundo en la práctica.
+        //
+        // Se toma de `candidate`, no de `track.genero`: `trackToCandidate` ya resolvió arriba
+        // con el catálogo server-side y los tags de Last.fm, que es exactamente la misma
+        // resolución con la que se escribieron las claves `genero:` contra las que se compara.
+        createRemotePost(track.id, rating, candidate.genero ?? null).catch(() => {});
 
         // Progreso del Camerino (antes un TODO, construido 2026-09-01): cualquier rating de
         // 1 a 5 cuenta igual como "reseñó la canción", sin importar qué tan alta o baja sea
