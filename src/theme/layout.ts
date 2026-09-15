@@ -32,10 +32,11 @@ export function floatingTabBarStyle(surfaceColor: string) {
     borderRadius: 22,
     backgroundColor: surfaceColor,
     borderTopWidth: 0,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    // boxShadow y no el cuarteto shadowColor/Offset/Opacity/Radius + elevation: RN 0.76+
+    // los marca deprecados y con la nueva arquitectura (newArchEnabled, ver app.json)
+    // boxShadow renderiza en iOS y Android igual que en web, así que es UNA declaración en
+    // vez de cinco. `elevation` se quita, no se conserva: con boxShadow ya soportado en
+    // Android, dejarlo pintaría una segunda sombra encima.
+    boxShadow: '0px 6px 12px rgba(0, 0, 0, 0.15)',
   };
 }

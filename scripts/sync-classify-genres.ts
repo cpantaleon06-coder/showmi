@@ -11,7 +11,7 @@
  *
  * Uso:  npx tsx scripts/sync-classify-genres.ts
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'fs';
 
 import { CANONICAL_GENRES } from '../src/lib/genres';
 

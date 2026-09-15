@@ -5,7 +5,11 @@
   },
   "exclude": [
     "node_modules",
-    "supabase/functions"
+    // Otro runtime, no la app: Deno (Edge Functions) y Node (scripts de operación, que se
+    // corren a mano con tsx). Sus globals no existen en el bundle de React Native, así que
+    // chequearlos contra esta configuración solo produce errores falsos.
+    "supabase/functions",
+    "scripts"
   ],
   "include": [
     "**/*.ts",

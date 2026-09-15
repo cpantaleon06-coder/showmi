@@ -4,8 +4,7 @@ import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { Mascot } from '../camerino/Mascot';
 import { useCamerinoStore, visibleEquipped } from '../../state/camerinoStore';
 import { useSubscriptionStore } from '../../state/subscriptionStore';
-import { GenreCategory } from '../../lib/cosmetics';
-import { MAX_LEVEL, levelForRatings, progressToNextLevel } from '../../lib/cosmetics';
+import { GenreCategory, MAX_LEVEL, levelForRatings, progressToNextLevel } from '../../lib/cosmetics';
 import { ThemeColors } from '../../theme/colors';
 import { fonts } from '../../theme/typography';
 

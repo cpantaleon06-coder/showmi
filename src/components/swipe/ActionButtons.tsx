@@ -53,12 +53,10 @@ export function ActionButtons({ colors, accentColor, onPass, onLike, onHeard }: 
   );
 }
 
+/** Ver la nota de floatingTabBarStyle en src/theme/layout.ts: boxShadow reemplaza al cuarteto
+ *  shadow* + elevation, deprecado desde RN 0.76. */
 const shadow = {
-  shadowColor: '#000000',
-  shadowOffset: { width: 0, height: 3 },
-  shadowOpacity: 0.18,
-  shadowRadius: 6,
-  elevation: 4,
+  boxShadow: '0px 3px 6px rgba(0, 0, 0, 0.18)',
 };
 
 const styles = StyleSheet.create({
