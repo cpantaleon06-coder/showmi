@@ -165,7 +165,7 @@ export default function AuthScreen() {
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             {mode === 'upgrade'
-              ? 'Convierte tu cuenta de invitado en una cuenta real -- no pierdes nada de lo que ya swipeaste.'
+              ? 'Convierte tu cuenta de invitado en una cuenta real — no pierdes nada de lo que ya swipeaste.'
               : 'Entra a una cuenta que ya tienes de otro dispositivo. Esto reemplaza tu sesión de invitado actual.'}
           </Text>
 

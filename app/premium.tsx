@@ -75,7 +75,7 @@ const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = 
   {
     icon: InfinityIcon,
     title: 'Swipes ilimitados',
-    description: `Sin el tope de ${DAILY_FREE_SWIPE_LIMIT} diarios -- descubre a tu ritmo.`,
+    description: `Sin el tope de ${DAILY_FREE_SWIPE_LIMIT} diarios — descubre a tu ritmo.`,
   },
   {
     icon: CrownIcon,
@@ -85,12 +85,12 @@ const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = 
   {
     icon: TShirtIcon,
     title: 'Cosméticos del Camerino',
-    description: 'Corona, lentes dorados y estrellas. Los ves antes de pagar -- nunca son aleatorios.',
+    description: 'Corona, lentes dorados y estrellas. Los ves antes de pagar — nunca son aleatorios.',
   },
   {
     icon: ProhibitIcon,
     title: 'Sin anuncios',
-    description: 'Ni en el deck ni en el Feed -- solo música y gente real.',
+    description: 'Ni en el deck ni en el Feed — solo música y gente real.',
   },
 ];
 
@@ -296,18 +296,18 @@ export default function PremiumScreen() {
             {isPremium ? (
               <View style={styles.activeBanner}>
                 <CheckIcon weight="bold" size={18} color={GOLD} />
-                <Text style={styles.activeBannerText}>Ya tienes Showmi More -- gracias por tu apoyo.</Text>
+                <Text style={styles.activeBannerText}>Ya tienes Showmi More — gracias por tu apoyo.</Text>
               </View>
             ) : null}
 
             {!isPremium && (
               <>
                 {!isRevenueCatConfigured() ? (
-                  <Text style={styles.note}>Los planes todavía se están configurando -- vuelve pronto.</Text>
+                  <Text style={styles.note}>Los planes todavía se están configurando — vuelve pronto.</Text>
                 ) : offeringQuery.isLoading ? (
                   <ActivityIndicator color={GOLD} size="small" style={styles.loading} />
                 ) : packages.length === 0 ? (
-                  <Text style={styles.note}>No hay planes disponibles todavía -- vuelve pronto.</Text>
+                  <Text style={styles.note}>No hay planes disponibles todavía — vuelve pronto.</Text>
                 ) : (
                   <View style={styles.planCard}>
                     {packages.map((pkg, i) => (

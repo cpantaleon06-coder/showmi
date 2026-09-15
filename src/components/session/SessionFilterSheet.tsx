@@ -67,7 +67,7 @@ export function SessionFilterSheet({ colors, onDone }: SessionFilterSheetProps) 
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>{greeting}</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Elige vibra y/o género para esta sesión -- puedes omitirlo.
+          Elige vibra y/o género para esta sesión — puedes omitirlo.
         </Text>
 
         <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Vibra</Text>

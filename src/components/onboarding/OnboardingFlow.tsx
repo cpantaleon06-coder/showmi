@@ -250,7 +250,7 @@ export function OnboardingFlow({
         {step === 'genres' && (
           <>
             <Text style={[styles.title, { color: colors.textPrimary }]}>¿Qué géneros te laten?</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Elige los que quieras -- al menos uno.</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Elige los que quieras — al menos uno.</Text>
             <CategorizedChipPicker
               colors={colors}
               items={CANONICAL_GENRES}
@@ -264,7 +264,7 @@ export function OnboardingFlow({
         {step === 'artists' && (
           <>
             <Text style={[styles.title, { color: colors.textPrimary }]}>¿Algún artista de referencia?</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Opcional -- según los géneros que ya elegiste.</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Opcional — según los géneros que ya elegiste.</Text>
             <View style={styles.chipWrap}>
               {candidateArtists.map((a) => (
                 <GradientChip key={a} colors={colors} label={a} selected={artists.includes(a)} onPress={() => toggleArtist(a)} />
@@ -276,7 +276,7 @@ export function OnboardingFlow({
         {step === 'vibe' && (
           <>
             <Text style={[styles.title, { color: colors.textPrimary }]}>¿Con qué ánimo vienes casi siempre?</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Opcional -- puedes cambiarlo por sesión más adelante.</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Opcional — puedes cambiarlo por sesión más adelante.</Text>
             <CategorizedChipPicker
               colors={colors}
               items={VIBES}
@@ -291,7 +291,7 @@ export function OnboardingFlow({
           <>
             <Text style={[styles.title, { color: colors.textPrimary }]}>¿Una canción que ya sabes que te gusta?</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Opcional -- la usamos para armar tu primer deck ("dame más como esta").
+              Opcional — la usamos para armar tu primer deck (“dame más como esta”).
             </Text>
             {editMode && !anchor && initialAnswers?.anchorArtist && (
               <Text

@@ -26,6 +26,7 @@ import { useSubscriptionStore } from '../src/state/subscriptionStore';
 import { signOut } from '../src/api/authClient';
 import { fetchTopSets } from '../src/api/tasteEngineClient';
 import { VIBES } from '../src/lib/vibes';
+import { CANONICAL_GENRES } from '../src/lib/genres';
 import { ProfileCrest } from '../src/components/profile/ProfileCrest';
 import { BackButton } from '../src/components/ui/BackButton';
 import { PageTransition } from '../src/components/ui/PageTransition';
@@ -267,9 +268,23 @@ export default function ProfileScreen() {
             <>
               {(genresQuery.data?.length ?? 0) > 0 && (
                 <StatSection colors={colors} title="Géneros favoritos">
-                  {genresQuery.data!.map((g) => (
-                    <StatChip key={g.dimKey} colors={colors} label={g.dimKey.replace('genero:', '')} count={g.likedCount} />
-                  ))}
+                  {genresQuery.data!.map((g) => {
+                    // La clave canónica cruda ("reggaeton", "hip_hop_rap") es un identificador
+                    // interno, no una etiqueta: se mostraba tal cual, en minúsculas, sin acento
+                    // y con guiones bajos, mientras el MISMO género sale como "🎧 Reggaetón" en
+                    // el onboarding y en el selector de sesión. Se resuelve contra la taxonomía
+                    // igual que la fila de vibras justo abajo.
+                    const key = g.dimKey.replace('genero:', '');
+                    const def = CANONICAL_GENRES.find((x) => x.key === key);
+                    return (
+                      <StatChip
+                        key={g.dimKey}
+                        colors={colors}
+                        label={def ? `${def.emoji} ${def.label}` : key}
+                        count={g.likedCount}
+                      />
+                    );
+                  })}
                 </StatSection>
               )}
               {(artistsQuery.data?.length ?? 0) > 0 && (

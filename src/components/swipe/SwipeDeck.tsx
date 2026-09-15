@@ -283,7 +283,7 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
         <View style={[styles.center, { backgroundColor: colors.background }]}>
           <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>Se acabaron las tarjetas</Text>
           <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-            Vuelve más tarde o busca "dame más como esta" desde tu Biblioteca.
+            Vuelve más tarde o busca “dame más como esta” desde tu Biblioteca.
           </Text>
           <Text
             style={[styles.retry, { color: colors.brandText }]}
