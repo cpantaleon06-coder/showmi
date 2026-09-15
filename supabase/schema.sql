@@ -59,12 +59,28 @@ create policy "propios swipes insert" on swipes for insert with check (auth.uid(
 -- directos): solo se lee/escribe a través de funciones security definer de abajo, nunca
 -- directo desde el cliente.
 
+-- Aplica el tope diario del tier gratuito del lado del servidor (el cliente lo enseña como
+-- paywall antes de llegar aca; esto es el respaldo autoritativo). 50 debe calzar con
+-- DAILY_FREE_SWIPE_LIMIT en src/state/subscriptionStore.ts. Cuenta por dia UTC.
 create or replace function register_swipe(
   p_track_id text, p_liked boolean, p_intensity real, p_dimensions jsonb
 ) returns uuid
 language plpgsql security definer set search_path = public as $$
-declare v_swipe_id uuid;
+declare
+  v_swipe_id uuid;
+  v_is_premium boolean;
+  v_hoy int;
 begin
+  select es_premium into v_is_premium from users where id = auth.uid();
+  if not coalesce(v_is_premium, false) then
+    select count(*) into v_hoy
+    from swipes
+    where user_id = auth.uid() and created_at >= date_trunc('day', now());
+    if v_hoy >= 50 then
+      raise exception 'daily_swipe_limit_reached'
+        using errcode = 'check_violation', hint = 'Free tier: 50/dia. Showmi More lo quita.';
+    end if;
+  end if;
   insert into swipes (user_id, track_id, liked, intensity)
   values (auth.uid(), p_track_id, p_liked, p_intensity)
   returning id into v_swipe_id;
