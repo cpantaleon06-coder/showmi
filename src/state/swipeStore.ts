@@ -21,6 +21,28 @@ interface SwipeState {
   currentIndex: number;
   history: SwipeRecord[];
   advance: (track: Track, direction: SwipeDirection) => void;
+  /**
+   * Deshace el ÚLTIMO swipe y devuelve el registro para que quien llama revierta lo que
+   * ocurrió fuera de este store (la canción guardada en la colección, el cupo del día).
+   * Devuelve null si no hay nada que deshacer.
+   *
+   * Qué revierte y qué NO, a propósito:
+   *
+   *   SÍ: la posición en el deck (vuelve la carta), el historial, y -- vía quien llama -- la
+   *   entrada en la Biblioteca y el swipe descontado del tope diario. O sea, todo lo que la
+   *   persona ve y controla.
+   *
+   *   NO: lo que el swipe le enseñó al motor de gustos ni al árbol de sesión. No es pereza:
+   *   `registerSwipe` aplica DECAY sobre el alpha/beta que ya había antes de sumar la
+   *   observación nueva, así que no existe una inversa exacta -- y aplicar la observación
+   *   contraria le enseñaría algo FALSO, que es peor que dejar una señal ligeramente
+   *   equivocada. Esa señal se diluye sola (half-life ~23 swipes sobre la misma clave, ver
+   *   DECAY en tasteEngine.ts).
+   *
+   *   NO: la fila del ledger remoto. Es el agregado colectivo del que salen los priors; una
+   *   fila de más ahí es ruido de fondo, y borrarla exigiría una RPC nueva.
+   */
+  undo: () => SwipeRecord | null;
   reanchor: (anchor: DeckAnchor) => void;
   /** Vuelve al pool mixto de siempre -- usado cuando se quita el chip de género de sesión. */
   clearAnchor: () => void;
@@ -93,6 +115,13 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
     // sus propios errores (los loggea), el .catch acá es solo para cualquier rechazo
     // inesperado (ej. sin red) que no haya pasado por ese manejo interno.
     registerSwipeRemote(track.id, liked, intensity, dimensionKeys(candidate)).catch(() => {});
+  },
+  undo: () => {
+    const { history, currentIndex } = get();
+    if (history.length === 0 || currentIndex === 0) return null;
+    const ultimo = history[history.length - 1];
+    set({ currentIndex: currentIndex - 1, history: history.slice(0, -1) });
+    return ultimo;
   },
   reanchor: (anchor) => set({ anchor, currentIndex: 0, history: [] }),
   clearAnchor: () => set({ anchor: null, currentIndex: 0, history: [] }),

@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { HeartIcon, UploadSimpleIcon, XIcon } from 'phosphor-react-native';
+import { ArrowUUpLeftIcon, HeartIcon, UploadSimpleIcon, XIcon } from 'phosphor-react-native';
 
 import { ThemeColors } from '../../theme/colors';
 import { FLOATING_TAB_BAR_CLEARANCE } from '../../theme/layout';
@@ -12,6 +12,10 @@ interface ActionButtonsProps {
   onPass: () => void;
   onLike: () => void;
   onHeard: () => void;
+  /** Deshacer el último swipe. */
+  onUndo: () => void;
+  /** Sin nada que deshacer, el botón se queda pero apagado -- ver la nota del componente. */
+  puedeDeshacer: boolean;
 }
 
 /**
@@ -23,11 +27,44 @@ interface ActionButtonsProps {
  * Pasar = X, Guardar = corazón, Ya la escuché = ícono de upload (nunca
  * texto, tal como se pidió).
  */
-export function ActionButtons({ colors, accentColor, onPass, onLike, onHeard }: ActionButtonsProps) {
+export function ActionButtons({
+  colors,
+  accentColor,
+  onPass,
+  onLike,
+  onHeard,
+  onUndo,
+  puedeDeshacer,
+}: ActionButtonsProps) {
   return (
     <View style={styles.row}>
+      {/* Deshacer va PRIMERO y es el más chico: es una salida, no una acción del juego, y
+          tenerlo al lado de la X evita que la mano tenga que viajar tras un toque
+          accidental -- que es justo cuando se necesita.
+
+          Se renderiza SIEMPRE, apagado cuando no hay nada que deshacer, en vez de aparecer y
+          desaparecer: montarlo a mitad de partida correría los otros tres botones justo
+          debajo del dedo que acaba de swipear. */}
+      <Pressable
+        onPress={onUndo}
+        disabled={!puedeDeshacer}
+        accessibilityRole="button"
+        accessibilityLabel="Deshacer el último swipe"
+        accessibilityState={{ disabled: !puedeDeshacer }}
+        style={[
+          styles.circle,
+          styles.undoCircle,
+          { backgroundColor: colors.surface, opacity: puedeDeshacer ? 1 : 0.35 },
+        ]}
+        hitSlop={8}
+      >
+        <ArrowUUpLeftIcon weight="bold" size={20} color={colors.textSecondary} />
+      </Pressable>
+
       <Pressable
         onPress={onPass}
+        accessibilityRole="button"
+        accessibilityLabel="Pasar"
         style={[styles.circle, styles.sideCircle, { backgroundColor: colors.surface }]}
         hitSlop={8}
       >
@@ -36,6 +73,8 @@ export function ActionButtons({ colors, accentColor, onPass, onLike, onHeard }: 
 
       <Pressable
         onPress={onHeard}
+        accessibilityRole="button"
+        accessibilityLabel="Ya la escuché"
         style={[styles.circle, styles.centerCircle, { backgroundColor: colors.surface }]}
         hitSlop={8}
       >
@@ -44,6 +83,8 @@ export function ActionButtons({ colors, accentColor, onPass, onLike, onHeard }: 
 
       <Pressable
         onPress={onLike}
+        accessibilityRole="button"
+        accessibilityLabel="Guardar"
         style={[styles.circle, styles.sideCircle, { backgroundColor: colors.surface }]}
         hitSlop={8}
       >
@@ -64,7 +105,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 22,
+    gap: 16,
     paddingHorizontal: 20,
     // La isla flotante (position: absolute) no reserva su propio espacio en el layout --
     // sin este colchón, estos botones quedaban literalmente tapados detrás de ella.
@@ -84,5 +125,9 @@ const styles = StyleSheet.create({
   centerCircle: {
     width: 50,
     height: 50,
+  },
+  undoCircle: {
+    width: 44,
+    height: 44,
   },
 });

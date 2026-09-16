@@ -71,6 +71,10 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
   const setResolvedAnchor = useSwipeStore((s) => s.setResolvedAnchor);
   const resetIndex = useSwipeStore((s) => s.resetIndex);
   const addToCollection = useLibraryStore((s) => s.addToCollection);
+  const removeFromCollection = useLibraryStore((s) => s.removeFromCollection);
+  const undo = useSwipeStore((s) => s.undo);
+  const puedeDeshacer = useSwipeStore((s) => s.history.length > 0 && s.currentIndex > 0);
+  const refundFreeSwipe = useSubscriptionStore((s) => s.refundFreeSwipe);
   const rateTrack = usePostStore((s) => s.rateTrack);
   const canSwipe = useSubscriptionStore((s) => s.hasFreeSwipesLeft());
   const consumeFreeSwipe = useSubscriptionStore((s) => s.consumeFreeSwipe);
@@ -143,6 +147,35 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
     },
     [advance, addToCollection, consumeFreeSwipe]
   );
+
+  /**
+   * Deshacer el último swipe (2026-09-16, pedido del usuario: "es molesto si lo presionas por
+   * accidente").
+   *
+   * Revierte lo que la persona VE: la carta vuelve, la canción sale de la colección donde
+   * había caído, y el swipe se le devuelve al cupo diario. Lo que le enseñó al motor de gustos
+   * NO se revierte -- ver la nota larga en swipeStore.undo: no hay inversa exacta y enseñar lo
+   * contrario sería peor que dejar una señal que se diluye sola.
+   *
+   * Vive acá y no dentro del store porque la colección y el cupo son de OTROS stores; el store
+   * de swipe devuelve el registro y quien orquesta es esta pantalla, que es la que sabe qué
+   * hizo con él.
+   */
+  const handleUndo = useCallback(() => {
+    const registro = undo();
+    if (!registro) return;
+
+    // Cada dirección dejó la canción en una colección distinta (ver handleSwiped).
+    if (registro.direction === 'right') {
+      removeFromCollection('para_escuchar', registro.track.id);
+    } else if (registro.direction === 'up') {
+      removeFromCollection('escuchadas', registro.track.id);
+    }
+    refundFreeSwipe();
+    // Si el sheet de estrellas seguía abierto por ESA canción, se cierra: ya no hay swipe que
+    // calificar. Si era de otra, se respeta.
+    setPendingRating((actual) => (actual && actual.id === registro.track.id ? null : actual));
+  }, [undo, removeFromCollection, refundFreeSwipe]);
 
   const handleRate = useCallback(
     (rating: StarRating) => {
@@ -357,6 +390,8 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
             onPass={() => triggerSwipe(topTrack, 'left')}
             onLike={() => triggerSwipe(topTrack, 'right')}
             onHeard={() => triggerSwipe(topTrack, 'up')}
+            onUndo={handleUndo}
+            puedeDeshacer={puedeDeshacer}
           />
         </View>
       );

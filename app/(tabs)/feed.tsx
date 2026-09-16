@@ -16,6 +16,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useThemeStore } from '../../src/theme/useThemeStore';
 import { fonts } from '../../src/theme/typography';
+import { readableOn } from '../../src/theme/contrast';
 import { useAuthStore } from '../../src/state/authStore';
 import { useSubscriptionStore } from '../../src/state/subscriptionStore';
 import { areAdsSupportedOnThisPlatform } from '../../src/lib/ads';
@@ -130,7 +131,9 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
         )}
         {post.isPremium && !post.isOfficial && (
           <View style={[styles.premiumBadge, { backgroundColor: colors.premiumAccent }]}>
-            <CrownIcon weight="fill" size={12} color={colors.premiumAccent} />
+            {/* Medido contra el relleno: la insignia paso de contorno dorado a dorado macizo,
+                y una corona dorada encima de dorado no se ve. */}
+            <CrownIcon weight="fill" size={12} color={readableOn(colors.premiumAccent)} />
           </View>
         )}
       </View>

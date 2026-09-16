@@ -239,10 +239,10 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
       {isActive && (
         <>
           <Animated.View style={[styles.badge, styles.likeBadge, { backgroundColor: colors.like }, likeOpacity]}>
-            <HeartIcon weight="fill" size={26} color={colors.like} />
+            <HeartIcon weight="fill" size={26} color="#FFFFFF" />
           </Animated.View>
           <Animated.View style={[styles.badge, styles.passBadge, { backgroundColor: colors.pass }, passOpacity]}>
-            <XIcon weight="fill" size={26} color={colors.pass} />
+            <XIcon weight="fill" size={26} color="#FFFFFF" />
           </Animated.View>
           <Animated.View
             style={[styles.badge, styles.heardBadge, { backgroundColor: accentColor }, heardOpacity]}

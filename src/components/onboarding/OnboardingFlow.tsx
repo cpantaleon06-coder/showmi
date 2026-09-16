@@ -18,6 +18,7 @@ import { ThemeColors } from '../../theme/colors';
 import { useThemeStore } from '../../theme/useThemeStore';
 import { HalftoneWaveBackground } from '../backgrounds/HalftoneWaveBackground';
 import { fonts } from '../../theme/typography';
+import { readableOn } from '../../theme/contrast';
 import { FLOATING_TAB_BAR_CLEARANCE } from '../../theme/layout';
 import { CANONICAL_GENRES, CanonicalGenre, GENRE_CATEGORY_ORDER } from '../../lib/genres';
 import { VIBES, VIBE_CATEGORY_ORDER, VibeKey } from '../../lib/vibes';
@@ -316,7 +317,13 @@ export function OnboardingFlow({
                 ]}
               />
               <Pressable onPress={runSearch} style={[styles.searchButton, { backgroundColor: colors.brand }]} hitSlop={8}>
-                {searching ? <ActivityIndicator color={colors.brandText} size="small" /> : <Text style={[styles.searchButtonText, { color: colors.brandText }]}>Buscar</Text>}
+                {searching ? (
+                  <ActivityIndicator color={readableOn(colors.brand)} size="small" />
+                ) : (
+                  // `brandText` es el rojo legible sobre el FONDO, no sobre el rojo. Desde que
+                  // este boton se rellena de marca, el color se mide contra ese relleno.
+                  <Text style={[styles.searchButtonText, { color: readableOn(colors.brand) }]}>Buscar</Text>
+                )}
               </Pressable>
             </View>
             {anchorResults.map((track) => (
@@ -332,10 +339,22 @@ export function OnboardingFlow({
               >
                 <Image source={{ uri: track.artworkUrl }} style={styles.resultArtwork} contentFit="cover" />
                 <View style={styles.resultText}>
-                  <Text style={[styles.resultTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                  <Text
+                    style={[
+                      styles.resultTitle,
+                      { color: anchor?.id === track.id ? readableOn(colors.brand) : colors.textPrimary },
+                    ]}
+                    numberOfLines={1}
+                  >
                     {track.title}
                   </Text>
-                  <Text style={[styles.resultArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+                  <Text
+                    style={[
+                      styles.resultArtist,
+                      { color: anchor?.id === track.id ? readableOn(colors.brand) : colors.textSecondary },
+                    ]}
+                    numberOfLines={1}
+                  >
                     {track.artist}
                   </Text>
                 </View>

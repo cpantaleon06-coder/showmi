@@ -24,6 +24,8 @@ interface SubscriptionState {
   /** Incrementa el contador si no es Premium (Premium nunca gasta cupo) -- se llama en cada
    *  swipe real (ver SwipeDeck.tsx::handleSwiped), rueda el día solo si hace falta. */
   consumeFreeSwipe: () => void;
+  /** Devuelve un swipe al cupo del día. Lo usa deshacer: si la carta vuelve, no se cobra. */
+  refundFreeSwipe: () => void;
   /** Lectura pura -- rueda el día si hace falta antes de comparar, para que un swipe justo
    *  después de medianoche no siga viendo el contador de ayer. */
   hasFreeSwipesLeft: () => boolean;
@@ -45,6 +47,14 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         } else {
           set((state) => ({ swipesUsedToday: state.swipesUsedToday + 1 }));
         }
+      },
+      refundFreeSwipe: () => {
+        const { isPremium, swipeDate } = get();
+        if (isPremium) return;
+        // Solo se devuelve si el swipe fue HOY. Deshacer algo de ayer no puede regalar cupo
+        // de hoy -- y el contador de ayer ya no existe.
+        if (swipeDate !== todayKey()) return;
+        set((state) => ({ swipesUsedToday: Math.max(0, state.swipesUsedToday - 1) }));
       },
       hasFreeSwipesLeft: () => {
         const { isPremium, swipeDate, swipesUsedToday } = get();
