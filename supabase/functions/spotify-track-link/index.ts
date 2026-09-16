@@ -78,25 +78,63 @@ serve(async (req) => {
     return new Response(JSON.stringify({ trackId: null, reason: 'not_configured' }), { headers: JSON_HEADERS });
   }
 
-  const { artist, title } = await req.json();
-  if (!artist || !title) {
-    return new Response(JSON.stringify({ error: 'artist and title are required' }), { status: 400, headers: JSON_HEADERS });
-  }
+  const body = await req.json().catch(() => ({}));
 
-  try {
-    const accessToken = await getAppAccessToken(clientId, clientSecret);
+  // Resuelve UN {artist,title} a su track id. Devuelve null en cualquier "no encontrado"
+  // (búsqueda vacía, respuesta no-OK): para el que llama, "no hay match" no es un error.
+  async function resolveOne(accessToken: string, artist: string, title: string): Promise<string | null> {
     const q = encodeURIComponent(`track:${title} artist:${artist}`);
     const res = await fetch(`${SEARCH_URL}?q=${q}&type=track&limit=1`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-
-    if (!res.ok) {
-      return new Response(JSON.stringify({ trackId: null }), { headers: JSON_HEADERS });
-    }
-
+    if (!res.ok) return null;
     const json = await res.json();
-    const trackId = json?.tracks?.items?.[0]?.id ?? null;
+    return json?.tracks?.items?.[0]?.id ?? null;
+  }
 
+  // ---- Modo batch: { queries: [{artist,title}] } -> { results: [{trackId,uri}|null] } ----
+  // Lo usa el export a Spotify (resolver toda una colección a URIs de una vez). Preserva el
+  // orden y la posición: results[i] corresponde a queries[i], con null donde no hubo match,
+  // para que quien llama sepa cuántas y cuáles canciones no se pudieron llevar.
+  if (Array.isArray(body.queries)) {
+    // Tope duro por invocación: la Search API de Spotify limita el ritmo, y una biblioteca no
+    // debería mandar miles de una. 200 cubre cualquier colección real; lo que exceda se recorta.
+    const queries: { artist?: string; title?: string }[] = body.queries.slice(0, 200);
+    try {
+      const accessToken = await getAppAccessToken(clientId, clientSecret);
+      const results: ({ trackId: string; uri: string } | null)[] = new Array(queries.length).fill(null);
+      // Concurrencia acotada (mismo criterio que itunes-search): 5 a la vez, ni secuencial
+      // lento ni una ráfaga que dispare el 429 de Spotify.
+      const CONCURRENCIA = 5;
+      let cursor = 0;
+      async function worker() {
+        while (cursor < queries.length) {
+          const i = cursor++;
+          const qy = queries[i];
+          if (!qy?.artist || !qy?.title) continue;
+          const trackId = await resolveOne(accessToken, qy.artist, qy.title);
+          if (trackId) results[i] = { trackId, uri: `spotify:track:${trackId}` };
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCIA, queries.length) }, worker));
+      return new Response(JSON.stringify({ results }), { headers: JSON_HEADERS });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Spotify lookup failed' }), {
+        status: 502,
+        headers: JSON_HEADERS,
+      });
+    }
+  }
+
+  // ---- Modo single (contrato original, no tocar): { artist, title } -> { trackId } ----
+  const { artist, title } = body;
+  if (!artist || !title) {
+    return new Response(JSON.stringify({ error: 'artist and title (or queries[]) are required' }), { status: 400, headers: JSON_HEADERS });
+  }
+
+  try {
+    const accessToken = await getAppAccessToken(clientId, clientSecret);
+    const trackId = await resolveOne(accessToken, artist, title);
     return new Response(JSON.stringify({ trackId }), { headers: JSON_HEADERS });
   } catch (e) {
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Spotify lookup failed' }), {

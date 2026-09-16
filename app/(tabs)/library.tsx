@@ -12,6 +12,7 @@ import { getCollectionColor, getTileAccent } from '../../src/theme/collectionCol
 import { readableOn } from '../../src/theme/contrast';
 import { useLibraryStore } from '../../src/state/libraryStore';
 import { TileVariant, TrackTile } from '../../src/components/library/TrackTile';
+import { SpotifyExportButton } from '../../src/components/library/SpotifyExportButton';
 import { EchoTitle } from '../../src/components/ui/EchoTitle';
 import { EmptyCollection } from '../../src/components/library/EmptyCollection';
 import { TileReveal } from '../../src/components/library/TileReveal';
@@ -142,6 +143,12 @@ export default function LibraryScreen() {
           <View style={[styles.countPill, { backgroundColor: activeColor }]}>
             <Text style={[styles.countPillText, { color: readableOn(activeColor) }]}>{activeCollection.name}</Text>
           </View>
+        </View>
+        {/* Exporta la colección ACTIVA (la que se está viendo), no toda la biblioteca: es lo que
+            el usuario tiene enfrente y el nombre de la playlist sale de ahí. El botón se oculta
+            solo si la colección está vacía o si Spotify no está configurado en la build. */}
+        <View style={styles.exportRow}>
+          <SpotifyExportButton colors={colors} collectionName={activeCollection.name} tracks={tracks} />
         </View>
       </View>
 
@@ -283,6 +290,7 @@ const styles = StyleSheet.create({
   headerSpacer: {
     flex: 1,
   },
+  exportRow: { marginTop: 14, alignItems: 'flex-start' },
   titleBlock: {
     paddingHorizontal: 20,
     // El eco del título se sale hacia abajo; sin este respiro choca con la fila de chips.
