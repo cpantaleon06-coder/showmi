@@ -78,7 +78,7 @@ export function AuthHero({ colors, saludo }: AuthHeroProps) {
         </View>
 
         <View style={[styles.lado, styles.derecha]}>
-          <Mascot equipped={{}} size={80} shape="cuadrado" />
+          <Mascot equipped={{}} size={80} shape="rombo" />
         </View>
 
         {/* El globo va sobre el hombro de la criatura del centro, no centrado: centrado se lee

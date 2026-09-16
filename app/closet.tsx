@@ -30,7 +30,8 @@ import { readableOn } from '../src/theme/contrast';
 const SHAPE_OPTIONS: { shape: MascotShape; label: string }[] = [
   { shape: 'circulo', label: 'Redonda' },
   { shape: 'triangulo', label: 'Triangular' },
-  { shape: 'cuadrado', label: 'Cuadrada' },
+  { shape: 'rombo', label: 'Rombo' },
+  { shape: 'estrella', label: 'Estrella' },
 ];
 
 function ProgressRow({ colors, label, ratings }: { colors: ThemeColors; label: string; ratings: number }) {
