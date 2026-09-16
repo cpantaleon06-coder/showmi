@@ -10,6 +10,7 @@ import { resolveSpotifyTrackLink } from '../../api/spotify';
 import { ThemeColors } from '../../theme/colors';
 import { TILE_SURFACE, TILE_TEXT_MUTED } from '../../theme/collectionColors';
 import { radii } from '../../theme/radii';
+import { conResorte, resortes } from '../../theme/motion';
 import { fonts } from '../../theme/typography';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
@@ -80,7 +81,7 @@ export function TrackTile({ track, colors, variant, accent, onRemove }: TrackTil
   }));
 
   const setPressed = (value: number) => {
-    pressed.value = reducedMotion ? withTiming(value, { duration: 1 }) : withSpring(value, { damping: 18, stiffness: 320 });
+    pressed.value = conResorte(value, reducedMotion, resortes.ui);
   };
 
   return (

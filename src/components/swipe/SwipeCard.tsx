@@ -19,6 +19,7 @@ import { Track } from '../../api/types';
 import { VibeKey } from '../../lib/vibes';
 import { ThemeColors } from '../../theme/colors';
 import { radii } from '../../theme/radii';
+import { resortes } from '../../theme/motion';
 import { cardGlowColor, cardGlowShadow } from '../../theme/glow';
 import { fonts } from '../../theme/typography';
 import { SwipeDirection } from '../../state/swipeStore';
@@ -156,8 +157,11 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
         translateX.value = withTiming(0, { duration: 1 });
         translateY.value = withTiming(0, { duration: 1 });
       } else {
-        translateX.value = withSpring(0, { damping: 18 });
-        translateY.value = withSpring(0, { damping: 18 });
+        // Vuelta a su sitio cuando el gesto no alcanzo el umbral. Resorte compartido: es el
+        // mismo "responde y para" que el resto de la UI. Los throw de arriba NO se migran --
+        // llevan callback y su 1ms esta puesto a proposito (ver el comentario de arriba).
+        translateX.value = withSpring(0, resortes.ui);
+        translateY.value = withSpring(0, resortes.ui);
       }
     });
 

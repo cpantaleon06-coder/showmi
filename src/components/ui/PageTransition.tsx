@@ -1,8 +1,9 @@
 import { ReactNode, useEffect } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { conTiempo, duracion } from '../../theme/motion';
 
 interface PageTransitionProps {
   children: ReactNode;
@@ -24,7 +25,9 @@ export function PageTransition({ children, style }: PageTransitionProps) {
 
   useEffect(() => {
     if (reducedMotion) return;
-    progress.value = withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) });
+    // 260 -> duracion.base (240) y la curva compartida: la entrada de una pantalla y la de
+    // una teja ahora desaceleran igual, que es lo que las hace leer como el mismo sistema.
+    progress.value = conTiempo(1, reducedMotion, duracion.base);
   }, [reducedMotion, progress]);
 
   const animatedStyle = useAnimatedStyle(() => ({

@@ -1,11 +1,12 @@
 import { useEffect, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { useAnimatedProps, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedProps, useSharedValue } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useThemeStore } from '../../theme/useThemeStore';
+import { conResorte, resortes } from '../../theme/motion';
 import { fonts } from '../../theme/typography';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -118,11 +119,9 @@ export function ShowmiTabBar({ state, descriptors, navigation }: TabBarProps) {
 
   useEffect(() => {
     const destino = centroDe(state.index);
-    cx.value = reducedMotion
-      ? withTiming(destino, { duration: 0 })
-      : // Spring sin rebote: la muesca persigue al dedo, no salta. Un overshoot acá se leería
-        // como que la barra "vibra" cada vez que navegas.
-        withSpring(destino, { damping: 18, stiffness: 180, mass: 0.6 });
+    // Mismo resorte que los chips: cambiar de pestaña y seleccionar un chip son el mismo
+    // gesto conceptual, y ahora se mueven igual.
+    cx.value = conResorte(destino, reducedMotion, resortes.ui);
     // centroDe depende de `ancho`, que cambia al rotar -- por eso va en deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.index, ancho, reducedMotion]);

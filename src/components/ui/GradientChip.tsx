@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { ThemeColors } from '../../theme/colors';
 import { readableOn } from '../../theme/contrast';
 import { fonts } from '../../theme/typography';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { conResorte, resortes } from '../../theme/motion';
 
 interface GradientChipProps {
   colors: ThemeColors;
@@ -49,9 +50,10 @@ export function GradientChip({ colors, label, selected, onPress, fillColor, outl
   const outline = outlineColor ?? colors.textPrimary;
 
   useEffect(() => {
-    progress.value = reducedMotion
-      ? withTiming(selected ? 1 : 0, { duration: 1 })
-      : withSpring(selected ? 1 : 0, { damping: 15, stiffness: 180 });
+    // `resortes.ui`: seleccionar un chip es UI funcional, no un momento de gracia. Antes
+    // usaba damping 15 / stiffness 180, que se pasaba de largo y volvía -- un rebote chico
+    // pero suficiente para que el chip siguiera moviéndose cuando el ojo ya quería leerlo.
+    progress.value = conResorte(selected ? 1 : 0, reducedMotion, resortes.ui);
   }, [selected, progress, reducedMotion]);
 
   const fillStyle = useAnimatedStyle(() => ({

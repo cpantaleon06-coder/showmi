@@ -1,8 +1,9 @@
 import { ReactNode, useEffect } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay } from 'react-native-reanimated';
 
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { conTiempo, duracion, retraso } from '../../theme/motion';
 
 interface TileRevealProps {
   children: ReactNode;
@@ -27,9 +28,6 @@ interface TileRevealProps {
  * esperaría casi dos segundos para aparecer, y a esa altura ya no es una entrada, es una
  * pantalla que carga lento.
  */
-const STAGGER_MS = 45;
-const MAX_STAGGER_MS = 360;
-
 export function TileReveal({ children, index, style }: TileRevealProps) {
   const reducedMotion = useReducedMotion();
   const progress = useSharedValue(reducedMotion ? 1 : 0);
@@ -39,10 +37,9 @@ export function TileReveal({ children, index, style }: TileRevealProps) {
       progress.value = 1;
       return;
     }
-    progress.value = withDelay(
-      Math.min(index * STAGGER_MS, MAX_STAGGER_MS),
-      withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) }),
-    );
+    // El tope del escalonado vive ahora en theme/motion (`retraso`), compartido con
+    // cualquier otra lista que lo necesite en vez de re-derivarlo acá.
+    progress.value = withDelay(retraso(index), conTiempo(1, reducedMotion, duracion.lenta));
     // `index` fuera de las dependencias a propósito: si la lista se reordena (crear una
     // colección, quitar una canción), re-animar las tejas que YA estaban en pantalla sería
     // ruido. La entrada pertenece al montaje.

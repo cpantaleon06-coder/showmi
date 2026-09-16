@@ -4,13 +4,12 @@ import Animated, {
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
-  withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 
 import { fonts } from '../../theme/typography';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { conResorte, resortes } from '../../theme/motion';
 
 interface EchoTitleProps {
   text: string;
@@ -71,9 +70,9 @@ export function EchoTitle({ text, accent, color, size }: EchoTitleProps) {
     from.value = to.value;
     to.value = accent;
     progress.value = 0;
-    progress.value = reducedMotion
-      ? withTiming(1, { duration: 1 })
-      : withSpring(1, { damping: 14, stiffness: 120 });
+    // `suave`, no `ui`: acá el eco APARECE y se acomoda, no cambia de estado. Es el único
+    // sitio donde ese recorrido más largo es el punto.
+    progress.value = conResorte(1, reducedMotion, resortes.suave);
   }, [accent, from, to, progress, reducedMotion]);
 
   return (
