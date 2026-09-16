@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 
-import { syncPremiumStatus } from '../api/subscriptionClient';
 import { addCustomerInfoListener, configureRevenueCat, fetchCustomerInfo, isPremiumFromCustomerInfo } from '../lib/revenuecat';
 import { useSubscriptionStore } from '../state/subscriptionStore';
 
@@ -23,8 +22,12 @@ export function useRevenueCatSync(userId: string | undefined) {
 
     const applyCustomerInfo = (info: Parameters<typeof isPremiumFromCustomerInfo>[0]) => {
       const isPremium = isPremiumFromCustomerInfo(info);
+      // Solo estado LOCAL. La copia server-side (`users.es_premium`) ya no la escribe el
+      // cliente: desde 2026-09-15 la única puerta es el webhook de RevenueCat
+      // (supabase/functions/revenuecat-webhook), y `set_premium_status` quedó revocada para
+      // anon/authenticated. Dejar la llamada acá solo produciría un 403 en cada cambio de
+      // CustomerInfo.
       useSubscriptionStore.getState().setPremium(isPremium);
-      syncPremiumStatus(isPremium).catch(() => {});
     };
 
     fetchCustomerInfo().then((info) => {

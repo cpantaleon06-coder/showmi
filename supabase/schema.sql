@@ -713,10 +713,15 @@ select cron.schedule('classify-tracks-daily', '0 4 * * *', -- 4am, antes de seed
 -- futuro).
 alter table users add column es_premium boolean not null default false;
 
+-- Ya NO la puede llamar el cliente (revocada de public/anon/authenticated el 2026-09-15):
+-- `users.es_premium` lo escribe el webhook de RevenueCat con service_role, ver
+-- supabase/functions/revenuecat-webhook. Se conserva la definicion por si hiciera falta
+-- corregir a mano desde postgres, pero ningun rol de cliente tiene EXECUTE.
 create or replace function set_premium_status(p_is_premium boolean)
 returns void language sql security definer set search_path = public as $$
   update users set es_premium = p_is_premium where id = auth.uid();
 $$;
+revoke execute on function set_premium_status(boolean) from public, anon, authenticated;
 
 -- get_feed_posts cambia de columnas de salida -- Postgres no permite CREATE OR REPLACE
 -- cuando cambia el shape de retorno de una función que regresa tabla, hay que dropearla.

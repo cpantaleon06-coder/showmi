@@ -38,7 +38,6 @@ import {
   purchasePackage,
   restorePurchases,
 } from '../src/lib/revenuecat';
-import { syncPremiumStatus } from '../src/api/subscriptionClient';
 import { PageTransition } from '../src/components/ui/PageTransition';
 import { radii } from '../src/theme/radii';
 
@@ -218,9 +217,12 @@ export default function PremiumScreen() {
   const savings = useMemo(() => annualSavingsPercent(packages), [packages]);
 
   const applyCustomerInfo = (info: Parameters<typeof isPremiumFromCustomerInfo>[0]) => {
-    const premium = isPremiumFromCustomerInfo(info);
-    setPremium(premium);
-    syncPremiumStatus(premium).catch(() => {});
+    // Solo estado LOCAL: desbloquea la UI al instante tras comprar. La copia server-side
+    // (`users.es_premium`, la insignia que ven los demás en el Feed) la escribe el webhook de
+    // RevenueCat, no el cliente -- ver supabase/functions/revenuecat-webhook. Llega con unos
+    // segundos de retraso frente a esta línea, y ese desfase es aceptable: lo que la persona
+    // acaba de pagar se le abre aquí y ahora.
+    setPremium(isPremiumFromCustomerInfo(info));
   };
 
   const handlePurchase = async (pkg: PurchasesPackage) => {
