@@ -130,6 +130,41 @@ export interface GenreDef {
  * Dos etiquetas se dejan A PROPÓSITO sin resolver: "world" y "experimental". No son géneros
  * en esta taxonomía sino paraguas, y mapearlas a la fuerza mandaría tracks a un género que
  * la persona no pidió. Es preferible que no resuelvan a que resuelvan mal.
+ *
+ * SEGUNDA AUDITORÍA (2026-09-16). Se comprobó algo que la primera no miró: si la ETIQUETA
+ * VISIBLE de cada género resuelve a su propio género. Fallaban 8 de 53, y la causa era la
+ * misma en todas -- sus sinónimos estaban solo en inglés, en una app cuyo mercado principal es
+ * latino y cuya fuente (iTunes) devuelve `primaryGenreName` LOCALIZADO según la tienda. Es
+ * decir, "Clásica" y "Cristiana y gospel" llegan así de verdad, y no resolvían.
+ *
+ * Se cerraron seis: clasica, cristiana, celta/irlandesa, pop arabe, pop nordico y "drum & bass".
+ * Este último no era un problema de idioma sino de normalización: normalizeTag borra todo lo no
+ * alfanumérico, así que "drum and bass" queda en `drumandbass` y "drum & bass" en `drumbass` --
+ * dos cadenas distintas. La forma con ampersand es la más común por escrito y no estaba.
+ *
+ * Dos se dejan sin resolver a propósito, por el mismo criterio que "world": "regional" a secas
+ * (ambiguo entre corridos y banda/norteño) y "bass" a secas (tan probable que sea bajo
+ * eléctrico como música bass).
+ *
+ * MEDIDO CONTRA LA FUENTE REAL, no contra la propia tabla: se pidieron 750 canciones a la API
+ * de iTunes en la tienda de MÉXICO con `lang=es_mx`, que es la configuración en la que corre
+ * Showmi, y se contó cuántas resolvían por su `primaryGenreName`. Salieron 39 etiquetas
+ * distintas y la cobertura era del 69% de los tracks. Casi todo lo que fallaba estaba en
+ * español, que es justo lo que la tabla no cubría.
+ *
+ * Se cerraron las inequívocas: "Pop en español" -> pop_latino (93 de esos 750 tracks),
+ * "Alternativa y rock en español" -> rock, "Baladas y boleros" -> boleros, "Roots reggae" ->
+ * reggae, "Crossover clásica" y "Bandas sonoras" -> classical, e "Inspiración", "Litúrgica y
+ * religión" y "Música espiritual" -> gospel_cristiana (que es donde iTunes las coloca).
+ *
+ * "MÚSICA LATINA" SE QUEDA FUERA, y es la segunda etiqueta más frecuente (71 tracks). No es un
+ * descuido: es un paraguas que abarca reggaetón, salsa, banda y bolero a la vez, y mandarla a
+ * cualquiera de ellos metería en ese filtro tracks que la persona no pidió. Mismo criterio que
+ * "world" y "experimental". Igual que ellas, lo correcto es que no resuelva.
+ *
+ * Por lo mismo se dejan fuera "Instrumental", "Bandas sonoras" aparte, "De cuna", "Época
+ * festiva", "Música para niños", "Músicas del mundo", "Música original" y "Latina
+ * contemporánea": describen ocasión o formato, no género.
  */
 export const CANONICAL_GENRES: GenreDef[] = [
   {
@@ -216,21 +251,21 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Latino',
     label: 'Boleros',
     emoji: '💐',
-    lastfmTagSynonyms: ['bolero', 'boleros'],
+    lastfmTagSynonyms: ['bolero', 'boleros', 'baladas y boleros'],
   },
   {
     key: 'pop_latino',
     category: 'Latino',
     label: 'Pop Latino',
     emoji: '✨',
-    lastfmTagSynonyms: ['pop latino', 'latin pop', 'latino'],
+    lastfmTagSynonyms: ['pop latino', 'latin pop', 'latino', 'pop en espanol'],
   },
   {
     key: 'rock',
     category: 'Rock/Alternativo',
     label: 'Rock',
     emoji: '🎸',
-    lastfmTagSynonyms: ['rock', 'alternative rock', 'grunge', 'classic rock', 'hard rock', 'alternative', 'alternativa', 'alt rock', 'rock and roll', 'garage rock'],
+    lastfmTagSynonyms: ['rock', 'alternative rock', 'grunge', 'classic rock', 'hard rock', 'alternative', 'alternativa', 'alt rock', 'rock and roll', 'garage rock', 'alternativa y rock en espanol'],
   },
   {
     key: 'metal',
@@ -331,7 +366,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Electrónica/Chill',
     label: 'Drum & Bass',
     emoji: '🔊',
-    lastfmTagSynonyms: ['drum and bass', 'dnb', 'jungle'],
+    lastfmTagSynonyms: ['drum and bass', 'drum & bass', 'dnb', 'jungle'],
   },
   {
     key: 'jazz',
@@ -380,7 +415,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Del Mundo',
     label: 'Pop Árabe',
     emoji: '🕌',
-    lastfmTagSynonyms: ['arabic pop', 'khaleeji', 'arab pop'],
+    lastfmTagSynonyms: ['arabic pop', 'khaleeji', 'arab pop', 'pop arabe'],
   },
   {
     key: 'turkish_pop',
@@ -408,7 +443,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Del Mundo',
     label: 'Pop Nórdico',
     emoji: '❄️',
-    lastfmTagSynonyms: ['nordic pop', 'scandipop', 'swedish pop'],
+    lastfmTagSynonyms: ['nordic pop', 'scandipop', 'swedish pop', 'pop nordico'],
   },
   {
     key: 'country_folk',
@@ -422,7 +457,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Raíces',
     label: 'Clásica',
     emoji: '🎻',
-    lastfmTagSynonyms: ['classical', 'orchestral', 'soundtrack'],
+    lastfmTagSynonyms: ['classical', 'orchestral', 'soundtrack', 'clasica', 'musica clasica', 'crossover clasica', 'bandas sonoras'],
   },
   {
     key: 'opera',
@@ -464,7 +499,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Del Mundo',
     label: 'Reggae',
     emoji: '🦁',
-    lastfmTagSynonyms: ['reggae', 'dancehall', 'dub', 'ska'],
+    lastfmTagSynonyms: ['reggae', 'dancehall', 'dub', 'ska', 'roots reggae'],
   },
   {
     key: 'afrobeats',
@@ -485,7 +520,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Del Mundo',
     label: 'Celta/Irlandesa',
     emoji: '☘️',
-    lastfmTagSynonyms: ['celtic', 'irish folk', 'irish traditional'],
+    lastfmTagSynonyms: ['celtic', 'irish folk', 'irish traditional', 'celta', 'musica celta', 'irlandesa'],
   },
   {
     key: 'fado',
@@ -499,7 +534,7 @@ export const CANONICAL_GENRES: GenreDef[] = [
     category: 'Raíces',
     label: 'Gospel/Cristiana',
     emoji: '🙏',
-    lastfmTagSynonyms: ['gospel', 'christian', 'musica cristiana'],
+    lastfmTagSynonyms: ['gospel', 'christian', 'musica cristiana', 'cristiana', 'cristiana y gospel', 'inspiracion', 'liturgica y religion', 'musica espiritual'],
   },
   {
     key: 'punk',
