@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -223,13 +223,33 @@ export default function ProfileScreen() {
         <BackButton colors={colors} />
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <ProfileCrest colors={colors} displayName={displayName} subtitle={crestSubtitle} />
+          <ProfileCrest
+            colors={colors}
+            displayName={displayName}
+            subtitle={crestSubtitle}
+            isPremium={isPremium}
+            // El enlace junto al nombre es contextual: sin cuenta, lo útil no es "editar" sino
+            // tenerla. Con cuenta, lo editable de un perfil de Showmi son las preferencias.
+            actionLabel={isAnonymous ? 'Crear cuenta' : 'Editar'}
+            onPressAction={() => router.push(isAnonymous ? '/auth' : '/edit-onboarding')}
+          />
 
+          {/* Separadores de un pixel entre columnas, tomados de la referencia. Sin ellos, cuatro
+              pares de número+rótulo seguidos se leen como una sopa de cifras; con ellos se leen
+              como una tabla. Se dibujan entre elementos y no alrededor: una línea al principio
+              o al final parecería un borde del bloque. */}
           <View style={styles.countsRow}>
-            <CountStat colors={colors} value={savedCount} label="Guardadas" />
-            <CountStat colors={colors} value={genresQuery.data?.length ?? 0} label="Géneros" />
-            <CountStat colors={colors} value={artistsQuery.data?.length ?? 0} label="Artistas" />
-            <CountStat colors={colors} value={vibesQuery.data?.length ?? 0} label="Vibras" />
+            {[
+              { value: savedCount, label: 'Guardadas' },
+              { value: genresQuery.data?.length ?? 0, label: 'Géneros' },
+              { value: artistsQuery.data?.length ?? 0, label: 'Artistas' },
+              { value: vibesQuery.data?.length ?? 0, label: 'Vibras' },
+            ].map((c, i) => (
+              <Fragment key={c.label}>
+                {i > 0 && <View style={[styles.countDivider, { backgroundColor: colors.border }]} />}
+                <CountStat colors={colors} value={c.value} label={c.label} />
+              </Fragment>
+            ))}
           </View>
 
           {/* Tarjeta destacada. Es lo único de la pantalla con degradado propio: en la versión
@@ -364,11 +384,15 @@ const styles = StyleSheet.create({
 
   countsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    marginTop: 22,
+    marginTop: 20,
     marginBottom: 24,
   },
+  /** 60% de alto y no el total: una línea de borde a borde encajona las cifras; una corta
+   *  solo las separa, que es lo que hace la referencia. */
+  countDivider: { width: 1, height: 26, opacity: 0.6 },
   countStat: { flex: 1, alignItems: 'center', gap: 1 },
   countValue: { fontSize: 21, fontFamily: fonts.display, letterSpacing: -0.4 },
   countLabel: { fontSize: 11, fontFamily: fonts.bodySemiBold },

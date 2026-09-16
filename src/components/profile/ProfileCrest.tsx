@@ -1,8 +1,10 @@
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import { CrownIcon } from 'phosphor-react-native';
 
 import { ThemeColors } from '../../theme/colors';
 import { fonts } from '../../theme/typography';
+import { wordmark } from '../../theme/wordmark';
 
 interface ProfileCrestProps {
   colors: ThemeColors;
@@ -10,43 +12,75 @@ interface ProfileCrestProps {
   displayName: string;
   /** Línea de estado bajo el nombre. Quien llama decide qué contar ahí. */
   subtitle: string;
+  /** Pinta la insignia de More en la esquina de la tarjeta. */
+  isPremium: boolean;
+  /** Enlace pequeño al lado del nombre. El rótulo cambia según haya cuenta o no. */
+  actionLabel: string;
+  onPressAction: () => void;
 }
 
 /**
- * Cabecera del Perfil: telón de color con el borde inferior curvo y el avatar en un aro que lo
- * monta (2026-09-13).
+ * Cabecera del Perfil (reconstruida 2026-09-16 desde la referencia que mandó el usuario, la
+ * pantalla de perfil de Reddit).
  *
- * Viene de las referencias que mandó el usuario: la curva y el aro claro que despega el avatar
- * del fondo de color vienen de LUSH Club y de las tarjetas de perfil; el nombre grande con su
- * línea de estado debajo viene de LEX.
+ * Lo que se tomó de la referencia, y por qué cada cosa:
  *
- * 2026-09-16, al eliminarse las mascotas: el avatar pasó de ser la criatura del Camerino a un
- * MONOGRAMA con la inicial del nombre. No se sustituyó por una foto de perfil porque Showmi no
- * tiene fotos y no debería fingir que las tiene; la inicial es lo que puede decirse con lo que
- * el producto realmente sabe de la persona.
+ *   - EL AVATAR COMO TARJETA VERTICAL ENMARCADA, no como círculo. Es lo que más carácter le da
+ *     a la referencia: se lee como una credencial o un cromo, no como una foto de contacto. El
+ *     marco va en `surface` y no en `background`: probado con `background`, el marco era
+ *     invisible en cuanto la tarjeta bajaba de la curva, porque tenía el color de lo que tenía
+ *     detrás. Es un marco, tiene que verse.
+ *   - LA COLUMNA IZQUIERDA. Tarjeta, nombre y cifras apoyados contra el mismo margen. Es lo
+ *     que distingue a la referencia de cualquier perfil centrado.
+ *   - EL NOMBRE GRANDE CON UNA ACCIÓN PEQUEÑA AL LADO ("Editar" en la referencia). Puesta en la
+ *     misma línea y subrayada, la acción se lee como parte del nombre y no como un botón más de
+ *     la pantalla.
+ *   - LAS CIFRAS EN FILA CON SEPARADORES FINOS. Las cifras ya existían en Showmi; lo que se
+ *     copió es el tratamiento -- número grande arriba, rótulo chico abajo, y una línea de un
+ *     pixel entre columnas. Sin la línea, cuatro pares de número+rótulo se leen como una sopa;
+ *     con ella se leen como una tabla.
  *
- * En la misma limpieza desaparecieron las dos cifras que flanqueaban al avatar ("Calificadas" y
- * "Al siguiente"): las dos salían del progreso por categoría, que existía únicamente para
- * desbloquear cosméticos. Sin cosméticos, un nivel no abre nada y anunciarlo sería prometer algo
- * que no llega. Las cifras que sí siguen significando algo (guardadas, géneros, artistas,
- * vibras) ya estaban en su propia fila justo debajo, así que no se perdió ninguna información:
- * se perdió una repetida que además ya no era cierta.
+ * Lo que NO se copió: la referencia tiene foto de avatar dibujada. Showmi no tiene ni fotos de
+ * perfil ni ilustración propia (las mascotas se eliminaron el mismo día), así que la tarjeta
+ * lleva el WORDMARK, que es la identidad que el producto sí tiene: las seis letras, cada una
+ * con su color muestreado (ver theme/wordmark.ts). Poner ahí el icono de la app se descartó
+ * porque hoy ese icono es todavía el de Expo por defecto.
  *
- * El telón se acortó de 132 a 104 en la misma operación. No es estética: sin las dos cifras
- * dentro, 132 de degradado vacío se leían como un hueco donde antes había algo.
+ * El interior de la tarjeta es tinta fija (#141414) y no `colors.surface`: los seis colores del
+ * wordmark están calibrados para verse sobre oscuro, y en tema claro el amarillo (#F9EB06)
+ * sobre una superficie clara desaparecía.
  */
 
 /** Alto del telón de color, sin contar la curva. */
-const BANNER_HEIGHT = 104;
+const BANNER_HEIGHT = 128;
 /** Cuánto baja la curva en su punto más hondo. */
 const CURVE_DEPTH = 34;
-const AVATAR_RING = 104;
-const AVATAR = 84;
 
-export function ProfileCrest({ colors, displayName, subtitle }: ProfileCrestProps) {
+const CARD_W = 116;
+const CARD_H = 150;
+/** Grosor del marco que despega la tarjeta del telón. */
+const FRAME = 7;
+
+/** Las seis letras en dos columnas por tres filas: llena la tarjeta vertical sin estirar nada. */
+const LETRAS: { letra: string; color: string }[] = [
+  { letra: 'S', color: wordmark.s.corner },
+  { letra: 'H', color: wordmark.h.corner },
+  { letra: 'O', color: wordmark.o.corner },
+  { letra: 'W', color: wordmark.w.corner },
+  { letra: 'M', color: wordmark.m.corner },
+  { letra: 'I', color: wordmark.i.corner },
+];
+
+export function ProfileCrest({
+  colors,
+  displayName,
+  subtitle,
+  isPremium,
+  actionLabel,
+  onPressAction,
+}: ProfileCrestProps) {
   const { width } = useWindowDimensions();
   const totalH = BANNER_HEIGHT + CURVE_DEPTH;
-  const inicial = (displayName.trim()[0] ?? '?').toUpperCase();
 
   return (
     <View style={styles.wrap}>
@@ -60,7 +94,7 @@ export function ProfileCrest({ colors, displayName, subtitle }: ProfileCrestProp
             </LinearGradient>
           </Defs>
           {/* Rectángulo cuyo borde inferior es una curva. Una sola cúbica simétrica, no una
-              onda de varios picos: con más de un pico el borde compite con el avatar que lo
+              onda de varios picos: con más de un pico el borde compite con la tarjeta que lo
               monta, que es lo que tiene que mirarse. */}
           <Path
             d={`M0,0 L${width},0 L${width},${BANNER_HEIGHT}
@@ -71,58 +105,117 @@ export function ProfileCrest({ colors, displayName, subtitle }: ProfileCrestProp
         </Svg>
       </View>
 
-      {/* Empuja el aro hasta el borde del telón. Antes ese hueco lo ocupaba la fila de cifras. */}
-      <View style={{ height: BANNER_HEIGHT }} />
+      {/* Empuja la tarjeta hasta donde tiene que montar la curva. */}
+      <View style={{ height: BANNER_HEIGHT - 44 }} />
 
-      <View style={[styles.avatarRing, { backgroundColor: colors.background }]}>
-        <View style={[styles.avatar, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.inicial, { color: colors.textPrimary }]}>{inicial}</Text>
+      <View style={styles.columna}>
+      <View style={[styles.marco, { backgroundColor: colors.surface }]}>
+        <View style={styles.tarjeta}>
+          <View style={styles.rejilla}>
+            {LETRAS.map(({ letra, color }) => (
+              <Text key={letra} style={[styles.letra, { color }]}>
+                {letra}
+              </Text>
+            ))}
+          </View>
         </View>
+
+        {/* Insignia en la esquina, como los distintivos de la referencia. Solo aparece si hay
+            algo real que distinguir -- una esquina siempre ocupada deja de significar nada. */}
+        {isPremium && (
+          <View style={[styles.insignia, { borderColor: colors.surface }]}>
+            <CrownIcon weight="fill" size={13} color="#1A1405" />
+          </View>
+        )}
       </View>
 
-      <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
-        {displayName}
-      </Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+      <View style={styles.nombreFila}>
+        <Text style={[styles.nombre, { color: colors.textPrimary }]} numberOfLines={1}>
+          {displayName}
+        </Text>
+        <Pressable onPress={onPressAction} hitSlop={8}>
+          <Text style={[styles.accion, { color: colors.textPrimary }]}>{actionLabel}</Text>
+        </Pressable>
+      </View>
+
+      <Text style={[styles.subtitulo, { color: colors.textSecondary }]} numberOfLines={1}>
         {subtitle}
       </Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center' },
+  // El margen izquierdo va en `columna` y NO acá: en React Native lo posicionado en absoluto se
+  // coloca dentro del padding del padre, así que un paddingHorizontal en `wrap` metía el telón
+  // 22px por cada lado y dejaba de ir de borde a borde.
+  wrap: { alignItems: 'stretch' },
+  // Alineado a la IZQUIERDA, como la referencia. Centrado es lo que hace cualquier perfil; la
+  // referencia apoya la tarjeta, el nombre y las cifras contra el mismo margen, y esa columna
+  // es la mitad de su carácter.
+  columna: { alignItems: 'flex-start', paddingHorizontal: 22 },
   bannerLayer: { position: 'absolute', top: 0, left: 0, right: 0 },
-  /** Sube para montar la curva: el aro es lo que cose el telón con el contenido de abajo. El
-   *  borde es del color del FONDO, no blanco, para que en los dos temas lea como un recorte
-   *  limpio y no como un anillo pintado. */
-  avatarRing: {
-    width: AVATAR_RING,
-    height: AVATAR_RING,
-    borderRadius: AVATAR_RING / 2,
+  marco: {
+    padding: FRAME,
+    borderRadius: 22,
+  },
+  tarjeta: {
+    width: CARD_W,
+    height: CARD_H,
+    borderRadius: 16,
+    backgroundColor: '#141414',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -AVATAR_RING / 2 - 8,
+    overflow: 'hidden',
   },
-  avatar: {
-    width: AVATAR,
-    height: AVATAR,
-    borderRadius: AVATAR / 2,
+  rejilla: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: 78,
+    justifyContent: 'center',
+  },
+  letra: {
+    width: 39,
+    textAlign: 'center',
+    fontSize: 30,
+    lineHeight: 40,
+    fontFamily: fonts.display,
+  },
+  insignia: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    backgroundColor: '#C9A227',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  inicial: { fontSize: 36, fontFamily: fonts.display, letterSpacing: -1 },
-  name: {
+  nombreFila: {
     marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 12,
+  },
+  nombre: {
     fontSize: 26,
     fontFamily: fonts.display,
     letterSpacing: -0.6,
-    textAlign: 'center',
+    flexShrink: 1,
   },
-  subtitle: {
-    marginTop: 3,
+  /** Subrayado, como en la referencia: es lo que lo separa del nombre sin necesitar un botón
+   *  con fondo, que a este tamaño competiría con el nombre en vez de acompañarlo. */
+  accion: {
+    fontSize: 14,
+    fontFamily: fonts.bodyBold,
+    textDecorationLine: 'underline',
+  },
+  subtitulo: {
+    marginTop: 4,
     fontSize: 13,
     fontFamily: fonts.bodySemiBold,
-    textAlign: 'center',
   },
 });
