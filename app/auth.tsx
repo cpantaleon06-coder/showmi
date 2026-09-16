@@ -156,8 +156,9 @@ export default function AuthScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => goBackOrHome(router)} hitSlop={10}>
-            {/* Blanco: desde que hay panel de color detrás, `textSecondary` se perdía contra el
-              degradado en el tema claro. */}
+            {/* Tinta oscura y fija. Era blanco cuando el panel de atrás era el degradado de
+              marca; con la ilustración nueva el panel es aqua CLARO y el blanco se perdía
+              encima. Fija en los dos temas porque el panel no sigue al tema. */}
             <Text style={styles.cancelText}>Cancelar</Text>
           </Pressable>
         </View>
@@ -172,10 +173,7 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <AuthHero
-          colors={colors}
-          saludo={mode === 'upgrade' ? '¡Hola!' : '¿Nos conocemos?'}
-        />
+          <AuthHero />
 
           <View style={styles.content}>
             <Text style={[styles.title, { color: colors.textPrimary }]}>
@@ -308,7 +306,7 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 13,
     fontFamily: fonts.bodySemiBold,
-    color: '#FFFFFF',
+    color: '#141414',
   },
   scroll: {
     // Colchón abajo para que el último botón nunca quede pegado al borde.

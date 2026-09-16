@@ -201,13 +201,14 @@ export function Mascot({ equipped, size = 160, shape = 'circulo' }: MascotProps)
       {/* La forma. Es la criatura entera: una primitiva y nada más. */}
       {/* Dos piezas que en la referencia son parte del rombo y de nadie más: un círculo
           añil asomando por detrás de la punta superior derecha, y un contorno violeta
-          LIGERAMENTE desplazado del cuerpo. El desplazamiento es lo que los hace ver como
-          dos capas de una calcomanía y no como un borde: alineados se leerían como un
-          simple stroke. Van antes del cuerpo para quedar detrás. */}
+          GIRADO unos grados respecto al cuerpo. Girado y no desplazado: en la imagen los dos
+          rombos se cruzan en las esquinas, que es lo que solo produce una rotación -- una
+          traslación los dejaría paralelos y se leerían como un borde grueso mal puesto. Van
+          antes del cuerpo para quedar detrás. */}
       {def.adorno && (
         <G>
           <Circle cx={96} cy={6} r={13} fill="#1800AD" />
-          <Path d={def.body} fill="none" stroke="#8B3DFF" strokeWidth={2.5} transform="translate(3,-3)" />
+          <Path d={def.body} fill="none" stroke="#8B3DFF" strokeWidth={2.5} transform="rotate(7 60 40)" />
         </G>
       )}
       <Path d={def.body} fill={`url(#${gradId})`} />
