@@ -9,7 +9,6 @@ import { useThemeStore } from '../../src/theme/useThemeStore';
 import { fonts } from '../../src/theme/typography';
 import { radii } from '../../src/theme/radii';
 import { getCollectionColor, getTileAccent } from '../../src/theme/collectionColors';
-import { readableOn } from '../../src/theme/contrast';
 import { useLibraryStore } from '../../src/state/libraryStore';
 import { TileVariant, TrackTile } from '../../src/components/library/TrackTile';
 import { SpotifyExportButton } from '../../src/components/library/SpotifyExportButton';
@@ -159,12 +158,15 @@ export default function LibraryScreen() {
             return (
               <GradientChip
                 colors={colors}
-                label={`${item.name} · ${(items[item.id] ?? []).length}`}
+                label={item.name}
                 selected={item.id === activeCollection.id}
-                // Encendido se rellena de su color; apagado lo lleva en el contorno. Es la
-                // fila de pills de colores de la referencia: todas se ven, una manda.
+                // UN acento por pantalla (2026-09-15). Antes cada chip apagado llevaba SU
+                // color en el contorno: la fila entera era un arcoíris y ninguna mandaba, que
+                // es justo lo que hacía ver la pantalla barata. Ahora el color solo lo tiene
+                // la colección ACTIVA; las demás son contorno neutro. El color sigue estando
+                // -- solo dejó de estar cinco veces a la vez.
                 fillColor={color}
-                outlineColor={color}
+                outlineColor={colors.border}
                 onPress={() => setActiveId(item.id)}
               />
             );
@@ -193,17 +195,18 @@ export default function LibraryScreen() {
                 />
               </View>
             ) : (
-              // Botón circular y no un pill de texto: en las referencias la fila de pills se
-              // interrumpe con círculos de acento, y eso es lo que evita que se lea como una
-              // barra de pestañas más. El color es el que le tocaría a la colección SIGUIENTE,
-              // así que el botón muestra de qué color va a salir lo que creas.
+              // Era un círculo relleno del color de la colección SIGUIENTE. Sonaba bien en
+              // teoría (anticipar el color) pero en la práctica metía un tercer lenguaje de
+              // forma -- pill relleno, pill contorneado y círculo -- y un color más que no
+              // correspondía a nada visible. Ahora es un chip igual a los demás, apagado:
+              // pertenece a la fila en vez de interrumpirla.
               <Pressable
                 onPress={() => setIsCreating(true)}
-                style={[styles.newTabButton, { backgroundColor: getCollectionColor('', collections.length) }]}
+                style={[styles.newTabButton, { borderColor: colors.border, backgroundColor: colors.background }]}
                 accessibilityRole="button"
                 accessibilityLabel="Crear una colección nueva"
               >
-                <PlusIcon weight="bold" size={18} color={readableOn(getCollectionColor('', collections.length))} />
+                <PlusIcon weight="bold" size={17} color={colors.textSecondary} />
               </Pressable>
             )
           }
@@ -217,7 +220,7 @@ export default function LibraryScreen() {
       <View style={styles.listArea}>
         {tracks.length === 0 && (
           <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
-            <DotGridBackground width={screenWidth} height={screenHeight} mode={mode} />
+            <DotGridBackground width={screenWidth} height={screenHeight} mode={mode} dotColor={activeColor} />
           </View>
         )}
         <FlatList
@@ -288,6 +291,9 @@ const styles = StyleSheet.create({
   exportRow: { marginTop: 14, alignItems: 'flex-start' },
   titleBlock: {
     paddingHorizontal: 20,
+    // Aire arriba: el titulo arrancaba pegado al boton de perfil y la pantalla se sentia
+    // apretada desde el primer pixel.
+    paddingTop: 6,
     // El eco del título se sale hacia abajo; sin este respiro choca con la fila de chips.
     paddingBottom: 14,
     gap: 12,
@@ -319,9 +325,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   newTabButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

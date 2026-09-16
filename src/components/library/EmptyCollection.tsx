@@ -71,7 +71,8 @@ const styles = StyleSheet.create({
   wrap: { paddingTop: 8 },
   panel: {
     backgroundColor: TILE_SURFACE,
-    borderWidth: 2.5,
+    // 2.5 -> 1.5: un contorno grueso en color saturado grita mas de lo que compone.
+    borderWidth: 1.5,
     borderRadius: radii.card,
     padding: 22,
     gap: 12,
