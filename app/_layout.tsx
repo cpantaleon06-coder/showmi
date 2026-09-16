@@ -17,6 +17,7 @@ import { useAuthBootstrap } from '../src/hooks/useAuthBootstrap';
 import { useRevenueCatSync } from '../src/hooks/useRevenueCatSync';
 import { useAuthStore } from '../src/state/authStore';
 import { initializeAds } from '../src/lib/ads';
+import { configurarAudio } from '../src/lib/audioSession';
 
 export default function RootLayout() {
   const mode = useThemeStore((s) => s.mode);
@@ -34,6 +35,13 @@ export default function RootLayout() {
   // No-op en web (ver areAdsSupportedOnThisPlatform en lib/ads.ts) -- seguro llamarlo siempre.
   useEffect(() => {
     initializeAds();
+  }, []);
+
+  // La sesión de audio se configura UNA vez, al arrancar. Hasta 2026-09-16 no se configuraba
+  // nunca, así que corría con los defaults de expo-audio -- ver src/lib/audioSession.ts para
+  // qué implicaba eso y por qué importa.
+  useEffect(() => {
+    configurarAudio();
   }, []);
 
   // Nada de texto visible con la fuente del sistema, ni siquiera un parpadeo

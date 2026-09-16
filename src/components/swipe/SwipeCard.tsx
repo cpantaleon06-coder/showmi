@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { AppState, Dimensions, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -83,6 +83,38 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
   useEffect(() => {
     if (status.didJustFinish) setFinished(true);
   }, [status.didJustFinish]);
+
+  // Un error de reproducción se trata igual que "terminó": aparece el aviso de "toca para
+  // escuchar de nuevo" y tocar la carta reintenta. Antes `status.error` no se miraba en ningún
+  // lado, así que una carta que fallaba al sonar se quedaba muda y SIN pista de que se podía
+  // reintentar -- indistinguible de una app rota.
+  useEffect(() => {
+    if (status.error) setFinished(true);
+  }, [status.error]);
+
+  /**
+   * Re-sincronizar al volver de segundo plano (2026-09-16).
+   *
+   * Éste es el fallo que se sentía como "hay que reiniciar la app": cuando entra una llamada o
+   * cualquier app se lleva el audio, el sistema nos detiene, pero `isActive` NO cambia -- la
+   * carta de arriba sigue siendo la de arriba. Como el efecto de reproducción depende solo de
+   * `isActive`, al volver no se re-ejecutaba nada y la carta quedaba MUDA hasta swipear a otra.
+   *
+   * No se reanuda solo: volver a la app y que empiece a sonar de golpe es peor, sobre todo si
+   * acabas de colgar. Se marca como "terminada", que es el estado que ya muestra el aviso de
+   * tocar para reproducir. La persona decide.
+   */
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (estado) => {
+      if (estado !== 'active') {
+        player.pause();
+        // Solo la carta activa: las del fondo ya están pausadas y marcarlas ensuciaría su
+        // estado para cuando les toque.
+        if (isActive) setFinished(true);
+      }
+    });
+    return () => sub.remove();
+  }, [player, isActive]);
 
   useEffect(() => {
     return () => {
