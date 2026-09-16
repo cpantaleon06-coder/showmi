@@ -5,8 +5,9 @@
 // `es_premium` es la copia server-side del entitlement de RevenueCat: existe para que el Feed
 // pueda mostrar la insignia de More de otras personas (get_feed_posts no puede ver el
 // CustomerInfo de nadie más). Hasta ahora lo escribía el propio cliente
-// (`set_premium_status`, ver src/api/subscriptionClient.ts), que ya venía marcado ahí como
-// "robustez consciente, endurecerlo es trabajo futuro". Esto es ese trabajo.
+// (`set_premium_status`), que ya venía marcado como "robustez consciente, endurecerlo es
+// trabajo futuro". Esto es ese trabajo: desde 2026-09-15 esa función está revocada para
+// anon/authenticated y el código cliente que la llamaba se borró.
 //
 // Con el webhook, la única fuente de verdad de `es_premium` pasa a ser RevenueCat, que es
 // quien de verdad sabe si hubo una compra, y la escritura la hace el servidor con

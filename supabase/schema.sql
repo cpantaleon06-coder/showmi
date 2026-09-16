@@ -709,8 +709,8 @@ select cron.schedule('classify-tracks-daily', '0 4 * * *', -- 4am, antes de seed
 -- la insignia de otros usuarios (get_feed_posts no puede ver el CustomerInfo de nadie más).
 -- El cliente la escribe él mismo (set_premium_status) cada vez que cambia su CustomerInfo, ver
 -- useRevenueCatSync.ts -- no es un webhook de RevenueCat, ver nota de robustez consciente en
--- src/api/subscriptionClient.ts (suficiente para el v1 del Shipaton, endurecerlo es trabajo
--- futuro).
+-- el webhook de RevenueCat (supabase/functions/revenuecat-webhook), que desde 2026-09-15 es la
+-- ÚNICA puerta: el cliente ya no escribe es_premium.
 alter table users add column es_premium boolean not null default false;
 
 -- Ya NO la puede llamar el cliente (revocada de public/anon/authenticated el 2026-09-15):
