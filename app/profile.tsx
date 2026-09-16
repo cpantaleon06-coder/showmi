@@ -10,7 +10,6 @@ import {
   PencilSimpleIcon,
   SignOutIcon,
   SunIcon,
-  TShirtIcon,
   UserPlusIcon,
 } from 'phosphor-react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -18,7 +17,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useThemeStore } from '../src/theme/useThemeStore';
 import { fonts } from '../src/theme/typography';
 import { radii } from '../src/theme/radii';
-import { MASCOTAS_ACTIVAS } from '../src/lib/beta';
 import { wordmark } from '../src/theme/wordmark';
 import { readableOn } from '../src/theme/contrast';
 import { useAuthStore } from '../src/state/authStore';
@@ -46,8 +44,7 @@ import { ThemeColors } from '../src/theme/colors';
  *  - Tarjetas de perfil: el aro claro que despega el avatar del fondo de color.
  *
  * Lo que NO se copió: las tres referencias tienen foto de perfil. Showmi no tiene fotos y no
- * va a fingir que las tiene -- el avatar es la mascota con lo que esté equipado en el
- * Camerino, que además le da una razón de ser al Camerino desde acá.
+ * va a fingir que las tiene -- el avatar es un monograma con la inicial del nombre.
  *
  * La versión anterior era una columna de filas con borde, todas del mismo peso: la que lleva
  * al paywall se veía igual que la que cambia el tema. Ahora hay jerarquía real -- una tarjeta
@@ -207,13 +204,26 @@ export default function ProfileScreen() {
    *  botón de crear cuenta de abajo tenga un motivo visible; inventar un apodo lo escondería. */
   const displayName = isAnonymous ? 'Invitado' : (email?.split('@')[0] ?? 'Tu perfil');
 
+  // Línea bajo el nombre. Antes decía el nivel del Camerino; al desaparecer los cosméticos ese
+  // nivel no abría nada, así que ahora dice el género que más ha gustado -- que es lo que esta
+  // app sí sabe de alguien y ya viene consultado para la sección de estadísticas de más abajo.
+  const topGenre = genresQuery.data?.[0];
+  const topGenreDef = topGenre
+    ? CANONICAL_GENRES.find((x) => x.key === topGenre.dimKey.replace('genero:', ''))
+    : undefined;
+  const crestSubtitle = topGenreDef
+    ? `Sobre todo ${topGenreDef.label}`
+    : isAnonymous
+      ? 'Cuenta de invitado — guarda tu progreso'
+      : 'Todavía sin favoritos — swipea para empezar';
+
   return (
     <PageTransition>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
         <BackButton colors={colors} />
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <ProfileCrest colors={colors} displayName={displayName} />
+          <ProfileCrest colors={colors} displayName={displayName} subtitle={crestSubtitle} />
 
           <View style={styles.countsRow}>
             <CountStat colors={colors} value={savedCount} label="Guardadas" />
@@ -239,31 +249,17 @@ export default function ProfileScreen() {
                   {isPremium ? 'Showmi More activo' : 'Showmi More'}
                 </Text>
                 <Text style={[styles.heroCaption, { color: HERO_INK }]}>
-                  {isPremium
-                    ? 'Gracias por tu apoyo'
-                    : MASCOTAS_ACTIVAS
-                      ? 'Swipes ilimitados y cosméticos'
-                      : 'Swipes ilimitados y sin anuncios'}
+                  {isPremium ? 'Gracias por tu apoyo' : 'Swipes ilimitados y sin anuncios'}
                 </Text>
               </View>
               <CaretRightIcon weight="bold" size={18} color={HERO_INK} />
             </LinearGradient>
           </Pressable>
 
-          {/* La tarjeta del Camerino es la ÚNICA forma de llegar a las mascotas desde la app.
-              Con la barrera de beta puesta (ver lib/beta.ts) desaparece y la fila se queda con
-              Preferencias sola, que con `flex: 1` ocupa el ancho entero sin tocar estilos. */}
+          {/* Antes esta fila tenía dos tarjetas: Camerino y Preferencias. Al eliminarse el
+              Camerino queda Preferencias sola, que con `flex: 1` ocupa el ancho entero sin
+              tocar estilos. */}
           <View style={styles.grid}>
-            {MASCOTAS_ACTIVAS && (
-              <GridCard
-                colors={colors}
-                accent={wordmark.w.corner}
-                icon={<TShirtIcon weight="fill" size={19} color={wordmark.w.corner} />}
-                title="Camerino"
-                caption="Viste a tu mascota"
-                onPress={() => router.push('/closet')}
-              />
-            )}
             <GridCard
               colors={colors}
               accent={wordmark.h.corner}

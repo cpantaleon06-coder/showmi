@@ -7,7 +7,6 @@ import { registerSwipeRemote } from '../api/tasteEngineClient';
 import { createRemotePost } from '../api/postsClient';
 import { Track } from '../api/types';
 import { dimensionKeys } from '../lib/tasteEngine';
-import { useCamerinoStore } from './camerinoStore';
 import { buildSessionSelection, useSessionTreeStore } from './sessionTreeStore';
 import { useSwipeStore } from './swipeStore';
 import { useTasteStateStore } from './tasteStateStore';
@@ -81,11 +80,6 @@ export const usePostStore = create<PostState>()(
         // con el catálogo server-side y los tags de Last.fm, que es exactamente la misma
         // resolución con la que se escribieron las claves `genero:` contra las que se compara.
         createRemotePost(track.id, rating, candidate.genero ?? null).catch(() => {});
-
-        // Progreso del Camerino (antes un TODO, construido 2026-09-01): cualquier rating de
-        // 1 a 5 cuenta igual como "reseñó la canción", sin importar qué tan alta o baja sea
-        // -- premiar solo las notas altas empujaría a inflar las estrellas.
-        useCamerinoStore.getState().recordRating(track.genre);
       },
     }),
     {

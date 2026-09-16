@@ -1,4 +1,4 @@
-import { GenreCategory, categoryForRawGenre } from '../lib/cosmetics';
+import { GenreCategory, categoryForRawGenre } from '../lib/genres';
 import { wordmark } from './wordmark';
 
 /**
@@ -31,7 +31,7 @@ export const GENRE_CATEGORY_COLORS: Record<GenreCategory, string> = {
  * Devuelve null cuando el string no cae en ninguna categoría -- quien llama decide el
  * fallback, igual que `getVibeColor`.
  *
- * Reusa `categoryForRawGenre` (cosmetics.ts) a propósito en vez de re-implementar el
+ * Reusa `categoryForRawGenre` (lib/genres.ts) a propósito en vez de re-implementar el
  * matcheo: esa función ya es deliberadamente laxa (cae a substring) porque un género
  * mal clasificado ahí solo mueve un color, nunca cambia qué canciones ve la persona.
  */

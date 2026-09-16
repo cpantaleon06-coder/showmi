@@ -18,13 +18,11 @@ import {
   GearIcon,
   InfinityIcon,
   ProhibitIcon,
-  TShirtIcon,
 } from 'phosphor-react-native';
 import type { PurchasesPackage } from 'react-native-purchases';
 
 import { useThemeStore } from '../src/theme/useThemeStore';
 import { fonts } from '../src/theme/typography';
-import { MASCOTAS_ACTIVAS } from '../src/lib/beta';
 import { wordmark } from '../src/theme/wordmark';
 import { BackButton } from '../src/components/ui/BackButton';
 import { EchoTitle } from '../src/components/ui/EchoTitle';
@@ -74,11 +72,10 @@ const TEXT_DIM = '#B9B3C7';
 /**
  * Lo que se promete a cambio del dinero.
  *
- * Los cosméticos del Camerino SOLO aparecen si las mascotas no están tras la barrera de beta
- * (ver lib/beta.ts). No es un detalle de presentación: es la lista por la que alguien decide
- * pagar, y dejar ahí una ventaja que el comprador no va a poder ver en ningún sitio es cobrar
- * por algo que no se entrega. Se filtra en vez de borrarse para que vuelva sola cuando se
- * levante la barrera, sin que nadie tenga que acordarse.
+ * Al eliminarse el Camerino (2026-09-16) salió de acá la ventaja "Cosméticos del Camerino", y
+ * el gancho de arriba dejó de hablar de vestir a la mascota. No es un detalle de presentación:
+ * esta es la lista por la que alguien decide pagar, y dejar en ella una ventaja que el
+ * comprador no va a poder ver en ningún sitio es cobrar por algo que no se entrega.
  */
 const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = [
   {
@@ -91,15 +88,6 @@ const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = 
     title: 'Insignia de More',
     description: 'Visible junto a tu nombre en el Feed y tu Perfil.',
   },
-  ...(MASCOTAS_ACTIVAS
-    ? [
-        {
-          icon: TShirtIcon,
-          title: 'Cosméticos del Camerino',
-          description: 'Corona, lentes dorados y estrellas. Los ves antes de pagar — nunca son aleatorios.',
-        },
-      ]
-    : []),
   {
     icon: ProhibitIcon,
     title: 'Sin anuncios',
@@ -307,12 +295,7 @@ export default function PremiumScreen() {
 
             <Text style={styles.headline}>
               Descubre sin freno{'\n'}
-              {/* El gancho tampoco habla de la mascota mientras esté escondida: era la primera
-                  frase de la pantalla que cobra, prometiendo justo lo que el comprador no iba a
-                  encontrar después. */}
-              <Text style={{ color: wordmark.w.corner }}>
-                {MASCOTAS_ACTIVAS ? 'y viste a tu mascota' : 'y sin interrupciones'}
-              </Text>
+              <Text style={{ color: wordmark.w.corner }}>y sin interrupciones</Text>
             </Text>
 
             {isPremium ? (

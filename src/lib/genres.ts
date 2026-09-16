@@ -579,3 +579,37 @@ export function resolveCanonicalGenre(topTags: string[]): CanonicalGenre | null 
   }
   return null;
 }
+
+/** Mapa género canónico -> categoría, armado una sola vez desde la taxonomía de arriba. */
+const CATEGORY_BY_GENRE = new Map(CANONICAL_GENRES.map((g) => [g.key, g.category] as const));
+
+/**
+ * Categoría a la que pertenece el string CRUDO de género de iTunes (`Track.genre`, ej.
+ * "Latin", "Urbano latino", "Hip-Hop/Rap").
+ *
+ * A propósito es MÁS LAXA que `resolveCanonicalGenre` (que exige match exacto de tag): primero
+ * intenta la resolución estricta, y si falla cae a substring en ambos sentidos. La razón es la
+ * asimetría del costo -- equivocarse aquí solo tiñe el halo de una tarjeta con el color de la
+ * categoría vecina, mientras que aflojar el matcher del deck cambiaría qué canciones ve la
+ * persona. Con el matcher estricto solo, strings comunísimos de iTunes como "Latin" no
+ * resuelven a nada y media biblioteca saldría sin color.
+ *
+ * Vivía en `lib/cosmetics.ts`, donde servía para repartir progreso del Camerino por categoría.
+ * Al eliminarse el Camerino (2026-09-16) se mudó acá, que es de donde salen sus datos: su único
+ * consumidor vivo es `theme/genreColors.ts`.
+ */
+export function categoryForRawGenre(rawGenre: string | null | undefined): GenreCategory | null {
+  if (!rawGenre) return null;
+
+  const strict = resolveCanonicalGenre([rawGenre]);
+  if (strict) return CATEGORY_BY_GENRE.get(strict) ?? null;
+
+  const needle = rawGenre.toLowerCase().trim();
+  if (!needle) return null;
+  for (const genre of CANONICAL_GENRES) {
+    for (const tag of genre.lastfmTagSynonyms) {
+      if (tag.includes(needle) || needle.includes(tag)) return genre.category;
+    }
+  }
+  return null;
+}
