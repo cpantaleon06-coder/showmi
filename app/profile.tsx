@@ -38,7 +38,6 @@ import { ThemeColors } from '../src/theme/colors';
  * perfil). Lo que se tomó de cada una y por qué, en vez de copiar una sola:
  *
  *  - LUSH: telón de color con borde curvo, avatar montándolo, y dos cifras flanqueándolo.
- *    También la tira de damero del pie, que cierra la pantalla en vez de dejarla desvanecerse.
  *  - LEX: la fila de cifras bajo el nombre, y la tarjeta ancha del tier de pago con su propio
  *    tratamiento de color -- lo único de la pantalla que no es del sistema neutro.
  *  - Tarjetas de perfil: el aro claro que despega el avatar del fondo de color.
@@ -146,7 +145,7 @@ function QuietRow({
   tint?: string;
 }) {
   return (
-    <Pressable onPress={onPress} style={[styles.quietRow, { backgroundColor: colors.surface }]} hitSlop={6}>
+    <Pressable onPress={onPress} style={styles.quietRow} hitSlop={6}>
       {icon}
       <Text style={[styles.quietRowText, { color: tint ?? colors.textPrimary }]}>{label}</Text>
       <CaretRightIcon weight="bold" size={15} color={colors.textSecondary} />
@@ -154,31 +153,6 @@ function QuietRow({
   );
 }
 
-/**
- * Tira de damero del pie (referencia LUSH). Cierra la pantalla con un borde duro en vez de
- * dejar que el contenido se desvanezca contra el fondo. Se dibuja con Views y no con SVG: son
- * dos filas de cuadrados planos, y un SVG acá sería más código para el mismo resultado.
- */
-function CheckerStrip({ colors }: { colors: ThemeColors }) {
-  const CELLS = 14;
-  return (
-    <View style={styles.checker} pointerEvents="none">
-      {[0, 1].map((row) => (
-        <View key={row} style={styles.checkerRow}>
-          {Array.from({ length: CELLS }, (_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.checkerCell,
-                { backgroundColor: (i + row) % 2 === 0 ? colors.brand : 'transparent' },
-              ]}
-            />
-          ))}
-        </View>
-      ))}
-    </View>
-  );
-}
 
 export default function ProfileScreen() {
   const colors = useThemeStore((s) => s.colors);
@@ -336,7 +310,17 @@ export default function ProfileScreen() {
             </Text>
           )}
 
-          <View style={styles.quietBlock}>
+          {/* El pie lleva título como las demás secciones, y sus filas van en UN bloque con
+              separadores en vez de tres pastillas sueltas. Antes eran tres islas idénticas
+              flotando al final, sin nada que dijera que van juntas ni que son ajustes y no una
+              tarjeta más de la pantalla. */}
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Cuenta</Text>
+
+          {!isAnonymous && !!email && (
+            <Text style={[styles.accountEmail, { color: colors.textSecondary }]}>{email}</Text>
+          )}
+
+          <View style={[styles.quietBlock, { backgroundColor: colors.surface }]}>
             {isAnonymous ? (
               <QuietRow
                 colors={colors}
@@ -346,16 +330,15 @@ export default function ProfileScreen() {
                 onPress={() => router.push('/auth')}
               />
             ) : (
-              <>
-                {!!email && <Text style={[styles.accountEmail, { color: colors.textSecondary }]}>{email}</Text>}
-                <QuietRow
-                  colors={colors}
-                  icon={<SignOutIcon weight="fill" size={18} color={colors.textPrimary} />}
-                  label="Cerrar sesión"
-                  onPress={() => signOut().catch(() => {})}
-                />
-              </>
+              <QuietRow
+                colors={colors}
+                icon={<SignOutIcon weight="fill" size={18} color={colors.textPrimary} />}
+                label="Cerrar sesión"
+                onPress={() => signOut().catch(() => {})}
+              />
             )}
+
+            <View style={[styles.quietSeparador, { backgroundColor: colors.border }]} />
 
             <QuietRow
               colors={colors}
@@ -370,8 +353,6 @@ export default function ProfileScreen() {
               onPress={toggleMode}
             />
           </View>
-
-          <CheckerStrip colors={colors} />
         </ScrollView>
       </SafeAreaView>
     </PageTransition>
@@ -380,7 +361,10 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { paddingBottom: 0 },
+  /** El aire de abajo lo daba la tira de damero que cerraba la pantalla. Al quitarla, el
+   *  contenido terminaba pegado al borde y la última fila quedaba debajo del gesto de inicio
+   *  del sistema. */
+  content: { paddingBottom: 40 },
 
   countsRow: {
     flexDirection: 'row',
@@ -454,21 +438,33 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
 
-  quietBlock: { paddingHorizontal: 22, gap: 9, marginTop: 6, marginBottom: 26 },
+  /** El radio de tarjeta y no de pastilla: ya no es una fila suelta, es un bloque con filas
+   *  dentro, y `pill` en algo tan alto lo dejaba con los lados en forma de cápsula. */
+  quietBlock: {
+    marginHorizontal: 22,
+    marginTop: 2,
+    marginBottom: 12,
+    borderRadius: radii.card,
+    overflow: 'hidden',
+  },
   quietRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 11,
-    borderRadius: radii.pill,
-    paddingVertical: 12,
-    paddingHorizontal: 15,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
+  /** Sangrado a la izquierda hasta donde empieza el texto, no de borde a borde: así la línea
+   *  agrupa las filas en vez de cortar el bloque en dos tarjetas. */
+  quietSeparador: { height: 1, marginLeft: 45, opacity: 0.5 },
   quietRowText: { flex: 1, fontSize: 14, fontFamily: fonts.bodyBold },
-  accountEmail: { fontSize: 12.5, fontFamily: fonts.bodyRegular, textAlign: 'center', marginBottom: 2 },
+  accountEmail: {
+    fontSize: 12.5,
+    fontFamily: fonts.bodyRegular,
+    paddingHorizontal: 24,
+    marginBottom: 8,
+  },
 
-  checker: { marginTop: 4 },
-  checkerRow: { flexDirection: 'row' },
-  checkerCell: { flex: 1, aspectRatio: 1 },
 });
 
 const chipStyles = StyleSheet.create({
