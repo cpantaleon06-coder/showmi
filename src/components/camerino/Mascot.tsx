@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
-import Svg, { Circle, ClipPath, Defs, Ellipse, G, LinearGradient, Path, Polygon, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, ClipPath, Defs, Ellipse, G, Path, Polygon, Rect } from 'react-native-svg';
 
 import { CosmeticSlot, cosmeticById } from '../../lib/cosmetics';
+import { wordmark } from '../../theme/wordmark';
 
 /** Las tres criaturas. Cada una es una forma primitiva distinta -- esa restricción ES el
  *  sistema, no una limitación. */
-export type MascotShape = 'circulo' | 'triangulo' | 'rombo' | 'estrella';
+export type MascotShape = 'circulo' | 'triangulo' | 'cuadrado';
 
 /**
  * Sin `colors`: desde que la tinta es fija y no hay contorno, la mascota NO depende del tema.
@@ -19,6 +20,18 @@ interface MascotProps {
   shape?: MascotShape;
 }
 
+/**
+ * Mezcla un hex hacia otro. Se usa para sacar el tono de los muñones del color del cuerpo en
+ * vez de declarar un segundo color por criatura: así el muñón nunca puede desentonar, y si
+ * algún día cambia la paleta no hay que acordarse de ajustar dos valores.
+ */
+function mix(hex: string, towards: string, amount: number): string {
+  const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [r1, g1, b1] = p(hex);
+  const [r2, g2, b2] = p(towards);
+  const c = (a: number, b: number) => Math.round(a + (b - a) * amount).toString(16).padStart(2, '0');
+  return `#${c(r1, r2)}${c(g1, g2)}${c(b1, b2)}`;
+}
 
 /**
  * Geometría de cada criatura.
@@ -33,88 +46,36 @@ interface MascotProps {
  * eso su base es tan ancha -- no es una elección estética, es el mínimo que permite que los
  * lentes le queden puestos.
  */
-const SHAPES: Record<
-  MascotShape,
-  {
-    body: string;
-    /** Color del cuerpo. Tomado de la referencia, no derivado del tema. */
-    color: string;
-    /** Segunda parada del degradado del cuerpo. */
-    colorHondo: string;
-    /** Tronco que asoma bajo la forma. */
-    torso: string;
-    /** Muñones. En la referencia son MÁS CLAROS que el cuerpo, no más oscuros. */
-    manos: string;
-    /** Círculo añil + contorno violeta detrás. Solo el rombo los lleva en la referencia. */
-    adorno?: boolean;
-    pupil: 'redonda' | 'rombo';
-    parpados: boolean;
-    lentes: boolean;
-    boca: string;
-    munones: [number, number];
-  }
-> = {
-  // Cabezón de párpados caídos. El naranja de la referencia.
+const SHAPES: Record<MascotShape, { body: string; color: string; pupil: 'redonda' | 'cuadrada'; parpados: boolean; boca: string; munones: [number, number] }> = {
+  // Cabezón dormido: párpados caídos y media sonrisa. El de la referencia naranja.
   circulo: {
     body: 'M60,4 C79.9,4 96,20.1 96,40 C96,59.9 79.9,76 60,76 C40.1,76 24,59.9 24,40 C24,20.1 40.1,4 60,4 Z',
-    color: '#FF914D',
-    colorHondo: '#FF914D', // plano, como en la referencia
-    torso: '#FF9F63',
-    manos: '#FFBD59',
+    color: wordmark.o.corner,
     pupil: 'redonda',
     parpados: true,
-    lentes: false,
     boca: 'M52 57 Q60 63 67 56',
     munones: [48, 52],
   },
-  // Punta arriba y base ANCHA. La base se abrió de 16..104 a 8..112 (2026-09-16) porque los
-  // ojos crecieron: a la altura de los ojos el triángulo es lo más estrecho de las cuatro
-  // formas, y con la base vieja los ojos nuevos se le salían por los lados.
+  // Punta arriba, base ancha. Ojos enormes y sonrisa mínima. El de la referencia verde.
   triangulo: {
-    body: 'M60,4 L112,76 L8,76 Z',
-    color: '#7ED957',
-    colorHondo: '#7ED957', // plano
-    torso: '#87C26D',
-    manos: '#9BE07A',
+    body: 'M60,4 L104,76 L16,76 Z',
+    color: wordmark.h.corner,
     pupil: 'redonda',
     parpados: false,
-    lentes: false,
     boca: 'M55 58 Q60 64 65 58',
     munones: [66, 69],
   },
-  // Rombo (antes un bloque redondeado). Se escribe como rombo directo y NO como un cuadrado
-  // rotado: rotando, los ojos y los cosméticos rotarían con él, y en la referencia la cara va
-  // perfectamente horizontal sobre el cuerpo inclinado. Además así el rombo es ANCHÍSIMO justo
-  // a la altura de los ojos (20..100), que es donde más falta hace.
-  rombo: {
-    body: 'M60,4 Q64,4 66,7 L97,36 Q100,40 97,44 L66,73 Q60,78 54,73 L23,44 Q20,40 23,36 L54,7 Q56,4 60,4 Z',
-    color: '#004AAD',
-    colorHondo: '#004AAD', // plano
-    torso: '#1B62C4',
-    manos: '#2E7BD8',
-    adorno: true,
-    pupil: 'rombo',
+  // Bloque con pupilas CUADRADAS -- el detalle que separa al azul de los otros dos en la
+  // referencia, y lo que le da su cara de robot.
+  cuadrado: {
+    body: 'M38,4 L82,4 Q100,4 100,22 L100,58 Q100,76 82,76 L38,76 Q20,76 20,58 L20,22 Q20,4 38,4 Z',
+    color: wordmark.m.corner,
+    pupil: 'cuadrada',
     parpados: false,
-    lentes: false,
     boca: 'M53 56 Q60 66 67 56',
     munones: [45, 49],
   },
-  // Estrella con lentes de sol. Los lentes se salen del cuerpo a propósito -- en la referencia
-  // también sobresalen, y es lo que hace que se lean como puestos y no como pintados encima.
-  estrella: {
-    body: 'M60.0,4.0 L69.1,27.5 L94.2,28.9 L74.7,44.8 L81.2,69.1 L60.0,55.5 L38.8,69.1 L45.3,44.8 L25.8,28.9 L50.9,27.5 Z',
-    color: '#FCEE21',
-    colorHondo: '#FFC933',
-    torso: '#FFD34D',
-    manos: '#FFBD59',
-    pupil: 'redonda',
-    parpados: false,
-    lentes: true,
-    boca: 'M54 57 Q60 62 66 57',
-    munones: [58, 61],
-  },
 };
-
 
 /**
  * La mascota de Showmi, dibujada en SVG por código -- no hay assets de arte en el repo, y
@@ -148,75 +109,39 @@ export function Mascot({ equipped, size = 160, shape = 'circulo' }: MascotProps)
   // porque son ojos, no porque el fondo sea claro. Van siempre sobre el cuerpo saturado, que
   // tampoco cambia con el tema, asi que no hay ningun problema de contraste que resolver.
   const ink = '#141414';
-  // Fallback: un `shape` viejo guardado en el store persistido o en la tabla `mascots`
-  // (por ejemplo el `cuadrado` que existió hasta el rediseño) apuntaría a undefined y tiraría
-  // la pantalla entera. Cae al círculo, que es el valor por defecto de siempre.
-  const def = SHAPES[shape] ?? SHAPES.circulo;
+  const def = SHAPES[shape];
   const body = def.color;
+  // Muñones más oscuros que el cuerpo, como en las tres referencias. Derivado, no declarado.
+  const limb = mix(body, '#000000', 0.22);
 
   const sombrero = equipped.sombrero ? cosmeticById(equipped.sombrero) : undefined;
   const accesorio = equipped.accesorio ? cosmeticById(equipped.accesorio) : undefined;
   const estampado = equipped.estampado ? cosmeticById(equipped.estampado) : undefined;
 
   const [munIzq, munDer] = def.munones;
-  /** Accesorios que se montan sobre los ojos y por tanto chocan con `def.lentes`. */
-  const tapaLosOjos = accesorio?.id === 'lentes_dorados' || accesorio?.id === 'visor';
-
-  // Los <Defs> de un SVG viven en el espacio de ids del DOCUMENTO, no del componente. Con
-  // varias criaturas en pantalla (el Camerino muestra cinco a la vez) todas apuntaban al mismo
-  // gradiente y heredaban el color de la primera en renderizarse. El sufijo por forma las
-  // separa; no hace falta un id aleatorio porque dos criaturas de la MISMA forma comparten
-  // color, así que compartir gradiente es correcto.
-  const gradId = `cuerpoGrad-${shape}`;
-  const clipId = `cuerpo-${shape}`;
 
   return (
     <Svg width={size} height={size} viewBox="0 -20 120 140">
       <Defs>
-        <ClipPath id={clipId}>
+        <ClipPath id="cuerpo">
           <Rect x={36} y={78} width={48} height={26} rx={13} />
         </ClipPath>
-        {/* Degradado del cuerpo. Las dos paradas se DECLARAN por criatura y no se derivan
-            del color con mix(): en la referencia el naranja, el verde y el azul son planos
-            (mismo hex de punta a punta) y solo la estrella va de amarillo a ámbar. Derivarlas
-            metía un degradado en las tres que no lo llevan. Cada criatura pone su
-            `colorHondo` igual a su `color` cuando debe verse plana. */}
-        <LinearGradient id={gradId} x1="0" y1="0" x2="0.85" y2="1">
-          <Stop offset="0" stopColor={body} />
-          <Stop offset="1" stopColor={def.colorHondo} />
-        </LinearGradient>
       </Defs>
 
       {/* Muñones: DETRÁS del cuerpo, asomando por los lados. Van a alturas distintas a
           propósito (ver munones en SHAPES) -- la asimetría es el recurso que hace que la
           criatura se lea como dibujada a mano y no como una composición de figuras. */}
-      <Circle cx={17} cy={munIzq} r={13} fill={def.manos} />
-      <Circle cx={103} cy={munDer} r={13} fill={def.manos} />
+      <Circle cx={17} cy={munIzq} r={13} fill={limb} />
+      <Circle cx={103} cy={munDer} r={13} fill={limb} />
 
       {/* Tronco, asomando bajo la forma principal. Existe sobre todo como percha de los
           cosméticos de cuerpo y los estampados, que están anclados a y=78. */}
-      <Rect x={41} y={64} width={38} height={40} rx={15} fill={def.torso} />
-      {estampado && <G clipPath={`url(#${clipId})`}>{renderEstampado(estampado.id, estampado.color)}</G>}
+      <Rect x={41} y={64} width={38} height={40} rx={15} fill={mix(body, '#FFFFFF', 0.16)} />
+      {estampado && <G clipPath="url(#cuerpo)">{renderEstampado(estampado.id, estampado.color)}</G>}
 
       {/* La forma. Es la criatura entera: una primitiva y nada más. */}
-      {/* Dos piezas que en la referencia son parte del rombo y de nadie más: un círculo
-          añil asomando por detrás de la punta superior derecha, y un contorno violeta
-          GIRADO unos grados respecto al cuerpo. Girado y no desplazado: en la imagen los dos
-          rombos se cruzan en las esquinas, que es lo que solo produce una rotación -- una
-          traslación los dejaría paralelos y se leerían como un borde grueso mal puesto. Van
-          antes del cuerpo para quedar detrás. */}
-      {def.adorno && (
-        <G>
-          <Circle cx={96} cy={6} r={13} fill="#1800AD" />
-          <Path d={def.body} fill="none" stroke="#8B3DFF" strokeWidth={2.5} transform="rotate(7 60 40)" />
-        </G>
-      )}
-      <Path d={def.body} fill={`url(#${gradId})`} />
+      <Path d={def.body} fill={body} />
 
-      {/* Los lentes cosidos a la estrella se quitan si el jugador se pone un cosmético que
-          ocupa los mismos ojos: encimados, se ven dos pares de anteojos sobre una cara. Manda
-          lo que el jugador eligió -- unos lentes que no se ven al ponértelos son un cosmético
-          roto, y la estrella sigue siendo reconocible por su silueta. */}
       {/* Ojos enormes, y DESIGUALES a propósito: el derecho es un pelo más chico y va 1px más
           abajo. Perfectamente simétricos se veían corporativos; así se ven hechos a mano.
           
@@ -226,23 +151,20 @@ export function Mascot({ equipped, size = 160, shape = 'circulo' }: MascotProps)
           recto y solo la parte de abajo es redonda. */}
       {def.parpados ? (
         <G>
-          <Path d="M34 36 A14 14 0 0 0 62 36 Z" fill="#FFFFFF" />
-          <Path d="M58.8 37 A13.2 13.2 0 0 0 85.2 37 Z" fill="#FFFFFF" />
+          <Path d="M35 36 A13 13 0 0 0 61 36 Z" fill="#FFFFFF" />
+          <Path d="M60 37 A12.2 12.2 0 0 0 84.4 37 Z" fill="#FFFFFF" />
         </G>
       ) : (
         <G>
-          <Circle cx={48} cy={40} r={14} fill="#FFFFFF" />
-          <Circle cx={72} cy={41} r={13.2} fill="#FFFFFF" />
+          <Circle cx={48} cy={40} r={13} fill="#FFFFFF" />
+          <Circle cx={72} cy={41} r={12.2} fill="#FFFFFF" />
         </G>
       )}
 
-      {def.pupil === 'rombo' ? (
-        // Pupilas en rombo, no cuadradas: repiten la forma del cuerpo dentro del ojo, que es
-        // lo que en la referencia hace que el azul se lea como un personaje coherente y no
-        // como un cuadrado con ojos genéricos.
+      {def.pupil === 'cuadrada' ? (
         <G>
-          <Rect x={44} y={36} width={10} height={10} rx={1.5} fill={ink} transform="rotate(45 49 41)" />
-          <Rect x={68.3} y={37.3} width={9.4} height={9.4} rx={1.5} fill={ink} transform="rotate(45 73 42)" />
+          <Rect x={44} y={36} width={10} height={10} rx={2} fill={ink} />
+          <Rect x={68} y={37} width={9.4} height={9.4} rx={2} fill={ink} />
         </G>
       ) : (
         <G>
@@ -260,23 +182,6 @@ export function Mascot({ equipped, size = 160, shape = 'circulo' }: MascotProps)
       )}
 
       <Path d={def.boca} stroke={ink} strokeWidth={4} fill="none" strokeLinecap="round" />
-
-      {/* Lentes de sol, cosidos a la estrella (no son un cosmético del Camerino): son parte de
-          QUIÉN es, igual que los párpados caídos son parte del naranja. Sobresalen del cuerpo a
-          propósito -- en la referencia también, y es lo que los hace ver puestos. */}
-      {def.lentes && !tapaLosOjos && (
-        // Dimensionados contra los OJOS (cx 48 y 72), no contra el ancho del cuerpo. La
-        // primera versión los midió contra el cuerpo: 64 de ancho por 20 de alto, una mancha
-        // negra que se comía la estrella entera y dejaba la silueta ilegible.
-        <G>
-          <Path d="M36 35 L84 35 L84 38 L63 38 L60 41 L57 38 L36 38 Z" fill={ink} />
-          <Path d="M37 37 Q37 49 48 49 Q59 49 59 37 Z" fill={ink} />
-          <Path d="M61 37 Q61 49 72 49 Q83 49 83 37 Z" fill={ink} />
-          {/* Destello: sin él, dos manchas negras se leen como agujeros y no como cristal. */}
-          <Path d="M40 39 L45 39 L42 46 L39 46 Z" fill="#FFFFFF" opacity={0.3} />
-          <Path d="M64 39 L69 39 L66 46 L63 46 Z" fill="#FFFFFF" opacity={0.3} />
-        </G>
-      )}
 
       {accesorio && renderAccesorio(accesorio.id, accesorio.color, ink)}
       {sombrero && renderSombrero(sombrero.id, sombrero.color, ink)}

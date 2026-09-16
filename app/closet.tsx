@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,6 +21,7 @@ import {
 import { MascotShape, Mascot } from '../src/components/camerino/Mascot';
 import { BackButton } from '../src/components/ui/BackButton';
 import { PageTransition } from '../src/components/ui/PageTransition';
+import { MASCOTAS_ACTIVAS } from '../src/lib/beta';
 import { ThemeColors } from '../src/theme/colors';
 import { radii } from '../src/theme/radii';
 import { readableOn } from '../src/theme/contrast';
@@ -30,8 +32,7 @@ import { readableOn } from '../src/theme/contrast';
 const SHAPE_OPTIONS: { shape: MascotShape; label: string }[] = [
   { shape: 'circulo', label: 'Redonda' },
   { shape: 'triangulo', label: 'Triangular' },
-  { shape: 'rombo', label: 'Rombo' },
-  { shape: 'estrella', label: 'Estrella' },
+  { shape: 'cuadrado', label: 'Cuadrada' },
 ];
 
 function ProgressRow({ colors, label, ratings }: { colors: ThemeColors; label: string; ratings: number }) {
@@ -164,6 +165,17 @@ export default function ClosetScreen() {
 
   const shown = visibleEquipped(equipped, isPremium);
   const totalRatings = Object.values(ratingsByCategory).reduce((a, b) => a + (b ?? 0), 0);
+
+  // Segundo cerrojo, además de esconder la tarjeta que lleva acá: expo-router resuelve por
+  // archivo, así que mientras `app/closet.tsx` exista la ruta responde a un deep link
+  // (showmi://closet) aunque nada de la app enlace a ella. Se echa atrás en un efecto y no
+  // durante el render porque navegar mientras se renderiza avisa en consola y, con la
+  // transición de página, deja la pantalla a medio montar.
+  useEffect(() => {
+    if (!MASCOTAS_ACTIVAS) router.replace('/profile');
+  }, [router]);
+
+  if (!MASCOTAS_ACTIVAS) return null;
 
   return (
     <PageTransition>

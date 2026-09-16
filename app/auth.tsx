@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -17,7 +17,6 @@ import {
 import { getGoogleIdToken } from '../src/api/googleAuth';
 import { goBackOrHome } from '../src/lib/navigation';
 import { PageTransition } from '../src/components/ui/PageTransition';
-import { AuthHero } from '../src/components/auth/AuthHero';
 
 type Mode = 'upgrade' | 'signin';
 
@@ -156,27 +155,12 @@ export default function AuthScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => goBackOrHome(router)} hitSlop={10}>
-            {/* Tinta oscura y fija. Era blanco cuando el panel de atrás era el degradado de
-              marca; con la ilustración nueva el panel es aqua CLARO y el blanco se perdía
-              encima. Fija en los dos temas porque el panel no sigue al tema. */}
-            <Text style={styles.cancelText}>Cancelar</Text>
+            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancelar</Text>
           </Pressable>
         </View>
 
-        {/* ScrollView, no un View suelto (2026-09-16): la cabecera ilustrada añadió ~278px, y
-            sin scroll el botón de enviar quedaba fuera de alcance en pantallas cortas -- y con
-            el teclado abierto, en casi todas. `keyboardShouldPersistTaps` para que el primer
-            toque en el botón cuente aunque el teclado esté arriba, en vez de gastarse en
-            cerrarlo. */}
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <AuthHero />
-
-          <View style={styles.content}>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>
+        <View style={styles.content}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>
             {mode === 'upgrade' ? 'Guarda tu progreso' : 'Inicia sesión'}
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
@@ -281,8 +265,7 @@ export default function AuthScreen() {
               <Text style={styles.submitButtonText}>{mode === 'upgrade' ? 'Crear cuenta' : 'Iniciar sesión'}</Text>
             )}
           </Pressable>
-          </View>
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </PageTransition>
   );
@@ -296,25 +279,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 20,
     paddingTop: 10,
-    // Encima del panel ilustrado, sin ocupar espacio propio en el layout.
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 2,
   },
   cancelText: {
     fontSize: 13,
     fontFamily: fonts.bodySemiBold,
-    color: '#141414',
-  },
-  scroll: {
-    // Colchón abajo para que el último botón nunca quede pegado al borde.
-    paddingBottom: 32,
   },
   content: {
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 24,
     gap: 14,
   },
   title: {

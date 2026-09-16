@@ -24,6 +24,7 @@ import type { PurchasesPackage } from 'react-native-purchases';
 
 import { useThemeStore } from '../src/theme/useThemeStore';
 import { fonts } from '../src/theme/typography';
+import { MASCOTAS_ACTIVAS } from '../src/lib/beta';
 import { wordmark } from '../src/theme/wordmark';
 import { BackButton } from '../src/components/ui/BackButton';
 import { EchoTitle } from '../src/components/ui/EchoTitle';
@@ -70,6 +71,15 @@ const GOLD = '#C9A227';
 const INK_ON_GOLD = '#1A1405';
 const TEXT_DIM = '#B9B3C7';
 
+/**
+ * Lo que se promete a cambio del dinero.
+ *
+ * Los cosméticos del Camerino SOLO aparecen si las mascotas no están tras la barrera de beta
+ * (ver lib/beta.ts). No es un detalle de presentación: es la lista por la que alguien decide
+ * pagar, y dejar ahí una ventaja que el comprador no va a poder ver en ningún sitio es cobrar
+ * por algo que no se entrega. Se filtra en vez de borrarse para que vuelva sola cuando se
+ * levante la barrera, sin que nadie tenga que acordarse.
+ */
 const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = [
   {
     icon: InfinityIcon,
@@ -81,11 +91,15 @@ const PERKS: { icon: typeof CrownIcon; title: string; description: string }[] = 
     title: 'Insignia de More',
     description: 'Visible junto a tu nombre en el Feed y tu Perfil.',
   },
-  {
-    icon: TShirtIcon,
-    title: 'Cosméticos del Camerino',
-    description: 'Corona, lentes dorados y estrellas. Los ves antes de pagar — nunca son aleatorios.',
-  },
+  ...(MASCOTAS_ACTIVAS
+    ? [
+        {
+          icon: TShirtIcon,
+          title: 'Cosméticos del Camerino',
+          description: 'Corona, lentes dorados y estrellas. Los ves antes de pagar — nunca son aleatorios.',
+        },
+      ]
+    : []),
   {
     icon: ProhibitIcon,
     title: 'Sin anuncios',
@@ -293,7 +307,12 @@ export default function PremiumScreen() {
 
             <Text style={styles.headline}>
               Descubre sin freno{'\n'}
-              <Text style={{ color: wordmark.w.corner }}>y viste a tu mascota</Text>
+              {/* El gancho tampoco habla de la mascota mientras esté escondida: era la primera
+                  frase de la pantalla que cobra, prometiendo justo lo que el comprador no iba a
+                  encontrar después. */}
+              <Text style={{ color: wordmark.w.corner }}>
+                {MASCOTAS_ACTIVAS ? 'y viste a tu mascota' : 'y sin interrupciones'}
+              </Text>
             </Text>
 
             {isPremium ? (

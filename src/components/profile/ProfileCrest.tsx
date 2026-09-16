@@ -2,6 +2,7 @@ import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { Mascot } from '../camerino/Mascot';
+import { MASCOTAS_ACTIVAS } from '../../lib/beta';
 import { useCamerinoStore, visibleEquipped } from '../../state/camerinoStore';
 import { useSubscriptionStore } from '../../state/subscriptionStore';
 import { GenreCategory, MAX_LEVEL, levelForRatings, progressToNextLevel } from '../../lib/cosmetics';
@@ -24,6 +25,9 @@ interface ProfileCrestProps {
  * perfil. Traído al lenguaje de Showmi: el avatar es la MASCOTA con lo que tenga equipado en
  * el Camerino, no una foto -- este producto no tiene fotos de perfil y no debería fingir que
  * las tiene.
+ *
+ * 2026-09-16: mientras las mascotas estén tras la barrera de beta (ver lib/beta.ts) el aro
+ * enseña la inicial del nombre. La cabecera no cambia de forma; solo cambia qué va dentro.
  *
  * El nivel que se muestra es el de la CATEGORÍA DOMINANTE, no un promedio ni una suma. Los
  * umbrales (LEVEL_THRESHOLDS, ver cosmetics.ts) están calibrados para una categoría: sumarlos
@@ -88,8 +92,20 @@ export function ProfileCrest({ colors, displayName }: ProfileCrestProps) {
         <CrestStat label={level >= MAX_LEVEL ? 'Nivel máximo' : 'Al siguiente'} value={`${progress}%`} />
       </View>
 
+      {/* Con la barrera de beta puesta el aro NO desaparece: se queda y enseña la inicial. Es
+          deliberado -- quitarlo dejaba un hueco entre las dos cifras y la curva perdía la pieza
+          que la monta, que es de donde saca su forma toda la cabecera. Un monograma ocupa el
+          mismo sitio y se lee como un avatar normal, no como algo que falta. */}
       <View style={[styles.mascotRing, { backgroundColor: colors.background }]}>
-        <Mascot equipped={visibleEquipped(equipped, isPremium)} size={84} shape={shape} />
+        {MASCOTAS_ACTIVAS ? (
+          <Mascot equipped={visibleEquipped(equipped, isPremium)} size={84} shape={shape} />
+        ) : (
+          <View style={[styles.monograma, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.monogramaTexto, { color: colors.textPrimary }]}>
+              {(displayName.trim()[0] ?? '?').toUpperCase()}
+            </Text>
+          </View>
+        )}
       </View>
 
       <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -113,6 +129,8 @@ function CrestStat({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center' },
+  monograma: { width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center' },
+  monogramaTexto: { fontSize: 34, fontFamily: fonts.display },
   bannerLayer: { position: 'absolute', top: 0, left: 0, right: 0 },
   statsRow: {
     flexDirection: 'row',
