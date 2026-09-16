@@ -187,52 +187,174 @@ const VIBE_TAG_SYNONYMS: Record<string, string[]> = {
 /** Último recurso: el género da un ánimo por defecto. Deliberadamente parcial -- solo los
  *  géneros donde el sesgo de ánimo es fuerte y poco discutible. Un género que no está acá
  *  simplemente no recibe vibra provisional, que es preferible a inventarle una. */
+/**
+ * Último recurso: el género da un ánimo por defecto.
+ *
+ * Sigue siendo la señal MÁS DÉBIL de las tres (voto de la comunidad > tags de ánimo reales de
+ * Last.fm > esto) y cualquiera de las otras dos la pisa. Lo que se asigna acá es el caso MODAL
+ * honesto de cada género, no una verdad sobre ninguna canción concreta.
+ *
+ * 2026-09-16, ampliación medida: el mapa cubría 23 de los 53 géneros y dejaba fuera justo los
+ * más grandes del catálogo real -- rock (15 canciones, 2 con vibra), hip_hop_rap (5, ninguna),
+ * electronica (4, ninguna), pop y pop_latino. Con reggaeton al 100% por estar en el mapa y rock
+ * al 13% por no estarlo, la "cobertura de vibra" era en realidad un reflejo de qué géneros
+ * alguien había alcanzado a escribir acá.
+ *
+ * También se corrigió una entrada MUERTA: decía `clasica`, pero la clave canónica es
+ * `classical` (ver src/lib/genres.ts), así que no matcheaba nunca.
+ *
+ * Ahora cubre los 53. Que estén todos NO significa que cada asignación sea igual de firme:
+ * `metal -> rabia` es casi tautológico y `rock -> hype` es solo el caso más común de un género
+ * anchísimo. Se acepta esa desigualdad porque la vibra se siembra a MEDIA fuerza (ver
+ * ONBOARDING_VIBE_SEED_FACTOR en tasteEngine.ts) y porque el primer voto de la comunidad la
+ * reemplaza. Un piso imperfecto que la gente corrige es mejor que un vacío perfecto -- es el
+ * mismo criterio con que nació este mapa.
+ */
 const GENRE_DEFAULT_VIBE: Record<string, string> = {
+  // --- Latino ---
   reggaeton: "fiesta",
   banda_norteno: "fiesta",
   cumbia: "fiesta",
   merengue: "fiesta",
   salsa: "fiesta",
+  tejano: "fiesta",
+  vallenato: "romantico",
   bachata: "romantico",
   boleros: "romantico",
+  pop_latino: "alegre",
   ranchera_mariachi: "desahogo",
   corridos_tumbados_regional: "hype",
   trap_latino: "hype",
+  // --- Urbano / Pop ---
+  hip_hop_rap: "hype",
   drill: "rabia",
+  rnb_soul: "sensual",
+  pop: "alegre",
+  k_pop: "alegre",
+  j_pop: "alegre",
+  mandopop_cantopop: "romantico",
+  // --- Rock y derivados ---
+  rock: "hype",
   metal: "rabia",
   punk: "rabia",
   emo: "melancolico",
   shoegaze_dreampop: "introspectivo",
   indie_lofi: "chill",
+  // --- Electrónica ---
+  electronica: "fiesta",
   house: "fiesta",
   techno: "hype",
   trance: "viaje",
   drum_and_bass: "hype",
   dubstep_bass: "hype",
+  // --- Raíces ---
   jazz: "relajacion",
   blues: "melancolico",
-  clasica: "enfoque",
+  funk_disco: "fiesta",
+  country_folk: "nostalgico",
+  bluegrass: "alegre",
+  classical: "enfoque",
+  opera: "introspectivo",
+  flamenco: "desahogo",
+  ambient_new_age: "relajacion",
+  gospel_cristiana: "motivacional",
+  // --- Del mundo ---
+  reggae: "chill",
+  afrobeats: "fiesta",
+  highlife: "alegre",
+  soca_calypso: "fiesta",
+  bossa_nova_mpb: "relajacion",
+  bollywood: "alegre",
+  arabic_pop: "fiesta",
+  turkish_pop: "fiesta",
+  nordic_pop: "melancolico",
+  celtic_irish: "nostalgico",
+  fado: "melancolico",
 };
 
-function resolveVibra(tags: string[], genero: string | null): string | null {
+/**
+ * Vibra por CATEGORÍA, cuando ni los tags ni el género alcanzaron.
+ *
+ * Nace de medir (2026-09-16): las 11 canciones que quedaban sin vibra eran exactamente las 11
+ * sin género, y las 11 traían el MISMO `primaryGenreName` de iTunes: "Latin". Esa cadena se
+ * deja sin resolver a género a propósito -- abarca reggaetón, salsa, bachata y boleros a la
+ * vez, y mandarla a uno solo marcaría a Tito Rojas como reggaetonero. El filtro duro del deck
+ * usa el género, así que ahí equivocarse le cambia a alguien el resultado de un filtro que
+ * pidió.
+ *
+ * La vibra no tiene ese problema: se siembra a media fuerza, la pisa el primer voto de la
+ * comunidad, y no filtra nada -- solo rankea. Así que de una categoría SÍ se puede sacar un
+ * modo honesto aunque del género no.
+ *
+ * "latin" -> fiesta es el modo real de este catálogo, no una corazonada: de esas 11, 7 caerían
+ * en fiesta por su género verdadero (dembow, reggaetón, salsa), 2 en hype y 2 en romántico.
+ * Acertar 7 de 11 en una señal débil y corregible es mejor que dejar 11 en cero.
+ *
+ * Esto NO asigna género. Devuelve solo vibra, y a propósito.
+ */
+const CATEGORY_DEFAULT_VIBE: Record<string, string> = {
+  latin: "fiesta",
+};
+
+function resolveVibra(tags: string[], genero: string | null, itunesGenre: string | null): string | null {
   const normalized = tags.filter((t): t is string => !!t).map((t) => t.toLowerCase().trim());
   for (const [key, synonyms] of Object.entries(VIBE_TAG_SYNONYMS)) {
     if (synonyms.some((tag) => normalized.includes(tag))) return key;
   }
-  return genero ? (GENRE_DEFAULT_VIBE[genero] ?? null) : null;
+  const porGenero = genero ? (GENRE_DEFAULT_VIBE[genero] ?? null) : null;
+  if (porGenero) return porGenero;
+  // Último recurso: la categoría cruda de iTunes.
+  const cat = (itunesGenre ?? "").toLowerCase().trim();
+  return CATEGORY_DEFAULT_VIBE[cat] ?? null;
 }
 
 // ---------- fuentes externas ----------
 
-async function getTrackTopTags(artist: string, title: string, apiKey: string): Promise<string[]> {
-  const url = `${LASTFM_BASE}?method=track.gettoptags&autocorrect=1&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(
-    title
-  )}&api_key=${apiKey}&format=json`;
+async function pedirTags(url: string): Promise<string[]> {
   const res = await fetch(url);
   if (!res.ok) return [];
   const json = await res.json();
   const tags = json?.toptags?.tag ?? [];
   return tags.map((t: any) => t.name ?? '').filter(Boolean);
+}
+
+/**
+ * Tags de Last.fm para una canción, con respaldo al ARTISTA cuando la canción no tiene ninguno.
+ *
+ * Medido sobre el catálogo real (2026-09-16): `track.gettoptags` devuelve vacío para buena
+ * parte del urbano/latino -- las canciones recientes simplemente no acumulan etiquetas. Eso
+ * dejaba `resolveVibra` sin su ÚNICA señal buena (palabras de ánimo escritas por gente que
+ * escuchó: "party", "sad", "chill") y lo obligaba a caer al mapa por género, que es una señal
+ * mucho más débil.
+ *
+ * El artista casi siempre sí tiene tags. No son tan precisos -- describen una obra entera, no
+ * una canción -- por eso van SOLO como respaldo y nunca pisan los de la canción. Pero un tag
+ * de artista real es mejor señal que adivinar por género, que es lo que pasaba antes.
+ *
+ * Devuelve las dos listas POR SEPARADO a propósito. Al principio se devolvían mezcladas y el
+ * mismo array alimentaba género y vibra; medido, eso subía la cobertura de género de 51% a 95%,
+ * pero por la razón equivocada: una balada de un reggaetonero heredaba "reggaeton" del catálogo
+ * de su autor. El género manda en el filtro duro del deck, así que ahí una etiqueta prestada no
+ * es cosmética -- le cambia el resultado a un filtro que la persona pidió explícitamente. Quien
+ * llama decide: género solo con `deCancion`, vibra con el respaldo.
+ */
+async function getTrackTopTags(
+  artist: string,
+  title: string,
+  apiKey: string
+): Promise<{ deCancion: string[]; deArtista: string[] }> {
+  const deCancion = await pedirTags(
+    `${LASTFM_BASE}?method=track.gettoptags&autocorrect=1&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(
+      title
+    )}&api_key=${apiKey}&format=json`
+  );
+  // Solo se pide el respaldo si hace falta: una petición menos por canción cuando ya hay tags.
+  if (deCancion.length > 0) return { deCancion, deArtista: [] };
+
+  const deArtista = await pedirTags(
+    `${LASTFM_BASE}?method=artist.gettoptags&autocorrect=1&artist=${encodeURIComponent(artist)}&api_key=${apiKey}&format=json`
+  );
+  return { deCancion, deArtista };
 }
 
 interface ItunesLookupResult {
@@ -333,9 +455,13 @@ serve(async (req) => {
       continue;
     }
 
-    const tags = await getTrackTopTags(itunes.artist, itunes.title, lastfmKey);
+    const { deCancion, deArtista } = await getTrackTopTags(itunes.artist, itunes.title, lastfmKey);
 
-    const genero = resolveGenero(tags, itunes.genre);
+    // GÉNERO: solo tags de la CANCIÓN. Los del artista describen su obra entera, y usarlos acá
+    // haría que una balada de un reggaetonero se etiquetara reggaeton. El género manda en el
+    // filtro duro del deck (qué canciones ve la persona), así que una etiqueta equivocada acá
+    // no es cosmética: le cambia el resultado de un filtro que pidió explícitamente.
+    const genero = resolveGenero(deCancion, itunes.genre);
     const { error: upsertError } = await supabase.from('track_catalog').upsert({
       track_id: trackId,
       title: itunes.title,
@@ -345,7 +471,10 @@ serve(async (req) => {
       epoca: resolveEpoca(itunes.releaseDate),
       genero,
       // Piso provisional: el voto de la comunidad lo pisa cuando existe (ver resolveVibra).
-      vibra: resolveVibra(tags, genero),
+      // VIBRA: tags de la canción y, si no hay, los del artista. Acá el respaldo sí conviene --
+      // el ánimo de un artista es mucho más estable a lo largo de su obra que su subgénero, y
+      // la alternativa era caer al mapa por género, que es una señal todavía más débil.
+      vibra: resolveVibra(deCancion.length > 0 ? deCancion : deArtista, genero, itunes.genre),
       classified_at: new Date().toISOString(),
     });
 
