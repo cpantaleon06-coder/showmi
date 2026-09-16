@@ -133,7 +133,7 @@ export default function SwipeScreen() {
                 setGenre(null);
                 clearAnchor();
               }}
-              style={[styles.filterChip, { borderColor: colors.border }]}
+              style={[styles.filterChip, { backgroundColor: colors.surface }]}
               hitSlop={6}
             >
               <Text style={[styles.filterChipText, { color: colors.textPrimary }]}>
@@ -142,7 +142,7 @@ export default function SwipeScreen() {
             </Pressable>
           )}
           {vibeDef && (
-            <Pressable onPress={() => setVibe(null)} style={[styles.filterChip, { borderColor: colors.border }]} hitSlop={6}>
+            <Pressable onPress={() => setVibe(null)} style={[styles.filterChip, { backgroundColor: colors.surface }]} hitSlop={6}>
               <Text style={[styles.filterChipText, { color: colors.textPrimary }]}>
                 {vibeDef.emoji} {vibeDef.label} ✕
               </Text>
@@ -192,7 +192,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   filterChip: {
-    borderWidth: 1.5,
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,

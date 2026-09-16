@@ -92,7 +92,7 @@ export function TrackTile({ track, colors, variant, accent, onRemove }: TrackTil
       style={[
         styles.tile,
         variant === 'wide' ? styles.tileWide : variant === 'tall' ? styles.tileTall : styles.tileSmall,
-        { backgroundColor: TILE_SURFACE, borderColor: accent },
+        { backgroundColor: TILE_SURFACE },
         pressStyle,
       ]}
     >
@@ -134,7 +134,7 @@ export function TrackTile({ track, colors, variant, accent, onRemove }: TrackTil
       <Pressable
         onPress={onRemove}
         hitSlop={10}
-        style={[styles.removeButton, { backgroundColor: TILE_SURFACE, borderColor: accent }]}
+        style={[styles.removeButton, { backgroundColor: TILE_SURFACE }]}
         accessibilityRole="button"
         accessibilityLabel={`Quitar ${track.title} de esta colección`}
       >
@@ -148,7 +148,6 @@ const styles = StyleSheet.create({
   tile: {
     // 2.5 y no 2: el contorno de color es un elemento del diseño acá, no una línea de
     // separación -- tiene que leerse como el marco de un cartel.
-    borderWidth: 2.5,
     borderRadius: radii.card,
     overflow: 'hidden',
   },
@@ -201,7 +200,6 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -177,8 +177,10 @@ export default function LibraryScreen() {
                 style={[
                   styles.newTabInputWrap,
                   {
-                    borderColor: inputFocused ? colors.textPrimary : colors.border,
-                    backgroundColor: colors.background,
+                    // El foco ya no se marca con borde sino con el relleno: apagado usa
+                    // `surface`, enfocado sube a `background` (mas claro en oscuro, mas
+                    // blanco en claro), asi que el campo activo "se prende".
+                    backgroundColor: inputFocused ? colors.background : colors.surface,
                   },
                 ]}
               >
@@ -202,7 +204,7 @@ export default function LibraryScreen() {
               // pertenece a la fila en vez de interrumpirla.
               <Pressable
                 onPress={() => setIsCreating(true)}
-                style={[styles.newTabButton, { borderColor: colors.border, backgroundColor: colors.background }]}
+                style={[styles.newTabButton, { backgroundColor: colors.surface }]}
                 accessibilityRole="button"
                 accessibilityLabel="Crear una colección nueva"
               >
@@ -328,12 +330,10 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   newTabInputWrap: {
-    borderWidth: 2,
     borderRadius: radii.pill,
     paddingVertical: 6,
     paddingHorizontal: 12,

@@ -372,7 +372,7 @@ export function SwipeDeck({ vibe, genre }: SwipeDeckProps) {
           como lo que es: se acabó lo que calzaba exacto y se amplió la búsqueda a propósito.
           Solo aparece con el deck ya cargado -- durante isLoading la pantalla es la estática. */}
       {!isLoading && !isError && relaxedLevels.length > 0 && (
-        <View style={[styles.relaxedNotice, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.relaxedNotice, { backgroundColor: colors.surface }]}>
           <Text style={[styles.relaxedNoticeText, { color: colors.textSecondary }]}>
             Ampliando tu búsqueda: había pocas canciones de {describeRelaxed(relaxedLevels)}.
           </Text>
@@ -440,7 +440,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderWidth: 1.5,
     borderRadius: radii.card,
   },
   relaxedNoticeText: {

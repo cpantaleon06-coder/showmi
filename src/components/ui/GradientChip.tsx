@@ -66,9 +66,10 @@ export function GradientChip({ colors, label, selected, onPress, fillColor, outl
           pasar las franjas por DETRÁS de su propia etiqueta. Se usa `background`, no
           `surface`, justamente para que en las pantallas sin patrón el chip siga
           viéndose idéntico a antes -- es del mismo color que la página. */}
-      <View
-        style={[styles.chip, { backgroundColor: colors.background, borderColor: selected ? fill : outline }]}
-      >
+      {/* Sin contorno (2026-09-16): el chip apagado se sostiene con RELLENO de `surface`, que
+          contrasta con `background` en los dos temas. Antes era del color de la pagina mas un
+          borde; quitandole el borde sin darle relleno habria desaparecido. */}
+      <View style={[styles.chip, { backgroundColor: colors.surface }]}>
         <Animated.View style={[StyleSheet.absoluteFill, fillStyle, { backgroundColor: fill }]} />
         {/* El color del texto encendido se MIDE contra el relleno (ver theme/contrast.ts), no
             es blanco fijo: desde que cada colección de Biblioteca trae su propio color del
@@ -84,7 +85,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   chip: {
-    borderWidth: 2,
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 8,

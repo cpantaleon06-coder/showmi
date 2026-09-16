@@ -82,7 +82,7 @@ function CommunityPickCard({ pick, colors }: { pick: CommunityPick; colors: Them
   const { data: track } = useResolvedTrack(pick.trackId);
   if (!track) return null;
   return (
-    <View style={[styles.pickCard, { backgroundColor: colors.surface, borderColor: colors.brand }]}>
+    <View style={[styles.pickCard, { backgroundColor: colors.surface }]}>
       <Image source={{ uri: track.artworkUrl }} style={styles.artwork} contentFit="cover" />
       <View style={styles.headerText}>
         <Text style={[styles.pickBadge, { color: colors.brandText }]}>#{pick.position} DE LA SEMANA</Text>
@@ -104,7 +104,7 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
 
   if (isLoading) {
     return (
-      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: 'center' }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, alignItems: 'center' }]}>
         <ActivityIndicator color={colors.brandText} size="small" />
       </View>
     );
@@ -112,7 +112,7 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
   if (!track) return null;
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.card, { backgroundColor: colors.surface }]}>
       <View style={styles.header}>
         <Image source={{ uri: track.artworkUrl }} style={styles.artwork} contentFit="cover" />
         <View style={styles.headerText}>
@@ -129,7 +129,7 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
           </View>
         )}
         {post.isPremium && !post.isOfficial && (
-          <View style={[styles.premiumBadge, { borderColor: colors.premiumAccent }]}>
+          <View style={[styles.premiumBadge, { backgroundColor: colors.premiumAccent }]}>
             <CrownIcon weight="fill" size={12} color={colors.premiumAccent} />
           </View>
         )}
@@ -170,7 +170,7 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
           placeholderTextColor={colors.textSecondary}
           style={[
             styles.reviewInput,
-            { color: colors.textPrimary, borderColor: inputFocused ? colors.brand : colors.border },
+            { color: colors.textPrimary, backgroundColor: inputFocused ? colors.background : colors.surface },
             inputFocused && styles.reviewInputFocused,
           ]}
           multiline
@@ -374,7 +374,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
   },
   pickCard: {
-    borderWidth: 2,
     borderRadius: radii.card,
     padding: 12,
     flexDirection: 'row',
@@ -388,7 +387,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   card: {
-    borderWidth: 2,
     borderRadius: radii.card,
     padding: 14,
     gap: 10,
@@ -427,7 +425,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   premiumBadge: {
-    borderWidth: 1.5,
     borderRadius: 12,
     padding: 5,
   },
@@ -445,7 +442,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   reviewInput: {
-    borderWidth: 2,
     borderRadius: radii.card,
     padding: 10,
     fontSize: 13,
@@ -453,7 +449,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyRegular,
   },
   reviewInputFocused: {
-    borderWidth: 2,
   },
   reviewReadOnly: {
     fontSize: 13,

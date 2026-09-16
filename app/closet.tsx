@@ -22,6 +22,7 @@ import { BackButton } from '../src/components/ui/BackButton';
 import { PageTransition } from '../src/components/ui/PageTransition';
 import { ThemeColors } from '../src/theme/colors';
 import { radii } from '../src/theme/radii';
+import { readableOn } from '../src/theme/contrast';
 
 /** Nombres de cara al usuario. Descriptivos y no inventados ("Bloopy", "Triangulin"): son
  *  tres formas, y nombrarlas por lo que son evita que alguien tenga que tocarlas para
@@ -46,7 +47,7 @@ function ProgressRow({ colors, label, ratings }: { colors: ThemeColors; label: s
           {atMax ? `Nivel ${level} · máximo` : `Nivel ${level} · ${ratings}/${next}`}
         </Text>
       </View>
-      <View style={[styles.track, { borderColor: colors.border }]}>
+      <View style={[styles.track, { backgroundColor: colors.surface }]}>
         <View style={[styles.fill, { width: `${pct * 100}%`, backgroundColor: colors.brand }]} />
       </View>
     </View>
@@ -83,14 +84,14 @@ function ShapeCard({
       style={[
         styles.shapeCard,
         {
-          backgroundColor: colors.surface,
-          borderColor: selected ? colors.brand : colors.border,
-          borderWidth: selected ? 3 : 1.5,
+          // Seleccion por RELLENO, no por borde: la elegida se pinta con el color de marca
+          // y las otras quedan en superficie. Misma gramatica que los chips.
+          backgroundColor: selected ? colors.brand : colors.surface,
         },
       ]}
     >
       <Mascot equipped={{}} size={72} shape={shape} />
-      <Text style={[styles.shapeLabel, { color: selected ? colors.brandText : colors.textSecondary }]}>{label}</Text>
+      <Text style={[styles.shapeLabel, { color: selected ? readableOn(colors.brand) : colors.textSecondary }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -109,24 +110,32 @@ function CosmeticCard({
   onPress: () => void;
 }) {
   const isMore = item.source.kind === 'more';
-  const borderColor = equipped ? colors.brand : isMore ? colors.premiumAccent : colors.border;
+  // El estado ya no lo dice un borde: 'puesto' se pinta de marca y el resto queda en
+  // superficie. La corona de More y el candado siguen estando arriba de la tarjeta.
+  const fondo = equipped ? colors.brand : colors.surface;
 
   return (
     <Pressable
       onPress={onPress}
       disabled={!unlocked}
-      style={[styles.card, { borderColor, opacity: unlocked ? 1 : 0.45 }]}
+      style={[styles.card, { backgroundColor: fondo, opacity: unlocked ? 1 : 0.45 }]}
       hitSlop={4}
     >
       <View style={styles.cardTop}>
-        <View style={[styles.swatch, { backgroundColor: item.color, borderColor: colors.border }]} />
+        <View style={[styles.swatch, { backgroundColor: item.color }]} />
         {!unlocked && <LockSimpleIcon weight="fill" size={14} color={colors.textSecondary} />}
         {isMore && <CrownIcon weight="fill" size={14} color={colors.premiumAccent} />}
       </View>
-      <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={2}>
+      <Text
+        style={[styles.cardName, { color: equipped ? readableOn(colors.brand) : colors.textPrimary }]}
+        numberOfLines={2}
+      >
         {item.name}
       </Text>
-      <Text style={[styles.cardHint, { color: equipped ? colors.brand : colors.textSecondary }]} numberOfLines={2}>
+      <Text
+        style={[styles.cardHint, { color: equipped ? readableOn(colors.brand) : colors.textSecondary }]}
+        numberOfLines={2}
+      >
         {equipped
           ? 'Puesto'
           : item.source.kind === 'more'
@@ -166,7 +175,7 @@ export default function ClosetScreen() {
             enseñan a esperar. */}
         <BackButton colors={colors} />
         <ScrollView contentContainerStyle={styles.content}>
-          <View style={[styles.stage, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.stage, { backgroundColor: colors.surface }]}>
             <Mascot equipped={shown} size={180} shape={shape} />
           </View>
 
@@ -225,11 +234,11 @@ export default function ClosetScreen() {
           {!isPremium && (
             <Pressable
               onPress={() => router.push('/premium')}
-              style={[styles.moreCta, { borderColor: colors.premiumAccent }]}
+              style={[styles.moreCta, { backgroundColor: colors.premiumAccent }]}
               hitSlop={8}
             >
-              <CrownIcon weight="fill" size={18} color={colors.premiumAccent} />
-              <Text style={[styles.moreCtaText, { color: colors.premiumAccent }]}>
+              <CrownIcon weight="fill" size={18} color={readableOn(colors.premiumAccent)} />
+              <Text style={[styles.moreCtaText, { color: readableOn(colors.premiumAccent) }]}>
                 Desbloquea las piezas exclusivas con Showmi More
               </Text>
             </Pressable>
@@ -256,7 +265,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 24,
-    borderWidth: 2,
     borderRadius: radii.card,
     marginTop: 8,
   },
@@ -272,19 +280,18 @@ const styles = StyleSheet.create({
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   progressLabel: { fontSize: 13, fontFamily: fonts.bodySemiBold },
   progressMeta: { fontSize: 11, fontFamily: fonts.bodyRegular },
-  track: { height: 10, borderWidth: 1.5, borderRadius: 6, overflow: 'hidden' },
+  track: { height: 10, borderRadius: 6, overflow: 'hidden' },
   fill: { height: '100%' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   card: {
     width: '31%',
-    borderWidth: 2,
     borderRadius: radii.card,
     padding: 9,
     gap: 5,
     minHeight: 96,
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  swatch: { width: 18, height: 18, borderRadius: 5, borderWidth: 1.5 },
+  swatch: { width: 18, height: 18, borderRadius: 5 },
   cardName: { fontSize: 12, fontFamily: fonts.bodySemiBold },
   cardHint: { fontSize: 10, fontFamily: fonts.bodyRegular, lineHeight: 13 },
   moreCta: {
@@ -292,7 +299,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderWidth: 2,
     borderRadius: 24,
     paddingHorizontal: 18,
     paddingVertical: 13,

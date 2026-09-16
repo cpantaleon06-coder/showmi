@@ -59,7 +59,7 @@ function titleCase(s: string): string {
 
 function StatChip({ colors, label, count }: { colors: ThemeColors; label: string; count: number }) {
   return (
-    <View style={[chipStyles.chip, { borderColor: colors.border }]}>
+    <View style={[chipStyles.chip, { backgroundColor: colors.surface }]}>
       <Text style={[chipStyles.label, { color: colors.textPrimary }]}>{label}</Text>
       <Text style={[chipStyles.count, { color: colors.textSecondary }]}>{count}</Text>
     </View>
@@ -107,8 +107,8 @@ function GridCard({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={[styles.gridCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <View style={[styles.gridIcon, { borderColor: accent }]}>{icon}</View>
+    <Pressable onPress={onPress} style={[styles.gridCard, { backgroundColor: colors.surface }]}>
+      <View style={styles.gridIcon}>{icon}</View>
       <Text style={[styles.gridTitle, { color: colors.textPrimary }]}>{title}</Text>
       <Text style={[styles.gridCaption, { color: colors.textSecondary }]} numberOfLines={2}>
         {caption}
@@ -148,7 +148,7 @@ function QuietRow({
   tint?: string;
 }) {
   return (
-    <Pressable onPress={onPress} style={[styles.quietRow, { borderColor: colors.border }]} hitSlop={6}>
+    <Pressable onPress={onPress} style={[styles.quietRow, { backgroundColor: colors.surface }]} hitSlop={6}>
       {icon}
       <Text style={[styles.quietRowText, { color: tint ?? colors.textPrimary }]}>{label}</Text>
       <CaretRightIcon weight="bold" size={15} color={colors.textSecondary} />
@@ -391,7 +391,6 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', gap: 12, paddingHorizontal: 22, marginBottom: 26 },
   gridCard: {
     flex: 1,
-    borderWidth: 1.5,
     borderRadius: radii.card,
     padding: 14,
     gap: 7,
@@ -400,7 +399,6 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -431,7 +429,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 11,
-    borderWidth: 1.5,
     borderRadius: radii.pill,
     paddingVertical: 12,
     paddingHorizontal: 15,
@@ -450,7 +447,6 @@ const chipStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    borderWidth: 1.5,
     borderRadius: radii.pill,
     paddingVertical: 7,
     paddingHorizontal: 13,

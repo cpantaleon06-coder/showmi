@@ -207,7 +207,7 @@ export default function AuthScreen() {
               onPress={() => setMode('upgrade')}
               style={[
                 styles.modeButton,
-                { borderColor: mode === 'upgrade' ? colors.brand : colors.border },
+                { backgroundColor: mode === 'upgrade' ? colors.brand : colors.surface },
                 mode === 'upgrade' && { backgroundColor: colors.brand },
               ]}
             >
@@ -219,7 +219,7 @@ export default function AuthScreen() {
               onPress={() => setMode('signin')}
               style={[
                 styles.modeButton,
-                { borderColor: mode === 'signin' ? colors.brand : colors.border },
+                { backgroundColor: mode === 'signin' ? colors.brand : colors.surface },
                 mode === 'signin' && { backgroundColor: colors.brand },
               ]}
             >
@@ -237,7 +237,7 @@ export default function AuthScreen() {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
-            style={[styles.input, { color: colors.textPrimary, borderColor: colors.textPrimary }]}
+            style={[styles.input, { color: colors.textPrimary, backgroundColor: colors.surface }]}
           />
           {/* El mínimo se anuncia en el campo solo al CREAR la cuenta -- en "iniciar sesión"
               sería ruido (no aplica) y peor: le sugeriría a quien ya tiene una de 6 que la
@@ -248,7 +248,7 @@ export default function AuthScreen() {
             placeholder={mode === 'upgrade' ? `Contraseña (mín. ${MIN_PASSWORD_LENGTH})` : 'Contraseña'}
             placeholderTextColor={colors.textSecondary}
             secureTextEntry
-            style={[styles.input, { color: colors.textPrimary, borderColor: colors.textPrimary }]}
+            style={[styles.input, { color: colors.textPrimary, backgroundColor: colors.surface }]}
           />
 
           {error && <Text style={[styles.error, { color: colors.pass }]}>{error}</Text>}
@@ -330,7 +330,6 @@ const styles = StyleSheet.create({
   },
   modeButton: {
     flex: 1,
-    borderWidth: 2,
     borderRadius: 18,
     paddingVertical: 10,
     alignItems: 'center',
@@ -340,7 +339,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
   },
   input: {
-    borderWidth: 2,
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,

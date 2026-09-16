@@ -219,7 +219,6 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
         styles.card,
         {
           backgroundColor: colors.surface,
-          borderColor: colors.textPrimary,
           boxShadow: cardGlowShadow(glowColor, isActive),
         },
         isActive && cardStyle,
@@ -235,14 +234,14 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
 
       {isActive && (
         <>
-          <Animated.View style={[styles.badge, styles.likeBadge, { borderColor: colors.like }, likeOpacity]}>
+          <Animated.View style={[styles.badge, styles.likeBadge, { backgroundColor: colors.like }, likeOpacity]}>
             <HeartIcon weight="fill" size={26} color={colors.like} />
           </Animated.View>
-          <Animated.View style={[styles.badge, styles.passBadge, { borderColor: colors.pass }, passOpacity]}>
+          <Animated.View style={[styles.badge, styles.passBadge, { backgroundColor: colors.pass }, passOpacity]}>
             <XIcon weight="fill" size={26} color={colors.pass} />
           </Animated.View>
           <Animated.View
-            style={[styles.badge, styles.heardBadge, { borderColor: accentColor, backgroundColor: accentColor }, heardOpacity]}
+            style={[styles.badge, styles.heardBadge, { backgroundColor: accentColor }, heardOpacity]}
           >
             <Text style={[styles.badgeText, { color: '#FFFFFF' }]}>YA LA ESCUCHÉ</Text>
           </Animated.View>
@@ -289,7 +288,6 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH - 40,
     height: '100%',
     borderRadius: radii.card,
-    borderWidth: 3,
     overflow: 'hidden',
   },
   edgeLight: {
@@ -359,7 +357,6 @@ const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
     top: 32,
-    borderWidth: 3,
     borderRadius: 10,
     padding: 10,
     zIndex: 3,

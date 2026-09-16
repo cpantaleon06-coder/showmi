@@ -139,12 +139,8 @@ export function ShowmiTabBar({ state, descriptors, navigation }: TabBarProps) {
       pointerEvents="box-none"
     >
       <Svg width={ancho} height={ALTO} style={StyleSheet.absoluteFill}>
-        <AnimatedPath
-          animatedProps={animatedProps}
-          fill={colors.surface}
-          stroke={colors.border}
-          strokeWidth={1}
-        />
+        {/* Sin contorno: la separacion del fondo la da la sombra del contenedor (ver styles.wrap). */}
+        <AnimatedPath animatedProps={animatedProps} fill={colors.surface} />
       </Svg>
 
       <View style={[styles.fila, { height: ALTO }]}>

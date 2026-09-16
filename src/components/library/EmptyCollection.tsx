@@ -53,7 +53,7 @@ export function EmptyCollection({ type, accent }: EmptyCollectionProps) {
   return (
     <View style={styles.wrap}>
       <TileReveal index={0}>
-        <View style={[styles.panel, { borderColor: accent }]}>
+        <View style={styles.panel}>
           {/* Sangrado abajo-derecha. `overflow: hidden` en el panel es lo que lo recorta. */}
           <View style={styles.discBleed} pointerEvents="none">
             <DiscIcon weight="fill" size={190} color={accent} />
@@ -72,7 +72,6 @@ const styles = StyleSheet.create({
   panel: {
     backgroundColor: TILE_SURFACE,
     // 2.5 -> 1.5: un contorno grueso en color saturado grita mas de lo que compone.
-    borderWidth: 1.5,
     borderRadius: radii.card,
     padding: 22,
     gap: 12,

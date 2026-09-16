@@ -297,7 +297,7 @@ export function OnboardingFlow({
               <Text
                 style={[
                   styles.currentAnchor,
-                  { backgroundColor: colors.background, color: colors.textSecondary, borderColor: colors.textPrimary },
+                  { backgroundColor: colors.surface, color: colors.textSecondary },
                 ]}
               >
                 Ancla actual: {initialAnswers.anchorTitle} — {initialAnswers.anchorArtist}
@@ -312,10 +312,10 @@ export function OnboardingFlow({
                 placeholderTextColor={colors.textSecondary}
                 style={[
                   styles.searchInput,
-                  { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border },
+                  { backgroundColor: colors.surface, color: colors.textPrimary },
                 ]}
               />
-              <Pressable onPress={runSearch} style={[styles.searchButton, { borderColor: colors.brand }]} hitSlop={8}>
+              <Pressable onPress={runSearch} style={[styles.searchButton, { backgroundColor: colors.brand }]} hitSlop={8}>
                 {searching ? <ActivityIndicator color={colors.brandText} size="small" /> : <Text style={[styles.searchButtonText, { color: colors.brandText }]}>Buscar</Text>}
               </Pressable>
             </View>
@@ -326,8 +326,7 @@ export function OnboardingFlow({
                 style={[
                   styles.resultRow,
                   {
-                    backgroundColor: colors.background,
-                    borderColor: anchor?.id === track.id ? colors.brand : colors.border,
+                    backgroundColor: anchor?.id === track.id ? colors.brand : colors.surface,
                   },
                 ]}
               >
@@ -436,7 +435,6 @@ const styles = StyleSheet.create({
   currentAnchor: {
     fontSize: 13,
     fontFamily: fonts.bodySemiBold,
-    borderWidth: 2,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -449,7 +447,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    borderWidth: 2,
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -457,7 +454,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyRegular,
   },
   searchButton: {
-    borderWidth: 2,
     borderRadius: 16,
     paddingHorizontal: 16,
     justifyContent: 'center',
@@ -470,7 +466,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderWidth: 2,
     borderRadius: 14,
     padding: 8,
     marginBottom: 8,

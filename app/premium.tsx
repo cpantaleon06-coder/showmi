@@ -162,7 +162,8 @@ function PlanRow({
     >
       {/* Marca de selección: círculo relleno de oro con palomita, o aro apagado. El aro vacío
           y el relleno miden IGUAL para que la fila no se mueva un pixel al cambiar de plan. */}
-      <View style={[styles.radio, selected ? { backgroundColor: GOLD, borderColor: GOLD } : { borderColor: '#6C6683' }]}>
+      {/* Sin anillo: el radio apagado es un disco tenue y el encendido se pinta de dorado. */}
+      <View style={[styles.radio, { backgroundColor: selected ? GOLD : 'rgba(255,255,255,0.18)' }]}>
         {selected && <CheckIcon weight="bold" size={13} color={INK_ON_GOLD} />}
       </View>
 
@@ -425,8 +426,6 @@ const styles = StyleSheet.create({
   planCard: {
     backgroundColor: 'rgba(10, 6, 24, 0.72)',
     borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
     overflow: 'visible',
     marginBottom: 26,
   },
@@ -448,7 +447,6 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -503,8 +501,6 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    borderWidth: 1.5,
-    borderColor: 'rgba(201,162,39,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -525,8 +521,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 9,
-    borderWidth: 1.5,
-    borderColor: GOLD,
     borderRadius: radii.card,
     padding: 13,
     marginBottom: 22,
@@ -542,8 +536,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
     borderRadius: radii.pill,
     paddingVertical: 11,
     marginBottom: 14,

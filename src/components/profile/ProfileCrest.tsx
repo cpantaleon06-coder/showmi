@@ -88,7 +88,7 @@ export function ProfileCrest({ colors, displayName }: ProfileCrestProps) {
         <CrestStat label={level >= MAX_LEVEL ? 'Nivel máximo' : 'Al siguiente'} value={`${progress}%`} />
       </View>
 
-      <View style={[styles.mascotRing, { backgroundColor: colors.background, borderColor: colors.background }]}>
+      <View style={[styles.mascotRing, { backgroundColor: colors.background }]}>
         <Mascot equipped={visibleEquipped(equipped, isPremium)} size={84} shape={shape} />
       </View>
 
@@ -144,7 +144,6 @@ const styles = StyleSheet.create({
     width: MASCOT_RING,
     height: MASCOT_RING,
     borderRadius: MASCOT_RING / 2,
-    borderWidth: 5,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: -MASCOT_RING / 2 - 8,

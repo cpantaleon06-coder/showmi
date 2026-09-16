@@ -53,7 +53,7 @@ export function StarRatingPicker({ colors, track, onRate, onVoteVibe, onDismiss 
 
   return (
     <View style={styles.backdrop}>
-      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.textPrimary }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
         <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
           {track.title}
         </Text>
@@ -127,7 +127,6 @@ const styles = StyleSheet.create({
     pointerEvents: 'box-none',
   },
   card: {
-    borderWidth: 3,
     borderRadius: radii.card,
     paddingVertical: 24,
     paddingHorizontal: 28,

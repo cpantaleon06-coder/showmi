@@ -60,7 +60,7 @@ export function SpotifyExportButton({ colors, collectionName, tracks }: SpotifyE
 
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={reset}>
         <View style={styles.backdrop}>
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>
             {enProgreso && (
               <>
                 <ActivityIndicator color={SPOTIFY_GREEN} size="large" />
@@ -152,7 +152,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     borderRadius: radii.card,
-    borderWidth: 1,
     paddingVertical: 28,
     paddingHorizontal: 24,
     alignItems: 'center',

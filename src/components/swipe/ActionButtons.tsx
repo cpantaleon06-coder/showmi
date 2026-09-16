@@ -28,7 +28,7 @@ export function ActionButtons({ colors, accentColor, onPass, onLike, onHeard }: 
     <View style={styles.row}>
       <Pressable
         onPress={onPass}
-        style={[styles.circle, styles.sideCircle, { backgroundColor: colors.surface, borderColor: colors.pass }]}
+        style={[styles.circle, styles.sideCircle, { backgroundColor: colors.surface }]}
         hitSlop={8}
       >
         <XIcon weight="bold" size={28} color={colors.pass} />
@@ -36,7 +36,7 @@ export function ActionButtons({ colors, accentColor, onPass, onLike, onHeard }: 
 
       <Pressable
         onPress={onHeard}
-        style={[styles.circle, styles.centerCircle, { backgroundColor: colors.surface, borderColor: accentColor }]}
+        style={[styles.circle, styles.centerCircle, { backgroundColor: colors.surface }]}
         hitSlop={8}
       >
         <UploadSimpleIcon weight="bold" size={22} color={accentColor} />
@@ -44,7 +44,7 @@ export function ActionButtons({ colors, accentColor, onPass, onLike, onHeard }: 
 
       <Pressable
         onPress={onLike}
-        style={[styles.circle, styles.sideCircle, { backgroundColor: colors.surface, borderColor: colors.like }]}
+        style={[styles.circle, styles.sideCircle, { backgroundColor: colors.surface }]}
         hitSlop={8}
       >
         <HeartIcon weight="fill" size={28} color={colors.like} />
@@ -73,7 +73,6 @@ const styles = StyleSheet.create({
   },
   circle: {
     borderRadius: 999,
-    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     ...shadow,
