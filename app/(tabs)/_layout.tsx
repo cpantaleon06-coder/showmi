@@ -4,6 +4,7 @@ import { CardsIcon, DiscIcon, NewspaperIcon } from 'phosphor-react-native';
 
 import { useThemeStore } from '../../src/theme/useThemeStore';
 import { floatingTabBarStyle } from '../../src/theme/layout';
+import { ShowmiTabBar } from '../../src/components/ui/ShowmiTabBar';
 
 // Naranja del wordmark (letra "O"), elegido por ser el que menos se confunde
 // con el verde/coral del swipe y el ámbar de marca -- exclusivo del ícono de
@@ -42,9 +43,13 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      // Barra propia: la muesca cóncava sobre la pestaña activa no se puede hacer con
+      // borderRadius, hay que recortar la silueta (ver ShowmiTabBar). `tabBarStyle` se sigue
+      // pasando porque app/(tabs)/index.tsx lo usa para OCULTAR la barra durante el onboarding,
+      // y ShowmiTabBar lo lee para eso.
+      tabBar={(props) => <ShowmiTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false,
         tabBarActiveTintColor: ACTIVE_TAB_COLOR,
         tabBarInactiveTintColor: colors.textSecondary,
         // 2026-09-01: "isla flotante" -- position absolute + separada de los 3 bordes

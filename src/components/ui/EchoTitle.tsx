@@ -46,10 +46,16 @@ interface EchoTitleProps {
  * amarillo sobre crema es de bajo contraste por definición y ninguna opacidad lo arregla --
  * pero deja de desaparecer, y ahí el eco es decoración, no información.
  */
+/**
+ * 2026-09-15: de tres capas a dos, y los desplazamientos a la mitad (12/8/4 -> 6/3 en x).
+ * Visto en vivo a 42px, el eco de 12px se extendia tanto hacia abajo-derecha que chocaba con
+ * la linea de "N canciones" y dejaba de leerse como impresion mal registrada para leerse como
+ * una mancha. El recurso funciona cuando las copias casi se tocan: apretado es un efecto,
+ * separado es un borron.
+ */
 const ECHO_LAYERS = [
-  { dx: 12, dy: 10, opacity: 0.28 },
-  { dx: 8, dy: 7, opacity: 0.48 },
-  { dx: 4, dy: 3.5, opacity: 0.75 },
+  { dx: 6, dy: 5, opacity: 0.38 },
+  { dx: 3, dy: 2.5, opacity: 0.7 },
 ];
 
 export function EchoTitle({ text, accent, color, size }: EchoTitleProps) {

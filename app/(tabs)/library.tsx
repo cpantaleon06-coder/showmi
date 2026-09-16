@@ -134,15 +134,10 @@ export default function LibraryScreen() {
         <EchoTitle text="Biblioteca" accent={activeColor} color={colors.textPrimary} size={42} />
         <View style={styles.countRow}>
           <Text style={[styles.count, { color: colors.textPrimary }]}>{countLabel}</Text>
-          {/* El nombre de la colección activa va en un PILL relleno, no como texto de color
-              suelto sobre la página. Dos razones, una de diseño y una medible: repite el
-              lenguaje de pills de la referencia, y evita el problema de contraste real de
-              pintar texto con un color del wordmark sobre el fondo -- el amarillo `#F9EB06`
-              sobre el ivory del tema claro es ilegible. Dentro de un pill, el color es fondo y
-              el texto se elige por contraste. */}
-          <View style={[styles.countPill, { backgroundColor: activeColor }]}>
-            <Text style={[styles.countPillText, { color: readableOn(activeColor) }]}>{activeCollection.name}</Text>
-          </View>
+          {/* El pill con el nombre de la colección vivía acá y se fue (2026-09-15): la fila de
+              chips de abajo ya muestra la colección activa, resaltada y con su conteo. Eran
+              dos veces el mismo dato a 40px de distancia, y el pill además repetía el color
+              del chip -- dos manchas del mismo color discutiendo cuál manda. */}
         </View>
         {/* Exporta la colección ACTIVA (la que se está viendo), no toda la biblioteca: es lo que
             el usuario tiene enfrente y el nombre de la playlist sale de ahí. El botón se oculta
