@@ -46,21 +46,18 @@ export async function signOut(): Promise<{ error: string | null }> {
 }
 
 /**
- * Google/Apple -- a diferencia de email (upgradeAnonymousAccount/signInExistingAccount),
+ * Apple -- a diferencia de email (upgradeAnonymousAccount/signInExistingAccount),
  * `signInWithIdToken` SIEMPRE crea o entra a una cuenta nueva, nunca preserva la sesión
  * anónima actual: Supabase no expone un `linkIdentity` equivalente para tokens nativos
  * (`linkIdentity` existe, pero solo para el flujo OAuth por navegador/redirect, no para el
- * idToken que entrega el SDK nativo de Google/Apple). Consecuencia real: usar estos botones
- * abandona el progreso acumulado como invitado en este dispositivo, igual que
- * signInExistingAccount con email -- comportamiento estándar en la mayoría de apps (nadie
- * intenta fusionar datos de invitado con una cuenta real vía OAuth tampoco), pero vale
- * dejarlo documentado porque es distinto del flujo de email de al lado.
+ * idToken que entrega el SDK nativo). Consecuencia real: usar este botón abandona el progreso
+ * acumulado como invitado en este dispositivo, igual que signInExistingAccount con email --
+ * comportamiento estándar en la mayoría de apps (nadie intenta fusionar datos de invitado con
+ * una cuenta real vía OAuth tampoco), pero vale dejarlo documentado porque es distinto del
+ * flujo de email de al lado.
+ *
+ * (Este comentario cubría también a Google hasta que se quitó ese botón el 2026-09-16.)
  */
-export async function signInWithGoogleIdToken(idToken: string): Promise<{ error: string | null }> {
-  const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken });
-  return { error: error?.message ?? null };
-}
-
 export async function signInWithAppleIdToken(identityToken: string): Promise<{ error: string | null }> {
   const { error } = await supabase.auth.signInWithIdToken({ provider: 'apple', token: identityToken });
   return { error: error?.message ?? null };

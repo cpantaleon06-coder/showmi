@@ -3,7 +3,6 @@ import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, Vi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { GoogleSigninButton } from '@react-native-google-signin/google-signin';
 
 import { useThemeStore } from '../src/theme/useThemeStore';
 import { fonts } from '../src/theme/typography';
@@ -11,10 +10,8 @@ import { useAuthStore } from '../src/state/authStore';
 import {
   signInExistingAccount,
   signInWithAppleIdToken,
-  signInWithGoogleIdToken,
   upgradeAnonymousAccount,
 } from '../src/api/authClient';
-import { getGoogleIdToken } from '../src/api/googleAuth';
 import { goBackOrHome } from '../src/lib/navigation';
 import { PageTransition } from '../src/components/ui/PageTransition';
 
@@ -29,18 +26,21 @@ type Mode = 'upgrade' | 'signin';
  *  - "Ya tengo cuenta" (`signin`): entra a una cuenta real que ya existía (otro
  *    dispositivo/reinstalación) -- reemplaza la sesión actual, no la fusiona.
  *
- * Google/Apple (abajo) NO tienen ese mismo par de modos -- signInWithIdToken siempre
- * crea-o-entra, nunca preserva la sesión anónima actual (ver comentario largo en
- * authClient.ts). Mismo botón sirve para "crear" y "entrar" indistintamente, como en
- * casi cualquier app.
+ * Apple (abajo) NO tiene ese mismo par de modos -- signInWithIdToken siempre crea-o-entra,
+ * nunca preserva la sesión anónima actual (ver comentario largo en authClient.ts). El mismo
+ * botón sirve para "crear" y "entrar" indistintamente, como en casi cualquier app.
  *
- * Requieren credenciales que este proyecto no tiene todavía (no se pueden probar hasta
- * que existan):
- *  - Google: EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID (.env, hoy vacío) + provider Google
- *    habilitado en el dashboard de Supabase con ese mismo client ID/secret.
- *  - Apple: Apple Developer Program (capability "Sign In with Apple" en el bundle ID) +
- *    provider Apple habilitado en Supabase (Services ID, Team ID, Key ID, private key).
- *    Además solo puede aparecer en iOS -- por eso el chequeo de isAvailableAsync abajo.
+ * GOOGLE SE QUITÓ el 2026-09-16. El botón se dibujaba en Android, pero
+ * `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` nunca llegó a tener valor y el provider tampoco quedó
+ * habilitado en Supabase, así que tocarlo solo producía un error -- y era de lo primero que
+ * se ve al abrir esta pantalla. Un método de entrada que falla siempre es peor que uno que no
+ * está. Vuelve a ponerse el día que existan las credenciales, no antes.
+ *
+ * Apple sigue, y también depende de credenciales que este proyecto no tiene todavía (Apple
+ * Developer Program con la capability "Sign In with Apple" en el bundle ID, y el provider
+ * Apple habilitado en Supabase). La diferencia es que su botón SOLO aparece si el propio
+ * sistema dice que está disponible (isAvailableAsync), así que no puede quedarse en pantalla
+ * prometiendo algo que no funciona.
  */
 /**
  * Largo mínimo de una contraseña NUEVA. Subido de 6 a 8 el 2026-09-13.
@@ -104,29 +104,6 @@ export default function AuthScreen() {
     goBackOrHome(router);
   };
 
-  const submitGoogle = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
-      const idToken = await getGoogleIdToken();
-      if (!idToken) {
-        // Canceló el picker de cuentas -- no es un error, no hay nada que mostrar.
-        setSubmitting(false);
-        return;
-      }
-      const result = await signInWithGoogleIdToken(idToken);
-      setSubmitting(false);
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      goBackOrHome(router);
-    } catch (e) {
-      setSubmitting(false);
-      setError(e instanceof Error ? e.message : 'No se pudo iniciar sesión con Google.');
-    }
-  };
-
   const submitApple = async () => {
     setSubmitting(true);
     setError(null);
@@ -169,17 +146,13 @@ export default function AuthScreen() {
               : 'Entra a una cuenta que ya tienes de otro dispositivo. Esto reemplaza tu sesión de invitado actual.'}
           </Text>
 
-          {Platform.OS !== 'web' && (
+          {/* La condición es la del botón de Apple, no `Platform.OS !== 'web'`. Desde que Google
+              se quitó, Apple es el ÚNICO botón social, y con la condición vieja en Android
+              quedaba una columna con el separador "o con email" y nada encima -- un separador
+              que no separa de nada. Así, donde no hay botón no hay bloque. */}
+          {Platform.OS === 'ios' && appleAvailable && (
             <View style={styles.socialColumn}>
-              <GoogleSigninButton
-                size={GoogleSigninButton.Size.Wide}
-                color={GoogleSigninButton.Color.Dark}
-                onPress={submitGoogle}
-                disabled={submitting}
-                style={styles.googleButton}
-              />
-              {Platform.OS === 'ios' && appleAvailable && (
-                <AppleAuthentication.AppleAuthenticationButton
+              <AppleAuthentication.AppleAuthenticationButton
                   buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
                   // Blanco en modo oscuro, negro en modo claro -- mismo criterio de contraste
                   // que pide la guía de Apple para su botón oficial, no una elección de estilo.
@@ -190,9 +163,8 @@ export default function AuthScreen() {
                   }
                   cornerRadius={10}
                   style={styles.appleButton}
-                  onPress={submitApple}
-                />
-              )}
+                onPress={submitApple}
+              />
 
               <View style={styles.dividerRow}>
                 <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
@@ -300,10 +272,6 @@ const styles = StyleSheet.create({
   },
   socialColumn: {
     gap: 12,
-  },
-  googleButton: {
-    width: '100%',
-    height: 48,
   },
   appleButton: {
     width: '100%',
