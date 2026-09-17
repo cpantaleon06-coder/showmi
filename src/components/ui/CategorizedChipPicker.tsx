@@ -1,8 +1,12 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ThemeColors } from '../../theme/colors';
 import { fonts } from '../../theme/typography';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+
+import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { conTiempo, curva, duracion, retraso } from '../../theme/motion';
 import { GradientChip } from './GradientChip';
 
 interface CategorizedItem<T extends string> {
@@ -73,7 +77,7 @@ export function CategorizedChipPicker<T extends string>({
         const hiddenCount = categoryItems.length - visibleItems.length;
 
         return (
-          <View key={category} style={styles.section}>
+          <SeccionQueEntra key={category} orden={categoryOrder.indexOf(category)} style={styles.section}>
             <Text style={[styles.categoryLabel, { color: colors.textSecondary }]}>{category}</Text>
             <View style={styles.chipGrid}>
               {visibleItems.map((item) => (
@@ -94,11 +98,52 @@ export function CategorizedChipPicker<T extends string>({
                 </Text>
               </Pressable>
             )}
-          </View>
+          </SeccionQueEntra>
         );
       })}
     </View>
   );
+}
+
+/**
+ * Una sección de chips que aparece escalonada respecto a las de arriba (2026-09-16).
+ *
+ * Escalonado por SECCIÓN y no por chip: con 53 géneros repartidos en 6 categorías, animar cada
+ * chip serían 53 nodos animados para un efecto que el ojo lee igual de bien con 6. El retraso
+ * sale de `retraso()` (theme/motion.ts), que ya está acotado para que una lista larga no acabe
+ * con el último elemento entrando casi un segundo tarde.
+ *
+ * Solo al MONTAR, nunca al re-renderizar: elegir un chip vuelve a renderizar toda la lista, y
+ * si la entrada dependiera del render, la pantalla entera parpadearía cada vez que tocas algo.
+ * Por eso el efecto no lleva dependencias.
+ */
+function SeccionQueEntra({
+  orden,
+  style,
+  children,
+}: {
+  orden: number;
+  style?: StyleProp<ViewStyle>;
+  children: ReactNode;
+}) {
+  const reducedMotion = useReducedMotion();
+  const entrada = useSharedValue(0);
+
+  useEffect(() => {
+    const ms = retraso(orden);
+    const id = setTimeout(() => {
+      entrada.value = conTiempo(1, reducedMotion, duracion.base, curva.entrada);
+    }, reducedMotion ? 0 : ms);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const animado = useAnimatedStyle(() => ({
+    opacity: entrada.value,
+    transform: [{ translateY: (1 - entrada.value) * 10 }],
+  }));
+
+  return <Animated.View style={[style, animado]}>{children}</Animated.View>;
 }
 
 const styles = StyleSheet.create({

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,11 +9,15 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CaretLeftIcon } from 'phosphor-react-native';
 import { useQuery } from '@tanstack/react-query';
 
+import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { conTiempo, curva, duracion } from '../../theme/motion';
+import { PasoProgreso } from './PasoProgreso';
 import { ThemeColors } from '../../theme/colors';
 import { useThemeStore } from '../../theme/useThemeStore';
 import { HalftoneWaveBackground } from '../backgrounds/HalftoneWaveBackground';
@@ -89,6 +93,21 @@ export function OnboardingFlow({
   editMode = false,
 }: OnboardingFlowProps) {
   const [step, setStep] = useState<Step>('genres');
+
+  // Entrada del paso. Antes los cuatro pasos se reemplazaban de golpe, sin ninguna transicion:
+  // el texto cambiaba en el sitio y costaba notar que habias avanzado. Baja 14px y aparece --
+  // poco recorrido a proposito, lo justo para que el ojo registre "esto es nuevo" sin que haya
+  // que esperar a que termine para poder tocar.
+  const reducedMotion = useReducedMotion();
+  const aparicion = useSharedValue(1);
+  useEffect(() => {
+    aparicion.value = 0;
+    aparicion.value = conTiempo(1, reducedMotion, duracion.base, curva.entrada);
+  }, [step, reducedMotion, aparicion]);
+  const estiloPaso = useAnimatedStyle(() => ({
+    opacity: aparicion.value,
+    transform: [{ translateY: (1 - aparicion.value) * 14 }],
+  }));
   const [genres, setGenres] = useState<CanonicalGenre[]>(initialAnswers?.favoriteGenres ?? []);
   const [artists, setArtists] = useState<string[]>(initialAnswers?.referenceArtists ?? []);
   const [vibe, setVibe] = useState<VibeKey | null>(initialAnswers?.preferredVibe ?? null);
@@ -247,7 +266,19 @@ export function OnboardingFlow({
         </Pressable>
       </View>
 
+      {/* En fila propia y no junto al boton de volver: en modo edicion esta pantalla lleva un
+          "Cancelar" absoluto arriba a la derecha, y compartiendo fila la barra se le metia
+          debajo. Aparte, a ancho completo se lee mejor como progreso. */}
+      <View style={styles.progresoFila}>
+        <PasoProgreso
+          colors={colors}
+          indice={Math.max(0, STEP_ORDER.indexOf(step))}
+          total={STEP_ORDER.length}
+        />
+      </View>
+
       <ScrollView contentContainerStyle={styles.content}>
+        <Animated.View style={estiloPaso}>
         {step === 'genres' && (
           <>
             <Text style={[styles.title, { color: colors.textPrimary }]}>¿Qué géneros te laten?</Text>
@@ -362,6 +393,7 @@ export function OnboardingFlow({
             ))}
           </>
         )}
+        </Animated.View>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -405,6 +437,12 @@ const styles = StyleSheet.create({
   stepHeader: {
     paddingHorizontal: 20,
     paddingTop: 8,
+  },
+  progresoFila: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingTop: 2,
+    paddingBottom: 10,
   },
   backButton: {
     alignSelf: 'flex-start',
