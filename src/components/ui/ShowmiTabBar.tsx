@@ -111,7 +111,13 @@ export function ShowmiTabBar({ state, descriptors, navigation }: TabBarProps) {
     | undefined;
   const oculta = estiloActiva?.display === 'none';
 
-  const ancho = anchoPantalla - MARGEN * 2;
+  // Math.max y no la resta a secas: `useWindowDimensions` devuelve 0 en el primer frame (en web
+  // durante la hidratación, y en nativo en algún momento del montaje), y 0 - 36 daba un ancho
+  // NEGATIVO. El navegador lo rechazaba con "<svg> attribute width: A negative value is not
+  // valid (-36)", y peor: `siluetaConMuesca` calculaba entonces maxCx = -101 y construía un
+  // trazo con coordenadas sin sentido. Encontrado en consola, no a ojo -- la barra acababa
+  // pintándose bien un frame después, así que no se veía nada raro.
+  const ancho = Math.max(0, anchoPantalla - MARGEN * 2);
   const paso = ancho / state.routes.length;
   const centroDe = (i: number) => paso * i + paso / 2;
 
@@ -130,7 +136,9 @@ export function ShowmiTabBar({ state, descriptors, navigation }: TabBarProps) {
     d: siluetaConMuesca(ancho, ALTO, cx.value),
   }));
 
-  if (oculta) return null;
+  // `ancho <= 0` significa que la pantalla todavía no se ha medido. No se dibuja una barra de
+  // ancho cero: no se vería, y evita alimentar geometría inválida al SVG.
+  if (oculta || ancho <= 0) return null;
 
   return (
     <View
