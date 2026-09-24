@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { CaretLeftIcon } from 'phosphor-react-native';
 
 import { ThemeColors } from '../../theme/colors';
+import { iconSize } from '../../theme/icons';
 import { goBackOrHome } from '../../lib/navigation';
 
 interface BackButtonProps {
@@ -22,8 +23,14 @@ export function BackButton({ colors }: BackButtonProps) {
   const router = useRouter();
 
   return (
-    <Pressable onPress={() => goBackOrHome(router)} hitSlop={10} style={styles.button}>
-      <CaretLeftIcon weight="light" size={24} color="#FFFFFF" />
+    <Pressable
+      onPress={() => goBackOrHome(router)}
+      hitSlop={10}
+      style={styles.button}
+      accessibilityRole="button"
+      accessibilityLabel="Volver"
+    >
+      <CaretLeftIcon weight="light" size={iconSize.lg} color="#FFFFFF" />
     </Pressable>
   );
 }

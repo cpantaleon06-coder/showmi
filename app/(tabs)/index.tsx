@@ -135,6 +135,10 @@ export default function SwipeScreen() {
               }}
               style={[styles.filterChip, { backgroundColor: colors.surface }]}
               hitSlop={6}
+              accessibilityRole="button"
+              // La "X" del texto es la unica pista de que el chip QUITA el filtro; leida en voz
+              // alta no dice nada, asi que la accion va explicita en la etiqueta.
+              accessibilityLabel={`Quitar filtro de género: ${genreDef.label}`}
             >
               <Text style={[styles.filterChipText, { color: colors.textPrimary }]}>
                 {genreDef.emoji} {genreDef.label} ✕
@@ -142,7 +146,13 @@ export default function SwipeScreen() {
             </Pressable>
           )}
           {vibeDef && (
-            <Pressable onPress={() => setVibe(null)} style={[styles.filterChip, { backgroundColor: colors.surface }]} hitSlop={6}>
+            <Pressable
+              onPress={() => setVibe(null)}
+              style={[styles.filterChip, { backgroundColor: colors.surface }]}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={`Quitar filtro de vibra: ${vibeDef.label}`}
+            >
               <Text style={[styles.filterChipText, { color: colors.textPrimary }]}>
                 {vibeDef.emoji} {vibeDef.label} ✕
               </Text>

@@ -65,7 +65,17 @@ export function StarRatingPicker({ colors, track, onRate, onVoteVibe, onDismiss 
             </Text>
             <View style={styles.stars}>
               {RATINGS.map((value) => (
-                <Pressable key={value} onPress={() => handleRate(value)} hitSlop={6} style={styles.starButton}>
+                <Pressable
+                  key={value}
+                  onPress={() => handleRate(value)}
+                  hitSlop={6}
+                  style={styles.starButton}
+                  accessibilityRole="button"
+                  // Mismo patron que los chips de vibra de mas abajo en este archivo: sin
+                  // etiqueta, las cinco estrellas se anuncian identicas y no hay forma de saber
+                  // cual se esta tocando.
+                  accessibilityLabel={`Calificar con ${value} estrella${value === 1 ? '' : 's'}`}
+                >
                   <StarIcon weight="fill" size={34} color={colors.brandText} />
                 </Pressable>
               ))}

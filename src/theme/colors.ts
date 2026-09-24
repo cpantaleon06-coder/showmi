@@ -106,10 +106,24 @@ const NAGAI_GRADIENT: [string, string, string] = ['#FF8C5A', '#D9718C', '#0F6E7D
  * lenguaje de bloques planos del resto del sistema.
  *
  * Contrastes verificados contra el fondo nuevo: textPrimary 11.30, textSecondary
- * 4.71, border 10.50, like 6.41. `pass` (#F87171) queda en 4.45 -- justo debajo
- * del 4.5 de AA; se dejó igual porque casi siempre es ícono/borde (umbral 3:1) y
- * su único uso como texto es el mensaje de error de auth.tsx. Vale la pena
- * revisarlo si ese texto crece en importancia.
+ * 4.71, border 10.50, like 6.41.
+ *
+ * `pass` SE CORRIGIÓ el 2026-09-23. Estaba en #F87171, que da 4.45 contra este
+ * fondo -- justo por debajo del 4.5 de AA para texto normal, y sí se usa como
+ * texto: es el color del mensaje de error de auth.tsx, o sea precisamente donde
+ * alguien tiene un problema y necesita leer. Ahora es #F87676 y da **4.60**.
+ *
+ * SE ACLARÓ, NO SE OSCURECIÓ, y va contra la intuición: sobre un fondo OSCURO el
+ * contraste sube alejándose de él, o sea hacia el blanco. Comprobado con la misma
+ * fórmula de luminancia relativa de WCAG que el resto de este archivo: #F76E6E,
+ * que parecía la corrección obvia por ser más intenso, da 4.35 -- peor que el
+ * valor que se quería arreglar.
+ *
+ * El mínimo estricto que cruza el umbral es #F87373 (4.51), pero 0.01 de margen no
+ * sobrevive a ningún redondeo, así que se tomó el siguiente escalón imperceptible:
+ * cinco puntos de 255 en dos canales, indistinguible a ojo del rojo anterior.
+ * Como ícono y como borde (umbral 3:1) sigue holgadísimo, y sobre `surface`
+ * (#232B32) da 5.36.
  */
 export const darkColors: ThemeColors = {
   background: '#2C363E',
@@ -119,7 +133,7 @@ export const darkColors: ThemeColors = {
   brand: '#DC5C48',
   brandText: '#E8836F',
   like: '#34D399',
-  pass: '#F87171',
+  pass: '#F87676',
   border: '#F2ECE4',
   nagaiGradient: NAGAI_GRADIENT,
   premiumAccent: '#C9A227',

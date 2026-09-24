@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { UserCircleIcon } from 'phosphor-react-native';
 
 import { ThemeColors } from '../../theme/colors';
+import { iconSize } from '../../theme/icons';
 
 interface ProfileButtonProps {
   colors: ThemeColors;
@@ -19,8 +20,16 @@ export function ProfileButton({ colors, style }: ProfileButtonProps) {
   const router = useRouter();
 
   return (
-    <Pressable onPress={() => router.push('/profile')} hitSlop={10} style={[styles.button, style]}>
-      <UserCircleIcon weight="fill" size={26} color={colors.textSecondary} />
+    <Pressable
+      onPress={() => router.push('/profile')}
+      hitSlop={10}
+      style={[styles.button, style]}
+      accessibilityRole="button"
+      accessibilityLabel="Perfil"
+    >
+      {/* 26 -> iconSize.lg (24) al adoptar la escala: dos pixeles menos, imperceptible al lado
+          del resto de la cabecera, y deja de ser el unico icono de navegacion con medida propia. */}
+      <UserCircleIcon weight="fill" size={iconSize.lg} color={colors.textSecondary} />
     </Pressable>
   );
 }

@@ -261,6 +261,12 @@ export function OnboardingFlow({
           hitSlop={10}
           disabled={step === 'genres'}
           style={[styles.backButton, { opacity: step === 'genres' ? 0 : 1 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Paso anterior"
+          // La logica de deshabilitado ya existia; lo que faltaba era EXPONERLA. Sin esto, un
+          // lector de pantalla anuncia un boton pulsable en el primer paso, donde no hay nada
+          // atras a lo que volver.
+          accessibilityState={{ disabled: step === 'genres' }}
         >
           <CaretLeftIcon weight="light" size={24} color={colors.textPrimary} />
         </Pressable>

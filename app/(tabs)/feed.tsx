@@ -170,6 +170,7 @@ function PostCard({ post, colors, isMine }: { post: RemotePost; colors: ThemeCol
             updatePostText(post.postId, reviewText).catch(() => {});
           }}
           placeholder="Agrega una reseña (opcional)…"
+          accessibilityLabel="Reseña de la canción"
           placeholderTextColor={colors.textSecondary}
           style={[
             styles.reviewInput,

@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ArrowUUpLeftIcon, HeartIcon, UploadSimpleIcon, XIcon } from 'phosphor-react-native';
 
 import { ThemeColors } from '../../theme/colors';
+import { iconSize } from '../../theme/icons';
 import { FLOATING_TAB_BAR_CLEARANCE } from '../../theme/layout';
 
 interface ActionButtonsProps {
@@ -58,6 +59,9 @@ export function ActionButtons({
         ]}
         hitSlop={8}
       >
+        {/* 20 y el 22 de compartir se quedan en crudo: no coinciden con ningun paso de
+            `iconSize`, y acercarlos costaria 2 y 4 pixeles visibles en los controles mas usados
+            de la app. Eso es una decision de diseno, no una limpieza de escala. */}
         <ArrowUUpLeftIcon weight="bold" size={20} color={colors.textSecondary} />
       </Pressable>
 
@@ -68,7 +72,7 @@ export function ActionButtons({
         style={[styles.circle, styles.sideCircle, { backgroundColor: colors.surface }]}
         hitSlop={8}
       >
-        <XIcon weight="bold" size={28} color={colors.pass} />
+        <XIcon weight="bold" size={iconSize.xl} color={colors.pass} />
       </Pressable>
 
       <Pressable
@@ -88,7 +92,7 @@ export function ActionButtons({
         style={[styles.circle, styles.sideCircle, { backgroundColor: colors.surface }]}
         hitSlop={8}
       >
-        <HeartIcon weight="fill" size={28} color={colors.like} />
+        <HeartIcon weight="fill" size={iconSize.xl} color={colors.like} />
       </Pressable>
     </View>
   );

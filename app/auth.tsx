@@ -209,6 +209,12 @@ export default function AuthScreen() {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
+            // El placeholder DESAPARECE al escribir, asi que como unica etiqueta deja el campo
+            // sin nombre justo cuando tiene contenido. autoComplete/textContentType son lo que
+            // hace que el gestor de contrasenas del sistema ofrezca rellenarlo.
+            accessibilityLabel="Email"
+            autoComplete="email"
+            textContentType="emailAddress"
             style={[styles.input, { color: colors.textPrimary, backgroundColor: colors.surface }]}
           />
           {/* El mínimo se anuncia en el campo solo al CREAR la cuenta -- en "iniciar sesión"
@@ -220,6 +226,9 @@ export default function AuthScreen() {
             placeholder={mode === 'upgrade' ? `Contraseña (mín. ${MIN_PASSWORD_LENGTH})` : 'Contraseña'}
             placeholderTextColor={colors.textSecondary}
             secureTextEntry
+            accessibilityLabel="Contraseña"
+            autoComplete="password"
+            textContentType="password"
             style={[styles.input, { color: colors.textPrimary, backgroundColor: colors.surface }]}
           />
 

@@ -62,7 +62,18 @@ export function GradientChip({ colors, label, selected, onPress, fillColor, outl
   }));
 
   return (
-    <Pressable onPress={onPress} style={styles.wrap}>
+    <Pressable
+      onPress={onPress}
+      style={styles.wrap}
+      // El chip mide unos 32px de alto, por debajo del minimo tactil de 44. Era el unico
+      // componente interactivo de la app sin hitSlop: el area util se amplia sin mover un pixel
+      // del diseno.
+      hitSlop={8}
+      accessibilityRole="button"
+      // `selected` ya pintaba el relleno, pero no llegaba a accesibilidad: un lector de pantalla
+      // anunciaba igual un chip elegido que uno sin elegir.
+      accessibilityState={{ selected }}
+    >
       {/* backgroundColor opaco (no transparente) desde 2026-09-08: sobre las pantallas
           con fondo de patrón (ver components/backgrounds/), un chip transparente dejaba
           pasar las franjas por DETRÁS de su propia etiqueta. Se usa `background`, no
