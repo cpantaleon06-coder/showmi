@@ -23,6 +23,7 @@ import type { PurchasesPackage } from 'react-native-purchases';
 
 import { useThemeStore } from '../src/theme/useThemeStore';
 import { fonts } from '../src/theme/typography';
+import { MODO_DEMO, PLANES_DEMO } from '../src/lib/demo';
 import { wordmark } from '../src/theme/wordmark';
 import { BackButton } from '../src/components/ui/BackButton';
 import { EchoTitle } from '../src/components/ui/EchoTitle';
@@ -298,6 +299,17 @@ export default function PremiumScreen() {
               <Text style={{ color: wordmark.w.corner }}>y sin interrupciones</Text>
             </Text>
 
+            {/* Se dice EN LA PANTALLA que no se cobra. Un paywall de demo que no lo aclara es
+                indistinguible de uno que finge cobrar, y eso es justo lo que no queremos que
+                piense nadie que mire el video. */}
+            {MODO_DEMO && (
+              <View style={styles.demoAviso}>
+                <Text style={styles.demoAvisoTexto}>
+                  DEMO · activa Showmi More sin ningún cargo, solo en este teléfono
+                </Text>
+              </View>
+            )}
+
             {isPremium ? (
               <View style={styles.activeBanner}>
                 <CheckIcon weight="bold" size={18} color={GOLD} />
@@ -305,9 +317,34 @@ export default function PremiumScreen() {
               </View>
             ) : null}
 
+            {/* Volver al estado gratuito para poder grabar la toma otra vez. Solo en demo. */}
+            {MODO_DEMO && isPremium ? (
+              <Pressable onPress={() => setPremium(false)} style={styles.restoreRow} hitSlop={8}>
+                <Text style={styles.restoreText}>Desactivar Showmi More (demo)</Text>
+              </Pressable>
+            ) : null}
+
             {!isPremium && (
               <>
-                {!isRevenueCatConfigured() ? (
+                {MODO_DEMO ? (
+                  /* Bloque propio y no PlanRow: PlanRow toma un PurchasesPackage de verdad, y
+                     fabricar uno falso lo dejaria a un paso de llegar a purchasePackage(). Asi
+                     el camino del demo no puede tocar el SDK ni por accidente. */
+                  <View style={styles.planCard}>
+                    {PLANES_DEMO.map((plan, i) => (
+                      <View
+                        key={plan.id}
+                        style={[styles.planRow, i < PLANES_DEMO.length - 1 && styles.planRowDivider]}
+                      >
+                        <View style={styles.planText}>
+                          <Text style={styles.planTitle}>{plan.titulo}</Text>
+                          <Text style={styles.planCaption}>{plan.pie}</Text>
+                        </View>
+                        <Text style={styles.planPrice}>{plan.precio}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : !isRevenueCatConfigured() ? (
                   <Text style={styles.note}>Los planes todavía se están configurando — vuelve pronto.</Text>
                 ) : offeringQuery.isLoading ? (
                   <ActivityIndicator color={GOLD} size="small" style={styles.loading} />
@@ -356,14 +393,35 @@ export default function PremiumScreen() {
               </Pressable>
             )}
 
+            {/* Sin SDK configurado no hay nada que restaurar y `restorePurchases` llamaria a un
+                Purchases sin inicializar. Antes se enseñaba igual: un boton que solo podia dar
+                error. En modo demo ademas seria lo unico de la pantalla que se rompe. */}
+            {isRevenueCatConfigured() && (
             <Pressable onPress={handleRestore} disabled={restoring} style={styles.restoreRow} hitSlop={8}>
               <ArrowsClockwiseIcon weight="bold" size={15} color={TEXT_DIM} />
               <Text style={styles.restoreText}>{restoring ? 'Restaurando…' : 'Restaurar compras'}</Text>
             </Pressable>
+            )}
           </ScrollView>
 
           {/* El CTA vive FUERA del ScrollView, anclado abajo: en un paywall el botón no debe
               poder quedarse fuera de pantalla por scroll. */}
+          {MODO_DEMO && !isPremium && (
+            <SafeAreaView edges={['bottom']} style={styles.ctaDock}>
+              <Pressable
+                onPress={() => setPremium(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Activar Showmi More en modo demo, sin cargo"
+                style={styles.cta}
+              >
+                <Text style={styles.ctaText}>Activar Showmi More</Text>
+              </Pressable>
+              {/* El boton dice lo que HACE. En el paywall real esta letra chica repite el precio
+                  que se va a cobrar; aca repite que no se cobra nada. */}
+              <Text style={styles.ctaFinePrint}>Modo demo · no se cobra nada</Text>
+            </SafeAreaView>
+          )}
+
           {!isPremium && selectedPackage && (
             <SafeAreaView edges={['bottom']} style={styles.ctaDock}>
               <Pressable
@@ -453,6 +511,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   planText: { flex: 1 },
+  demoAviso: {
+    marginTop: 14,
+    alignSelf: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  demoAvisoTexto: {
+    fontSize: 11,
+    letterSpacing: 0.4,
+    color: '#FFFFFF',
+    fontFamily: fonts.bodyBold,
+    textAlign: 'center',
+  },
   planTitle: {
     fontSize: 17,
     color: '#FFFFFF',
