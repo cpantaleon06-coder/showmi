@@ -26,10 +26,18 @@
       "channel": "preview"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "../.showmi-secrets/google-play-service-account.json",
+        "track": "internal"
+      }
+    }
   }
 }
