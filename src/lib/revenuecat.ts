@@ -37,7 +37,34 @@ const ANDROID_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID ?? '';
 export function isRevenueCatConfigured(): boolean {
   if (Platform.OS === 'web') return false;
   const key = Platform.OS === 'ios' ? IOS_KEY : ANDROID_KEY;
-  return key.length > 0;
+  if (key.length === 0) return false;
+
+  // EL SDK CIERRA LA APP si encuentra una clave de Test Store en un build de release.
+  //
+  // No es una suposición: el APK del 2026-09-24 se instaló en un Android real y, al abrirlo,
+  // salió un diálogo nativo de RevenueCat -- "Wrong API Key ... The app will close now to
+  // protect the security of test purchases" -- y la app se cerraba. Ninguna pantalla llegaba a
+  // verse. La clave `test_...` del Test Store es de desarrollo, y el SDK la rechaza en cuanto
+  // el build no es depurable.
+  //
+  // La propia documentación de RevenueCat lo dice ("NEVER SUBMIT APPS WITH A TEST STORE API
+  // KEY") y recomienda elegir la clave según el tipo de build: la de prueba en debug, la de
+  // plataforma (`goog_...` / `appl_...`) en release. Eso es exactamente lo que hace esta línea.
+  //
+  // Al devolver false, la app entra en MODO GRATUITO -- que es un camino que este archivo ya
+  // soportaba desde el principio para cuando no había claves. Todo funciona menos comprar, y
+  // el paywall enseña "los planes todavía se están configurando". Preferible con mucho a una
+  // app que no abre.
+  //
+  // Para volver a tener compras hay dos caminos, y ninguno es quitar esta comprobación:
+  //   - Probar AHORA: un build depurable (perfil `development`), donde `__DEV__` es true y la
+  //     clave de prueba es legítima.
+  //   - Publicar: poner la clave `goog_...` de Google Play en EXPO_PUBLIC_REVENUECAT_API_KEY_
+  //     ANDROID en el entorno `preview`/`production` de EAS. En cuanto no empiece por `test_`,
+  //     esta comprobación deja de aplicar sola.
+  if (!__DEV__ && key.startsWith('test_')) return false;
+
+  return true;
 }
 
 /**
