@@ -136,19 +136,36 @@ export function ShowmiTabBar({ state, descriptors, navigation }: TabBarProps) {
     d: siluetaConMuesca(ancho, ALTO, cx.value),
   }));
 
-  // `ancho <= 0` significa que la pantalla todavía no se ha medido. No se dibuja una barra de
-  // ancho cero: no se vería, y evita alimentar geometría inválida al SVG.
-  if (oculta || ancho <= 0) return null;
+  // SOLO se oculta cuando la PANTALLA lo pide (onboarding, selector de sesión). Una medida que
+  // todavía no llegó no puede quitar la navegación.
+  //
+  // Antes esto era `if (oculta || ancho <= 0) return null`, y fue un error: si `anchoPantalla`
+  // valía 0 y no volvía a emitirse un cambio de dimensiones, la barra no se dibujaba NUNCA.
+  // Efecto en el teléfono: la app se quedaba en el deck sin forma de llegar a Biblioteca ni a
+  // Feed. Un problema de medición degradando a "sin decoración" es aceptable; degradando a "sin
+  // navegación" no lo es nunca.
+  if (oculta) return null;
+
+  /** Si todavía no hay medida, se dibujan los botones sin la silueta. */
+  const medida = ancho > 0;
 
   return (
     <View
       style={[styles.wrap, { left: MARGEN, right: MARGEN, bottom: Math.max(insets.bottom, 10) }]}
       pointerEvents="box-none"
     >
+      {/* Sin medida no se dibuja el SVG -- un ancho 0 alimenta geometria invalida al trazo -- pero
+          el contenedor toma el color de la barra para que los botones sigan siendo legibles ese
+          frame. En cuanto llega la medida, el degradado a la silueta real es imperceptible. */}
+      {!medida && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.surface, borderRadius: RADIO }]} />
+      )}
+      {medida && (
       <Svg width={ancho} height={ALTO} style={StyleSheet.absoluteFill}>
         {/* Sin contorno: la separacion del fondo la da la sombra del contenedor (ver styles.wrap). */}
         <AnimatedPath animatedProps={animatedProps} fill={colors.surface} />
       </Svg>
+      )}
 
       <View style={[styles.fila, { height: ALTO }]}>
         {state.routes.map((route, i) => {
