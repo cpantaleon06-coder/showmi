@@ -93,6 +93,31 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
   }, [status.error]);
 
   /**
+   * Arranque que NO arranca (2026-09-24, reporte del usuario: "muchas canciones no tienen
+   * sonido").
+   *
+   * `player.play()` puede no sonar sin que `status.error` se entere. El caso claro es el
+   * navegador: su política de autoreproducción rechaza la promesa de `play()` cuando no viene
+   * de un gesto reciente, y esa rechazada no llega al estado -- la carta se queda muda, sin
+   * aviso y sin pista de que tocarla la arregla. Indistinguible de una canción sin preview.
+   *
+   * Se comprueba por RESULTADO y no por causa: si pasado un momento la pista está cargada y
+   * sigue sin sonar desde el principio, se trata igual que "terminó" y aparece el "toca la
+   * tarjeta para escuchar". No adivina por qué falló; deja una salida visible.
+   *
+   * 900 ms: por debajo de ~600 el aviso salta en pistas que solo tardaban en abrir, y por
+   * encima de un segundo la persona ya decidió que la app está rota.
+   */
+  useEffect(() => {
+    if (!isActive || !track.previewUrl || finished) return;
+    if (status.playing) return;
+    const id = setTimeout(() => {
+      if (!status.playing && status.currentTime === 0) setFinished(true);
+    }, 900);
+    return () => clearTimeout(id);
+  }, [isActive, track.previewUrl, finished, status.playing, status.currentTime]);
+
+  /**
    * Re-sincronizar al volver de segundo plano (2026-09-16).
    *
    * Éste es el fallo que se sentía como "hay que reiniciar la app": cuando entra una llamada o
