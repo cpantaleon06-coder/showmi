@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Showmi — descubre música swipeando</title>
+    <meta
+      name="description"
+      content="Showmi es una app de descubrimiento musical: escuchas 30 segundos, swipeas, y el deck aprende de ti. Pruébala en el navegador, sin instalar nada."
+    />
+    <link rel="icon" href="../assets/favicon.png" />
+
+    <!-- Las dos familias REALES de la app (ver src/theme/typography.ts), no unas parecidas: la
+         landing y el producto tienen que leerse como la misma cosa. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Plus+Jakarta+Sans:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* Colores tomados de src/theme/colors.ts y src/theme/wordmark.ts. Nada inventado. */
+      :root {
+        --fondo: #2c363e;
+        --superficie: #232b32;
+        --texto: #f5f5f5;
+        --texto-tenue: #a0a0a0;
+        --marca: #dc5c48;
+        --s: #f7083f;
+        --h: #17c772;
+        --o: #f28407;
+        --w: #f95ab6;
+        --m: #087adb;
+        --i: #f9eb06;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 20px;
+        background: var(--fondo);
+        color: var(--texto);
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        /* El degradado de marca (NAGAI_GRADIENT), muy diluido: da profundidad sin competir
+           con el wordmark, que es lo que tiene que mirarse. */
+        background-image: radial-gradient(
+          120% 90% at 50% 0%,
+          rgba(255, 140, 90, 0.22) 0%,
+          rgba(217, 113, 140, 0.14) 40%,
+          rgba(15, 110, 125, 0.1) 70%,
+          transparent 100%
+        );
+      }
+
+      main { width: 100%; max-width: 560px; text-align: center; }
+
+      .wordmark {
+        font-family: 'Archivo Black', system-ui, sans-serif;
+        font-size: clamp(44px, 13vw, 84px);
+        letter-spacing: 2px;
+        line-height: 1;
+        margin: 0 0 18px;
+      }
+      /* Una letra, un color: es la identidad real del producto. */
+      .wordmark span:nth-child(1) { color: var(--s); }
+      .wordmark span:nth-child(2) { color: var(--h); }
+      .wordmark span:nth-child(3) { color: var(--o); }
+      .wordmark span:nth-child(4) { color: var(--w); }
+      .wordmark span:nth-child(5) { color: var(--m); }
+      .wordmark span:nth-child(6) { color: var(--i); }
+
+      .lema {
+        font-size: clamp(17px, 4.4vw, 21px);
+        line-height: 1.45;
+        margin: 0 auto 10px;
+        max-width: 26ch;
+      }
+
+      .detalle {
+        color: var(--texto-tenue);
+        font-size: 15px;
+        line-height: 1.55;
+        margin: 0 auto 34px;
+        max-width: 34ch;
+      }
+
+      .boton {
+        display: inline-block;
+        background: var(--marca);
+        color: #fff;
+        font-weight: 700;
+        font-size: 17px;
+        text-decoration: none;
+        padding: 17px 40px;
+        border-radius: 999px;
+        transition: transform 0.16s ease, filter 0.16s ease;
+      }
+      .boton:hover { transform: translateY(-2px); filter: brightness(1.08); }
+      .boton:focus-visible { outline: 3px solid var(--i); outline-offset: 3px; }
+
+      .bajo-boton {
+        margin-top: 14px;
+        font-size: 13px;
+        color: var(--texto-tenue);
+      }
+
+      .enlaces {
+        margin-top: 40px;
+        padding-top: 22px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 14px;
+      }
+      .enlaces a { color: var(--texto-tenue); text-decoration: none; }
+      .enlaces a:hover { color: var(--texto); text-decoration: underline; }
+      .enlaces span { color: rgba(255, 255, 255, 0.22); margin: 0 10px; }
+
+      .aviso {
+        margin-top: 26px;
+        font-size: 12.5px;
+        line-height: 1.5;
+        color: var(--texto-tenue);
+        background: var(--superficie);
+        border-radius: 14px;
+        padding: 13px 18px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <h1 class="wordmark">
+        <span>S</span><span>H</span><span>O</span><span>W</span><span>M</span><span>I</span>
+      </h1>
+
+      <p class="lema">Escucha 30 segundos. Swipea. El deck aprende de ti.</p>
+
+      <p class="detalle">
+        Descubrimiento musical sin algoritmo opaco: cada swipe mueve tu perfil de gustos y el
+        siguiente deck ya viene distinto.
+      </p>
+
+      <a class="boton" href="https://showmi-cpantaleon06-coders-projects.vercel.app">
+        Probar Showmi
+      </a>
+      <p class="bajo-boton">Funciona en el navegador — no hay que instalar nada</p>
+
+      <p class="aviso">
+        Versión de demostración para el RevenueCat Shipaton. La suscripción “Showmi More” se
+        puede activar para probarla y <strong>no genera ningún cargo</strong>.
+      </p>
+
+      <p class="enlaces">
+        <a href="https://github.com/cpantaleon06-coder/showmi">Código en GitHub</a>
+        <span>·</span>
+        <a href="https://showmi-cpantaleon06-coders-projects.vercel.app">Abrir la app</a>
+      </p>
+    </main>
+  </body>
+</html>
