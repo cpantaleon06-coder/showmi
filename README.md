@@ -3,10 +3,12 @@
 **Descubrimiento musical swipeando.** Escuchas 30 segundos de una canción, swipeas, y el deck
 aprende de ti: cada swipe mueve tu perfil de gustos y el siguiente deck ya viene distinto.
 
-### → [Probar Showmi en el navegador](https://showmi-cpantaleon06-coders-projects.vercel.app)
+### → [showmi-landing-cpantaleon06-coders-projects.vercel.app](https://showmi-landing-cpantaleon06-coders-projects.vercel.app)
 
-No hay que instalar nada. También hay una [landing](https://cpantaleon06-coder.github.io/showmi/)
-si prefieres compartir un enlace más presentable.
+Ese es el enlace para compartir: una página de entrada con un botón que abre la app. Si prefieres
+entrar directo, la app vive en
+[showmi-cpantaleon06-coders-projects.vercel.app](https://showmi-cpantaleon06-coders-projects.vercel.app).
+No hay que instalar nada.
 
 ---
 
